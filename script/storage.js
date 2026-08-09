@@ -1,5 +1,5 @@
 // ============================================
-// ХРАНИЛИЩЕ ONIKAANIME - EMAIL ВЕРСИЯ
+// ХРАНИЛИЩЕ ONIKAANIME
 // ============================================
 
 var DB = {
@@ -12,7 +12,6 @@ var DB = {
         history: {},
         achievements: {},
         activeTitle: {},
-        animeStatuses: {},
         currentUser: null,
         settings: { "3d": true, "vibe": true }
     },
@@ -72,7 +71,6 @@ var DB = {
                 self._data.favorites[name] = data.favorites || [];
                 self._data.achievements[name] = data.achievements || [];
                 self._data.activeTitle[name] = data.activeTitle || null;
-                self._data.animeStatuses[name] = data.animeStatuses || [];
                 self._saveToLocal();
                 console.log('👤 Данные пользователя загружены');
             }
