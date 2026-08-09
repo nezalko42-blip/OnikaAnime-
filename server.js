@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР С SQLite (EMAIL + СТАТУСЫ)
+// ONIKAANIME - СЕРВЕР SQLite
 // ============================================
 
 const express = require('express');
@@ -33,19 +33,6 @@ db.serialize(function() {
         bio TEXT,
         avatar TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    )`);
-
-    // История просмотров со статусами
-    db.run(`CREATE TABLE IF NOT EXISTS user_anime (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        anime_id INTEGER NOT NULL,
-        anime_title TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'watching',
-        episodes_watched INTEGER DEFAULT 0,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE(user_id, anime_id)
     )`);
 
     // Избранное
@@ -100,76 +87,7 @@ db.serialize(function() {
 });
 
 // ============================================
-// API ДЛЯ СТАТУСОВ АНИМЕ
-// ============================================
-
-// Добавить/обновить статус
-app.post('/api/anime-status', (req, res) => {
-    const { userId, animeId, animeTitle, status, episodes } = req.body;
-    
-    if (!userId || !animeId || !animeTitle || !status) {
-        return res.status(400).json({ error: 'Все поля обязательны' });
-    }
-    
-    const validStatuses = ['watching', 'completed', 'dropped', 'planned'];
-    if (status !== 'remove' && !validStatuses.includes(status)) {
-        return res.status(400).json({ error: 'Неверный статус' });
-    }
-    
-    // Если удаление
-    if (status === 'remove') {
-        db.run('DELETE FROM user_anime WHERE user_id = ? AND anime_id = ?',
-            [userId, animeId],
-            function(err) {
-                if (err) return res.status(500).json({ error: 'Ошибка удаления' });
-                res.json({ success: true, removed: true });
-            }
-        );
-        return;
-    }
-    
-    db.run(`INSERT OR REPLACE INTO user_anime (user_id, anime_id, anime_title, status, episodes_watched, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [userId, animeId, animeTitle, status, episodes || 0],
-        function(err) {
-            if (err) {
-                console.error('❌ Ошибка сохранения статуса:', err);
-                return res.status(500).json({ error: 'Ошибка сохранения' });
-            }
-            res.json({ success: true });
-        }
-    );
-});
-
-// Получить все статусы пользователя
-app.get('/api/anime-status/:userId', (req, res) => {
-    const userId = req.params.userId;
-    
-    db.all('SELECT * FROM user_anime WHERE user_id = ? ORDER BY updated_at DESC', [userId], (err, rows) => {
-        if (err) {
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        res.json(rows);
-    });
-});
-
-// Получить статус конкретного аниме
-app.get('/api/anime-status/:userId/:animeId', (req, res) => {
-    const { userId, animeId } = req.params;
-    
-    db.get('SELECT * FROM user_anime WHERE user_id = ? AND anime_id = ?', 
-        [userId, animeId], 
-        (err, row) => {
-            if (err) {
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            res.json(row || { status: null });
-        }
-    );
-});
-
-// ============================================
-// ОСТАЛЬНЫЕ API
+// API
 // ============================================
 
 // Регистрация
@@ -233,8 +151,7 @@ app.get('/api/user/:id', (req, res) => {
             name: user.name, 
             favorites: [], 
             achievements: [], 
-            activeTitle: null,
-            animeStatuses: []
+            activeTitle: null
         };
         
         db.all('SELECT anime FROM favorites WHERE user_id = ?', [userId], (err, favs) => {
@@ -245,11 +162,7 @@ app.get('/api/user/:id', (req, res) => {
                 
                 db.get('SELECT title_id FROM active_titles WHERE user_id = ?', [userId], (err, title) => {
                     if (!err && title) result.activeTitle = title.title_id;
-                    
-                    db.all('SELECT * FROM user_anime WHERE user_id = ?', [userId], (err, statuses) => {
-                        if (!err && statuses) result.animeStatuses = statuses;
-                        res.json(result);
-                    });
+                    res.json(result);
                 });
             });
         });
