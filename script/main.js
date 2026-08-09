@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME - СЕРВЕРНАЯ ВЕРСИЯ
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME - SQLite ВЕРСИЯ
 // ============================================
 
 var allData = {};
@@ -91,6 +91,155 @@ function closeMenu() {
     var overlay = document.getElementById('sidebarOverlay');
     if (sidebar) sidebar.classList.remove('open');
     if (overlay) overlay.classList.remove('open');
+}
+
+// ============================================
+// АВТОРИЗАЦИЯ (SQLite ВЕРСИЯ)
+// ============================================
+
+function showLoginModal() {
+    document.getElementById('loginModal').style.display = 'flex';
+}
+
+function closeLoginModal() {
+    document.getElementById('loginModal').style.display = 'none';
+}
+
+function switchAuthTab(tab, btn) {
+    document.querySelectorAll('.modal-tab').forEach(function(t) {
+        t.classList.remove('active');
+    });
+    btn.classList.add('active');
+    document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+}
+
+function login() {
+    var name = document.getElementById('loginName').value.trim();
+    var pass = document.getElementById('loginPass').value.trim();
+    
+    if (!name || !pass) {
+        showToast('Заполните все поля!', 'error');
+        return;
+    }
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/login');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+        try {
+            var data = JSON.parse(xhr.responseText);
+            if (data.success) {
+                DB._data.currentUser = data.user;
+                localStorage.setItem('onika_currentUser', data.user);
+                closeLoginModal();
+                updateUI();
+                navigate('catalog');
+                showToast('Добро пожаловать, ' + data.user + '! 🚀', 'success');
+                // Загружаем данные пользователя
+                if (typeof DB._loadUserData === 'function') {
+                    DB._loadUserData();
+                }
+            } else {
+                showToast(data.error || 'Ошибка входа', 'error');
+            }
+        } catch(e) {
+            showToast('Ошибка сервера', 'error');
+        }
+    };
+    
+    xhr.onerror = function() {
+        showToast('Ошибка сети', 'error');
+    };
+    
+    xhr.send(JSON.stringify({ name: name, password: pass }));
+}
+
+function register() {
+    var name = document.getElementById('regName').value.trim();
+    var pass = document.getElementById('regPass').value.trim();
+    
+    if (!name || !pass) {
+        showToast('Заполните все поля!', 'error');
+        return;
+    }
+    if (name.length < 3) {
+        showToast('Имя должно быть минимум 3 символа!', 'error');
+        return;
+    }
+    if (pass.length < 4) {
+        showToast('Пароль должен быть минимум 4 символа!', 'error');
+        return;
+    }
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/register');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+        try {
+            var data = JSON.parse(xhr.responseText);
+            if (data.success) {
+                DB._data.currentUser = data.user;
+                localStorage.setItem('onika_currentUser', data.user);
+                closeLoginModal();
+                updateUI();
+                navigate('catalog');
+                showToast('Аккаунт создан! Добро пожаловать, ' + data.user + '! 🌟', 'success');
+                if (typeof DB._loadUserData === 'function') {
+                    DB._loadUserData();
+                }
+            } else {
+                showToast(data.error || 'Ошибка регистрации', 'error');
+            }
+        } catch(e) {
+            showToast('Ошибка сервера', 'error');
+        }
+    };
+    
+    xhr.onerror = function() {
+        showToast('Ошибка сети', 'error');
+    };
+    
+    xhr.send(JSON.stringify({ name: name, password: pass }));
+}
+
+function logout() {
+    if (!DB.get('currentUser')) return;
+    showConfirmModal('🚪 Выход', 'Вы уверены?', function() {
+        var name = DB.get('currentUser');
+        DB.set('currentUser', null);
+        localStorage.removeItem('onika_currentUser');
+        updateUI();
+        navigate('catalog');
+        showToast('👋 До свидания, ' + name + '!', 'info');
+    });
+}
+
+function confirmDeleteAccount() {
+    var user = DB.get('currentUser');
+    var input = document.getElementById('deleteConfirmName');
+    if (input.value.trim() !== user) {
+        showToast('❌ Имя не совпадает!', 'error');
+        return;
+    }
+    
+    closeModal('deleteAccountModal');
+    showConfirmModal('💀 Удаление аккаунта', 'Вы уверены?', function() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/delete-account');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            DB.set('currentUser', null);
+            localStorage.removeItem('onika_currentUser');
+            updateUI();
+            navigate('catalog');
+            showToast('✅ Аккаунт удален', 'success');
+            setTimeout(function() { location.reload(); }, 500);
+        };
+        xhr.send(JSON.stringify({ name: user }));
+    });
 }
 
 // ============================================
@@ -1341,187 +1490,6 @@ function deleteAccount() {
     document.getElementById('deleteCurrentUser').textContent = user;
     document.getElementById('deleteConfirmName').value = '';
     modal.style.display = 'flex';
-}
-
-function confirmDeleteAccount() {
-    var user = DB.get('currentUser');
-    if (!user) return;
-    
-    var input = document.getElementById('deleteConfirmName');
-    if (!input) return;
-    
-    if (input.value.trim() !== user) {
-        showToast('❌ Имя не совпадает!', 'error');
-        input.value = '';
-        input.focus();
-        return;
-    }
-    
-    closeModal('deleteAccountModal');
-    
-    showConfirmModal(
-        '💀 Удаление аккаунта',
-        'Вы действительно хотите удалить аккаунт "' + user + '" навсегда? Это действие нельзя отменить!',
-        function() {
-            var users = DB.get('users', {});
-            delete users[user];
-            DB.set('users', users);
-            
-            var profiles = DB.get('profiles', {});
-            delete profiles[user];
-            DB.set('profiles', profiles);
-            
-            var favorites = DB.get('favorites', {});
-            delete favorites[user];
-            DB.set('favorites', favorites);
-            
-            var comments = DB.get('comments', {});
-            for (var k in comments) {
-                comments[k] = comments[k].filter(function(c) {
-                    return c.user !== user;
-                });
-                if (comments[k].length === 0) {
-                    delete comments[k];
-                }
-            }
-            DB.set('comments', comments);
-            
-            if (DB._data.achievements) {
-                delete DB._data.achievements[user];
-            }
-            if (DB._data.activeTitle) {
-                delete DB._data.activeTitle[user];
-            }
-            
-            DB.set('currentUser', null);
-            DB.save();
-            
-            updateUI();
-            navigate('catalog');
-            showToast('✅ Аккаунт "' + user + '" удален', 'success');
-        },
-        '💀'
-    );
-}
-
-// ============================================
-// АВТОРИЗАЦИЯ (СЕРВЕРНАЯ ВЕРСИЯ)
-// ============================================
-
-function showLoginModal() {
-    document.getElementById('loginModal').style.display = 'flex';
-}
-
-function closeLoginModal() {
-    document.getElementById('loginModal').style.display = 'none';
-}
-
-function switchAuthTab(tab, btn) {
-    document.querySelectorAll('.modal-tab').forEach(function(t) {
-        t.classList.remove('active');
-    });
-    btn.classList.add('active');
-    document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
-    document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
-}
-
-function login() {
-    var name = document.getElementById('loginName').value.trim();
-    var pass = document.getElementById('loginPass').value.trim();
-    
-    if (!name || !pass) {
-        showToast('Заполните все поля!', 'error');
-        return;
-    }
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/login');
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    
-    xhr.onload = function() {
-        try {
-            var data = JSON.parse(xhr.responseText);
-            if (data.success) {
-                DB.set('currentUser', data.user);
-                closeLoginModal();
-                updateUI();
-                navigate('catalog');
-                showToast('Добро пожаловать, ' + data.user + '! 🚀', 'success');
-            } else {
-                showToast(data.error || 'Ошибка входа', 'error');
-            }
-        } catch(e) {
-            showToast('Ошибка сервера', 'error');
-        }
-    };
-    
-    xhr.onerror = function() {
-        showToast('Ошибка сети', 'error');
-    };
-    
-    xhr.send(JSON.stringify({ name: name, password: pass }));
-}
-
-function register() {
-    var name = document.getElementById('regName').value.trim();
-    var pass = document.getElementById('regPass').value.trim();
-    
-    if (!name || !pass) {
-        showToast('Заполните все поля!', 'error');
-        return;
-    }
-    if (name.length < 3) {
-        showToast('Имя должно быть минимум 3 символа!', 'error');
-        return;
-    }
-    if (pass.length < 4) {
-        showToast('Пароль должен быть минимум 4 символа!', 'error');
-        return;
-    }
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/register');
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    
-    xhr.onload = function() {
-        try {
-            var data = JSON.parse(xhr.responseText);
-            if (data.success) {
-                DB.set('currentUser', data.user);
-                closeLoginModal();
-                updateUI();
-                navigate('catalog');
-                showToast('Аккаунт создан! Добро пожаловать, ' + data.user + '! 🌟', 'success');
-            } else {
-                showToast(data.error || 'Ошибка регистрации', 'error');
-            }
-        } catch(e) {
-            showToast('Ошибка сервера', 'error');
-        }
-    };
-    
-    xhr.onerror = function() {
-        showToast('Ошибка сети', 'error');
-    };
-    
-    xhr.send(JSON.stringify({ name: name, password: pass }));
-}
-
-function logout() {
-    if (!DB.get('currentUser')) return;
-    showConfirmModal('🚪 Выход', 'Вы уверены?', function() {
-        var name = DB.get('currentUser');
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/logout');
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.onload = function() {
-            DB.set('currentUser', null);
-            updateUI();
-            navigate('catalog');
-            showToast('👋 До свидания, ' + name + '!', 'info');
-        };
-        xhr.send();
-    });
 }
 
 function closeModal(id) {
