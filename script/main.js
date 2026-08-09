@@ -905,15 +905,18 @@ function updateEpisodeProgress(animeId, title) {
 }
 
 // ============================================
-// МОЙ СПИСОК АНИМЕ
+// МОЙ СПИСОК АНИМЕ - С КАРТОЧКАМИ
 // ============================================
+
+var myListFilter = 'all';
+var myListData = [];
 
 function renderMyAnimeList() {
     var user = DB.get('currentUser');
     if (!user) {
-        var container = document.getElementById('myAnimeList');
+        var container = document.getElementById('myAnimeGrid');
         if (container) {
-            container.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
+            container.innerHTML = '<div class="empty-state"><span class="empty-icon">🔐</span><p>Войдите в аккаунт чтобы видеть свой список</p></div>';
         }
         var count = document.getElementById('myListCount');
         if (count) count.textContent = '0 аниме';
@@ -926,85 +929,165 @@ function renderMyAnimeList() {
     xhr.onload = function() {
         try {
             var data = JSON.parse(xhr.responseText);
-            renderMyAnimeListData(data);
+            myListData = data;
+            renderMyAnimeListData(data, myListFilter);
         } catch(e) {
             console.error('Ошибка:', e);
         }
     };
     
+    xhr.onerror = function() {
+        showToast('❌ Ошибка загрузки списка', 'error');
+    };
+    
     xhr.send();
 }
 
-function renderMyAnimeListData(data) {
-    var container = document.getElementById('myAnimeList');
+function filterMyList(status, btn) {
+    myListFilter = status;
+    
+    document.querySelectorAll('.status-filter').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+    
+    renderMyAnimeListData(myListData, status);
+}
+
+function renderMyAnimeListData(data, filter) {
+    var container = document.getElementById('myAnimeGrid');
     if (!container) return;
     
-    var statusGroups = {
-        'watching': [],
-        'completed': [],
-        'dropped': [],
-        'planned': []
-    };
-    
-    data.forEach(function(item) {
-        if (statusGroups[item.status]) {
-            statusGroups[item.status].push(item);
-        }
-    });
-    
-    var total = data.length;
-    var count = document.getElementById('myListCount');
-    if (count) count.textContent = total + ' аниме';
-    
-    var html = '';
-    
-    var statusLabels = {
-        'watching': { icon: '📺', label: 'Смотрю', color: '#2ecc71' },
-        'completed': { icon: '✅', label: 'Просмотрено', color: '#3498db' },
-        'dropped': { icon: '❌', label: 'Заброшено', color: '#e74c3c' },
-        'planned': { icon: '📋', label: 'В планах', color: '#f39c12' }
-    };
-    
-    var hasItems = false;
-    
-    for (var status in statusGroups) {
-        var items = statusGroups[status];
-        if (items.length === 0) continue;
-        hasItems = true;
-        
-        var info = statusLabels[status];
-        html += `
-            <div style="margin-bottom:12px;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03);">
-                    <span style="font-size:14px;font-weight:600;color:${info.color};">${info.icon} ${info.label}</span>
-                    <span style="font-size:11px;color:var(--text-muted);">(${items.length})</span>
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        `;
-        
-        items.forEach(function(item) {
-            html += `
-                <div onclick="openDetail(${item.anime_id})" style="padding:4px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);cursor:pointer;font-size:12px;color:var(--text-secondary);transition:0.3s;">
-                    ${item.anime_title}
-                    ${item.episodes_watched > 0 ? `<span style="color:var(--text-muted);font-size:10px;">(${item.episodes_watched} эп.)</span>` : ''}
-                </div>
-            `;
+    var filtered = data;
+    if (filter && filter !== 'all') {
+        filtered = data.filter(function(item) {
+            return item.status === filter;
         });
-        
-        html += `</div></div>`;
     }
     
-    if (!hasItems) {
-        html = `
-            <div class="empty-state" style="padding:30px 20px;">
-                <span class="empty-icon" style="font-size:32px;">📭</span>
-                <p style="font-size:14px;">У вас нет аниме в списке</p>
+    var total = filtered.length;
+    var count = document.getElementById('myListCount');
+    if (count) {
+        var statusLabels = {
+            'all': 'Все',
+            'watching': 'Смотрю',
+            'completed': 'Просмотрено',
+            'dropped': 'Заброшено',
+            'planned': 'В планах'
+        };
+        count.textContent = total + ' аниме (' + (statusLabels[filter] || 'Все') + ')';
+    }
+    
+    if (total === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1;padding:40px 20px;">
+                <span class="empty-icon" style="font-size:40px;">📭</span>
+                <p style="font-size:14px;">Нет аниме в этом разделе</p>
                 <p style="font-size:12px;color:var(--text-muted);">Добавляйте аниме на странице просмотра</p>
             </div>
         `;
+        return;
     }
     
+    var colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
+    var statusTexts = {
+        'watching': '📺 Смотрю',
+        'completed': '✅ Просмотрено',
+        'dropped': '❌ Заброшено',
+        'planned': '📋 В планах'
+    };
+    
+    var html = '';
+    filtered.forEach(function(item, index) {
+        var color = colors[index % colors.length];
+        var img = '';
+        
+        for (var id in allData) {
+            var a = allData[id];
+            if (a.id && a.id == item.anime_id) {
+                if (a.poster) {
+                    var p = a.poster.optimized || a.poster;
+                    if (typeof p === 'string') {
+                        img = p;
+                    } else {
+                        img = p.preview || p.src || '';
+                    }
+                    if (img && img[0] === '/') {
+                        img = 'https://anilibria.top' + img;
+                    }
+                }
+                break;
+            }
+        }
+        
+        var placeholder = item.anime_title.charAt(0).toUpperCase();
+        
+        html += `
+            <div class="my-list-card" onclick="openDetail(${item.anime_id})">
+                <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:48px;color:#fff;' : ''}">
+                    ${img ? '<img src="' + img + '" loading="lazy" onerror="this.style.display=\'none\'">' : placeholder}
+                    <span class="status-badge ${item.status}">${statusTexts[item.status] || item.status}</span>
+                    ${item.episodes_watched > 0 ? `
+                        <div class="episode-progress">📊 ${item.episodes_watched} серий</div>
+                    ` : ''}
+                    <button class="remove-btn" onclick="event.stopPropagation(); removeFromMyList(${item.anime_id})" title="Удалить из списка">✕</button>
+                </div>
+                <div class="card-body">
+                    <div class="title">${item.anime_title}</div>
+                    <div class="status-label">${statusTexts[item.status] || item.status}</div>
+                </div>
+            </div>
+        `;
+    });
+    
     container.innerHTML = html;
+}
+
+function removeFromMyList(animeId) {
+    var user = DB.get('currentUser');
+    if (!user) return;
+    
+    showConfirmModal('🗑️ Удалить из списка', 'Вы уверены, что хотите удалить это аниме из списка?', function() {
+        var title = '';
+        for (var id in allData) {
+            if (allData[id].id == animeId) {
+                title = allData[id].name?.main || '';
+                break;
+            }
+        }
+        
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/anime-status');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        
+        xhr.onload = function() {
+            try {
+                var data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    showToast('🗑️ Удалено из списка', 'info');
+                    renderMyAnimeList();
+                    if (currentPage === 'detail') {
+                        var detailTitle = document.getElementById('detailTitle')?.textContent;
+                        for (var id in allData) {
+                            if (allData[id].name?.main === detailTitle) {
+                                renderAnimeStatus(allData[id].id);
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch(e) {
+                showToast('❌ Ошибка', 'error');
+            }
+        };
+        
+        xhr.send(JSON.stringify({ 
+            userId: user.id, 
+            animeId: animeId, 
+            animeTitle: title || 'Аниме',
+            status: 'remove' 
+        }));
+    });
 }
 
 // ============================================
