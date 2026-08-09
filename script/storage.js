@@ -2,7 +2,7 @@
 // ХРАНИЛИЩЕ ONIKAANIME - SUPABASE ВЕРСИЯ
 // ============================================
 
-const SUPABASE_URL = 'https://yxdotffhxortsqtsafpo.supabase.co';
+const SUPABASE_URL = 'https://yxdotffhxortsqtsafpo.supabase.co/rest/v1/';
 const SUPABASE_KEY = 'sb_publishable_t8GpU_UCoZ1t3Sk4wrqUhg_0rKF3clj';
 
 var DB = {
