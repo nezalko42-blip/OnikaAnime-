@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME - SQLite ВЕРСИЯ
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME - EMAIL ВЕРСИЯ
 // ============================================
 
 var allData = {};
@@ -63,7 +63,7 @@ function updateUI() {
                 <span class="icon">⚙️</span> Настройки
             </a>
         `;
-        footerHtml = `<div class="sidebar-user-info">🌟 ${user}</div>`;
+        footerHtml = `<div class="sidebar-user-info">🌟 ${user.name}</div>`;
     } else {
         navHtml = `
             <a class="active" data-page="catalog" onclick="navigate('catalog'); closeMenu();">
@@ -94,7 +94,7 @@ function closeMenu() {
 }
 
 // ============================================
-// АВТОРИЗАЦИЯ (SQLite ВЕРСИЯ)
+// АВТОРИЗАЦИЯ (EMAIL ВЕРСИЯ)
 // ============================================
 
 function showLoginModal() {
@@ -115,10 +115,10 @@ function switchAuthTab(tab, btn) {
 }
 
 function login() {
-    var name = document.getElementById('loginName').value.trim();
+    var email = document.getElementById('loginEmail').value.trim();
     var pass = document.getElementById('loginPass').value.trim();
     
-    if (!name || !pass) {
+    if (!email || !pass) {
         showToast('Заполните все поля!', 'error');
         return;
     }
@@ -131,15 +131,15 @@ function login() {
         try {
             var data = JSON.parse(xhr.responseText);
             if (data.success) {
-                DB._data.currentUser = data.user;
-                localStorage.setItem('onika_currentUser', data.user);
+                var user = data.user;
+                DB._data.currentUser = user;
+                localStorage.setItem('onika_currentUser', JSON.stringify(user));
                 closeLoginModal();
                 updateUI();
                 navigate('catalog');
-                showToast('Добро пожаловать, ' + data.user + '! 🚀', 'success');
-                // Загружаем данные пользователя
+                showToast('Добро пожаловать, ' + user.name + '! 🚀', 'success');
                 if (typeof DB._loadUserData === 'function') {
-                    DB._loadUserData();
+                    DB._loadUserData(user.id);
                 }
             } else {
                 showToast(data.error || 'Ошибка входа', 'error');
@@ -153,15 +153,20 @@ function login() {
         showToast('Ошибка сети', 'error');
     };
     
-    xhr.send(JSON.stringify({ name: name, password: pass }));
+    xhr.send(JSON.stringify({ email: email, password: pass }));
 }
 
 function register() {
+    var email = document.getElementById('regEmail').value.trim();
     var name = document.getElementById('regName').value.trim();
     var pass = document.getElementById('regPass').value.trim();
     
-    if (!name || !pass) {
+    if (!email || !name || !pass) {
         showToast('Заполните все поля!', 'error');
+        return;
+    }
+    if (!email.includes('@') || !email.includes('.')) {
+        showToast('Введите корректный email!', 'error');
         return;
     }
     if (name.length < 3) {
@@ -181,14 +186,15 @@ function register() {
         try {
             var data = JSON.parse(xhr.responseText);
             if (data.success) {
-                DB._data.currentUser = data.user;
-                localStorage.setItem('onika_currentUser', data.user);
+                var user = data.user;
+                DB._data.currentUser = user;
+                localStorage.setItem('onika_currentUser', JSON.stringify(user));
                 closeLoginModal();
                 updateUI();
                 navigate('catalog');
-                showToast('Аккаунт создан! Добро пожаловать, ' + data.user + '! 🌟', 'success');
+                showToast('Аккаунт создан! Добро пожаловать, ' + user.name + '! 🌟', 'success');
                 if (typeof DB._loadUserData === 'function') {
-                    DB._loadUserData();
+                    DB._loadUserData(user.id);
                 }
             } else {
                 showToast(data.error || 'Ошибка регистрации', 'error');
@@ -202,13 +208,13 @@ function register() {
         showToast('Ошибка сети', 'error');
     };
     
-    xhr.send(JSON.stringify({ name: name, password: pass }));
+    xhr.send(JSON.stringify({ email: email, name: name, password: pass }));
 }
 
 function logout() {
     if (!DB.get('currentUser')) return;
     showConfirmModal('🚪 Выход', 'Вы уверены?', function() {
-        var name = DB.get('currentUser');
+        var name = DB.get('currentUser').name;
         DB.set('currentUser', null);
         localStorage.removeItem('onika_currentUser');
         updateUI();
@@ -220,7 +226,7 @@ function logout() {
 function confirmDeleteAccount() {
     var user = DB.get('currentUser');
     var input = document.getElementById('deleteConfirmName');
-    if (input.value.trim() !== user) {
+    if (!user || input.value.trim() !== user.name) {
         showToast('❌ Имя не совпадает!', 'error');
         return;
     }
@@ -238,8 +244,129 @@ function confirmDeleteAccount() {
             showToast('✅ Аккаунт удален', 'success');
             setTimeout(function() { location.reload(); }, 500);
         };
-        xhr.send(JSON.stringify({ name: user }));
+        xhr.send(JSON.stringify({ userId: user.id }));
     });
+}
+
+// ============================================
+// РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// ============================================
+
+function editProfile(type) {
+    var user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    
+    window._editType = type;
+    var input = document.getElementById('editInput');
+    var textarea = document.getElementById('editTextarea');
+    var title = document.getElementById('editTitle');
+    
+    if (!input || !textarea || !title) return;
+    
+    input.style.display = type === 'bio' ? 'none' : 'block';
+    textarea.style.display = type === 'bio' ? 'block' : 'none';
+    
+    if (type === 'name') {
+        title.textContent = '✏️ Изменить никнейм';
+        input.value = user.name;
+        input.placeholder = 'Введите новый никнейм';
+        input.type = 'text';
+    } else if (type === 'email') {
+        title.textContent = '✏️ Изменить email';
+        input.value = user.email;
+        input.placeholder = 'Введите новый email';
+        input.type = 'email';
+    } else if (type === 'pass') {
+        title.textContent = '🔑 Изменить пароль';
+        input.value = '';
+        input.placeholder = 'Введите новый пароль';
+        input.type = 'password';
+    } else if (type === 'bio') {
+        title.textContent = '📝 Изменить описание';
+        input.style.display = 'none';
+        textarea.style.display = 'block';
+        var profiles = DB.get('profiles', {});
+        textarea.value = (profiles[user.name] && profiles[user.name].bio) || '';
+        textarea.placeholder = 'Введите описание';
+    }
+    
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function saveEdit() {
+    var user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    
+    var input = document.getElementById('editInput');
+    var textarea = document.getElementById('editTextarea');
+    var type = window._editType || 'bio';
+    var val = type === 'bio' ? textarea.value.trim() : input.value.trim();
+    
+    if (!val) {
+        showToast('Поле не может быть пустым!', 'error');
+        return;
+    }
+    
+    if (type === 'name') {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/update-name');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            try {
+                var data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    var oldName = user.name;
+                    user.name = val;
+                    localStorage.setItem('onika_currentUser', JSON.stringify(user));
+                    DB._data.currentUser = user;
+                    
+                    if (DB._data.favorites[oldName]) {
+                        DB._data.favorites[val] = DB._data.favorites[oldName];
+                        delete DB._data.favorites[oldName];
+                    }
+                    if (DB._data.achievements[oldName]) {
+                        DB._data.achievements[val] = DB._data.achievements[oldName];
+                        delete DB._data.achievements[oldName];
+                    }
+                    if (DB._data.activeTitle[oldName]) {
+                        DB._data.activeTitle[val] = DB._data.activeTitle[oldName];
+                        delete DB._data.activeTitle[oldName];
+                    }
+                    if (DB._data.profiles[oldName]) {
+                        DB._data.profiles[val] = DB._data.profiles[oldName];
+                        delete DB._data.profiles[oldName];
+                    }
+                    
+                    DB.save();
+                    closeModal('editModal');
+                    renderProfile();
+                    updateUI();
+                    showToast('✅ Никнейм изменен на ' + val, 'success');
+                } else {
+                    showToast(data.error || 'Ошибка', 'error');
+                }
+            } catch(e) {
+                showToast('Ошибка сервера', 'error');
+            }
+        };
+        xhr.send(JSON.stringify({ userId: user.id, newName: val }));
+    } else if (type === 'bio') {
+        var profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        profiles[user.name].bio = val;
+        DB.set('profiles', profiles);
+        closeModal('editModal');
+        renderProfile();
+        showToast('✅ Описание обновлено!', 'success');
+    } else {
+        showToast('❌ Изменение этого поля пока не поддерживается', 'warning');
+    }
 }
 
 // ============================================
@@ -252,7 +379,7 @@ function loadCatalog() {
     
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
     
-    var url = 'https://anilibria.top/api/v1/anime/catalog/releases';
+    var url = 'https://aniliberty.top/api/v1/anime/catalog/releases';
     var body = { page: page, limit: 12, f: { sorting: 'FRESH_AT_DESC' } };
     if (genre) body.f.genres = [parseInt(genre)];
     if (query) body.f.search = query;
@@ -461,7 +588,7 @@ function openDetail(id) {
         return;
     }
     
-    var url = 'https://anilibria.top/api/v1/app/title/' + id;
+    var url = 'https://aniliberty.top/api/v1/app/title/' + id;
     
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url);
@@ -589,7 +716,7 @@ function showDetail(anime) {
     if (tagsEl) tagsEl.innerHTML = tagsHtml || '<span class="detail-tag">🎬 Аниме</span>';
     
     var user = DB.get('currentUser');
-    var favs = user ? DB.getUserData(user, 'favorites', []) : [];
+    var favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
     var isFav = favs.indexOf(title) > -1;
     var btn = document.getElementById('favBtn');
     if (btn) {
@@ -638,7 +765,7 @@ function renderComments(animeName) {
     
     for (var i = list.length - 1; i >= 0; i--) {
         var c = list[i];
-        var canDelete = user && c.user === user;
+        var canDelete = user && c.user === user.name;
         html += `
             <div class="comment-item" data-comment-index="${i}">
                 <div class="c-user">${c.user}</div>
@@ -679,7 +806,7 @@ function addComment() {
     if (!comments[title]) comments[title] = [];
     
     comments[title].push({
-        user: user,
+        user: user.name,
         text: text,
         date: new Date().toISOString().slice(0, 16).replace('T', ' ')
     });
@@ -707,7 +834,7 @@ function deleteComment(animeName, index) {
         return;
     }
     
-    if (list[index].user !== user) {
+    if (list[index].user !== user.name) {
         showToast('Вы не можете удалить этот комментарий', 'error');
         return;
     }
@@ -750,7 +877,7 @@ function renderMyComments() {
     for (var animeName in allComments) {
         var list = allComments[animeName];
         for (var i = 0; i < list.length; i++) {
-            if (list[i].user === user) {
+            if (list[i].user === user.name) {
                 myComments.push({
                     anime: animeName,
                     text: list[i].text,
@@ -807,7 +934,7 @@ function deleteMyComment(animeName, index) {
         return;
     }
     
-    if (list[index].user !== user) {
+    if (list[index].user !== user.name) {
         showToast('Вы не можете удалить этот комментарий', 'error');
         return;
     }
@@ -841,7 +968,7 @@ function toggleFav(name) {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
-    var favs = DB.getUserData(user, 'favorites', []);
+    var favs = DB.getUserData(user.name, 'favorites', []);
     var idx = favs.indexOf(name);
     if (idx > -1) {
         favs.splice(idx, 1);
@@ -851,7 +978,7 @@ function toggleFav(name) {
         showToast('Добавлено в избранное ❤️', 'success');
         checkAchievements(name);
     }
-    DB.setUserData(user, 'favorites', favs);
+    DB.setUserData(user.name, 'favorites', favs);
     DB.save();
     
     var btn = document.getElementById('favBtn');
@@ -874,7 +1001,7 @@ function renderFavorites() {
         return;
     }
     
-    var favs = DB.getUserData(user, 'favorites', []);
+    var favs = DB.getUserData(user.name, 'favorites', []);
     var countEl = document.getElementById('favCount');
     if (countEl) countEl.textContent = favs.length + ' аниме';
     
@@ -970,9 +1097,9 @@ function renderAchievements() {
         return;
     }
     
-    var earned = DB.getAchievements(user);
+    var earned = DB.getAchievements(user.name);
     var total = ACHIEVEMENTS_LIST.length;
-    var activeTitle = DB.getActiveTitle(user);
+    var activeTitle = DB.getActiveTitle(user.name);
     
     updateAchievementStats(earned, total);
     
@@ -1027,13 +1154,13 @@ function setActiveTitle(achId) {
         return;
     }
     
-    var earned = DB.getAchievements(user);
+    var earned = DB.getAchievements(user.name);
     if (earned.indexOf(achId) === -1) {
         showToast('❌ Достижение не получено!', 'error');
         return;
     }
     
-    DB.setActiveTitle(user, achId);
+    DB.setActiveTitle(user.name, achId);
     renderAchievements();
     renderProfile();
     showToast('👑 Титул установлен!', 'success');
@@ -1043,21 +1170,21 @@ function checkAchievements(animeName) {
     var user = DB.get('currentUser');
     if (!user) return;
     
-    var earned = DB.getAchievements(user);
+    var earned = DB.getAchievements(user.name);
     
     var allComments = DB.get('comments', {});
     var commentCount = 0;
     for (var k in allComments) {
         allComments[k].forEach(function(c) {
-            if (c.user === user) commentCount++;
+            if (c.user === user.name) commentCount++;
         });
     }
     
-    var favs = DB.getUserData(user, 'favorites', []);
+    var favs = DB.getUserData(user.name, 'favorites', []);
     var favCount = favs.length;
     
-    var history = DB.getUserData(user, 'history', []);
-    var continueData = DB.getUserData(user, 'continueWatching', {});
+    var history = DB.getUserData(user.name, 'history', []);
+    var continueData = DB.getUserData(user.name, 'continueWatching', {});
     var episodeCount = 0;
     for (var a in continueData) {
         if (continueData[a] && continueData[a].ep) {
@@ -1090,7 +1217,7 @@ function checkAchievements(animeName) {
         else if (ach.id === 'fv1000' && favCount >= 1000) unlocked = true;
         
         if (unlocked) {
-            DB.addAchievement(user, ach.id);
+            DB.addAchievement(user.name, ach.id);
             newAchievements.push(ach);
         }
     });
@@ -1163,80 +1290,53 @@ function renderProfile() {
     }
     
     var profiles = DB.get('profiles', {});
-    var profile = profiles[user] || { bio: '', avatar: '' };
+    var profile = profiles[user.name] || { bio: '', avatar: '' };
     
-    var nameEl = document.getElementById('profileName');
-    if (nameEl) nameEl.textContent = user;
-    
-    var bioEl = document.getElementById('profileBio');
-    if (bioEl) bioEl.textContent = profile.bio || 'Нажмите чтобы добавить описание';
+    document.getElementById('profileName').textContent = user.name;
+    document.getElementById('profileEmail').textContent = '📧 ' + user.email;
+    document.getElementById('profileBio').textContent = profile.bio || 'Нажмите чтобы добавить описание';
     
     var img = document.getElementById('avatarImg');
     var letter = document.getElementById('avatarLetter');
-    
     if (profile.avatar && profile.avatar.length > 100) {
-        if (img) {
-            img.src = profile.avatar;
-            img.style.display = 'block';
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
-        }
-        if (letter) letter.style.display = 'none';
+        img.src = profile.avatar;
+        img.style.display = 'block';
+        letter.style.display = 'none';
     } else {
-        if (img) {
-            img.style.display = 'none';
-        }
-        if (letter) {
-            letter.style.display = 'flex';
-            letter.style.alignItems = 'center';
-            letter.style.justifyContent = 'center';
-            letter.style.width = '100%';
-            letter.style.height = '100%';
-            letter.style.fontSize = '36px';
-            letter.style.color = '#fff';
-            letter.textContent = user[0].toUpperCase();
-        }
+        img.style.display = 'none';
+        letter.style.display = 'flex';
+        letter.textContent = user.name[0].toUpperCase();
     }
     
-    var favs = DB.getUserData(user, 'favorites', []);
-    var statFav = document.getElementById('statFav');
-    if (statFav) statFav.textContent = favs.length;
+    var favs = DB.getUserData(user.name, 'favorites', []);
+    document.getElementById('statFav').textContent = favs.length;
     
     var comments = DB.get('comments', {});
     var count = 0;
     for (var k in comments) {
         comments[k].forEach(function(c) {
-            if (c.user === user) count++;
+            if (c.user === user.name) count++;
         });
     }
-    var statComments = document.getElementById('statComments');
-    if (statComments) statComments.textContent = count;
+    document.getElementById('statComments').textContent = count;
+    document.getElementById('statAchievements').textContent = DB.getAchievements(user.name).length;
     
-    var earned = DB.getAchievements(user);
-    var statAchievements = document.getElementById('statAchievements');
-    if (statAchievements) statAchievements.textContent = earned.length;
-    
-    var activeTitle = DB.getActiveTitle(user);
+    var activeTitle = DB.getActiveTitle(user.name);
     var titleBadge = document.getElementById('profileTitle');
-    if (titleBadge) {
-        if (activeTitle) {
-            var ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === activeTitle; });
-            if (ach) {
-                titleBadge.textContent = '🎖️ ' + ach.title;
-                titleBadge.style.display = 'inline';
-                titleBadge.className = 'title-badge';
-            } else {
-                titleBadge.textContent = '';
-                titleBadge.style.display = 'none';
-            }
+    if (titleBadge && activeTitle) {
+        var ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === activeTitle; });
+        if (ach) {
+            titleBadge.textContent = '🎖️ ' + ach.title;
+            titleBadge.style.display = 'inline';
+            titleBadge.className = 'title-badge';
         } else {
-            titleBadge.textContent = '';
             titleBadge.style.display = 'none';
         }
+    } else if (titleBadge) {
+        titleBadge.style.display = 'none';
     }
     
-    renderProfileAchievements(user);
+    renderProfileAchievements(user.name);
     renderTopUsers();
 }
 
@@ -1359,9 +1459,9 @@ function uploadAvatar(input) {
     var reader = new FileReader();
     reader.onload = function(e) {
         var profiles = DB.get('profiles', {});
-        if (!profiles[user]) profiles[user] = {};
+        if (!profiles[user.name]) profiles[user.name] = {};
         
-        profiles[user].avatar = e.target.result;
+        profiles[user.name].avatar = e.target.result;
         DB.set('profiles', profiles);
         DB.save();
         
@@ -1393,17 +1493,17 @@ function playVideo(name, url) {
     
     var user = DB.get('currentUser');
     if (user) {
-        var history = DB.getUserData(user, 'history', []);
+        var history = DB.getUserData(user.name, 'history', []);
         if (history.indexOf(name) === -1) {
             history.push(name);
-            DB.setUserData(user, 'history', history);
+            DB.setUserData(user.name, 'history', history);
         }
         
-        var continueData = DB.getUserData(user, 'continueWatching', {});
+        var continueData = DB.getUserData(user.name, 'continueWatching', {});
         if (!continueData[name]) continueData[name] = {};
         continueData[name].ep = (continueData[name].ep || 0) + 1;
         continueData[name].time = Date.now();
-        DB.setUserData(user, 'continueWatching', continueData);
+        DB.setUserData(user.name, 'continueWatching', continueData);
         
         checkAchievements(name);
     }
@@ -1487,7 +1587,7 @@ function deleteAccount() {
     var modal = document.getElementById('deleteAccountModal');
     if (!modal) return;
     
-    document.getElementById('deleteCurrentUser').textContent = user;
+    document.getElementById('deleteCurrentUser').textContent = user.name;
     document.getElementById('deleteConfirmName').value = '';
     modal.style.display = 'flex';
 }
