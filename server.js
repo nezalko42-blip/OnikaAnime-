@@ -1,220 +1,291 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР
+// ONIKAANIME - СЕРВЕР С SQLite
 // ============================================
 
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ============================================
-// НАСТРОЙКИ
-// ============================================
-
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
 
-// Путь к файлу базы данных
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
-
 // ============================================
-// ЧТЕНИЕ / ЗАПИСЬ БАЗЫ ДАННЫХ
+// ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ
 // ============================================
 
-function readDB() {
-    try {
-        if (!fs.existsSync(DB_PATH)) {
-            const dataDir = path.join(__dirname, 'data');
-            if (!fs.existsSync(dataDir)) {
-                fs.mkdirSync(dataDir);
-            }
-            const defaultDB = {
-                users: {},
-                profiles: {},
-                videos: {},
-                favorites: {},
-                comments: {},
-                continueWatching: {},
-                history: {},
-                achievements: {},
-                activeTitle: {},
-                currentUser: null,
-                settings: { "3d": true, "vibe": true }
-            };
-            fs.writeFileSync(DB_PATH, JSON.stringify(defaultDB, null, 2));
-            return defaultDB;
-        }
-        const data = fs.readFileSync(DB_PATH, 'utf8');
-        return JSON.parse(data);
-    } catch(e) {
-        console.error('❌ Ошибка чтения БД:', e);
-        return {};
-    }
-}
+const dbPath = path.join(__dirname, 'database.db');
+const db = new sqlite3.Database(dbPath);
 
-function writeDB(data) {
-    try {
-        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-        return true;
-    } catch(e) {
-        console.error('❌ Ошибка записи БД:', e);
-        return false;
-    }
-}
+// ============================================
+// СОЗДАНИЕ ТАБЛИЦ
+// ============================================
+
+db.serialize(function() {
+    // Пользователи
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Профили
+    db.run(`CREATE TABLE IF NOT EXISTS profiles (
+        user_id INTEGER PRIMARY KEY,
+        bio TEXT,
+        avatar TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`);
+
+    // Избранное
+    db.run(`CREATE TABLE IF NOT EXISTS favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        anime TEXT NOT NULL,
+        added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, anime)
+    )`);
+
+    // Комментарии
+    db.run(`CREATE TABLE IF NOT EXISTS comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        anime TEXT NOT NULL,
+        user_name TEXT NOT NULL,
+        text TEXT NOT NULL,
+        date TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Достижения
+    db.run(`CREATE TABLE IF NOT EXISTS achievements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        achievement_id TEXT NOT NULL,
+        earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, achievement_id)
+    )`);
+
+    // Активные титулы
+    db.run(`CREATE TABLE IF NOT EXISTS active_titles (
+        user_id INTEGER PRIMARY KEY,
+        title_id TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`);
+
+    // История просмотров
+    db.run(`CREATE TABLE IF NOT EXISTS history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        anime TEXT NOT NULL,
+        watched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`);
+
+    // Продолжение просмотра
+    db.run(`CREATE TABLE IF NOT EXISTS continue_watching (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        anime TEXT NOT NULL,
+        episode INTEGER DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, anime)
+    )`);
+
+    console.log('✅ Таблицы созданы (или уже существовали)');
+});
 
 // ============================================
 // API РОУТЫ
 // ============================================
 
-// Получить все данные
-app.get('/api/db', (req, res) => {
-    const db = readDB();
-    res.json(db);
-});
-
-// Получить конкретный ключ
-app.get('/api/db/:key', (req, res) => {
-    const db = readDB();
-    const key = req.params.key;
-    if (db[key] !== undefined) {
-        res.json(db[key]);
-    } else {
-        res.status(404).json({ error: 'Ключ не найден' });
-    }
-});
-
-// Обновить все данные
-app.post('/api/db', (req, res) => {
-    const newData = req.body;
-    if (writeDB(newData)) {
-        res.json({ success: true, message: 'Данные сохранены' });
-    } else {
-        res.status(500).json({ error: 'Ошибка сохранения' });
-    }
-});
-
-// Обновить конкретный ключ
-app.post('/api/db/:key', (req, res) => {
-    const db = readDB();
-    const key = req.params.key;
-    const value = req.body;
-    
-    if (key === 'currentUser') {
-        db.currentUser = value;
-    } else {
-        db[key] = value;
-    }
-    
-    if (writeDB(db)) {
-        res.json({ success: true, message: 'Данные обновлены' });
-    } else {
-        res.status(500).json({ error: 'Ошибка сохранения' });
-    }
-});
-
-// Регистрация
+// ===== РЕГИСТРАЦИЯ =====
 app.post('/api/register', (req, res) => {
     const { name, password } = req.body;
-    const db = readDB();
     
     if (!name || !password) {
         return res.status(400).json({ error: 'Имя и пароль обязательны' });
     }
-    
-    if (db.users[name]) {
-        return res.status(400).json({ error: 'Пользователь уже существует' });
-    }
-    
-    db.users[name] = password;
-    if (!db.profiles[name]) {
-        db.profiles[name] = { bio: '', avatar: '' };
-    }
-    if (!db.favorites[name]) {
-        db.favorites[name] = [];
-    }
-    if (!db.history[name]) {
-        db.history[name] = [];
-    }
-    if (!db.continueWatching[name]) {
-        db.continueWatching[name] = {};
-    }
-    if (!db.achievements[name]) {
-        db.achievements[name] = [];
-    }
-    
-    db.currentUser = name;
-    
-    if (writeDB(db)) {
-        res.json({ success: true, user: name });
-    } else {
-        res.status(500).json({ error: 'Ошибка сохранения' });
-    }
+
+    db.get('SELECT * FROM users WHERE name = ?', [name], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        if (user) {
+            return res.status(400).json({ error: 'Пользователь уже существует' });
+        }
+
+        db.run('INSERT INTO users (name, password) VALUES (?, ?)', [name, password], function(err) {
+            if (err) {
+                return res.status(500).json({ error: 'Ошибка регистрации' });
+            }
+            
+            const userId = this.lastID;
+            
+            db.run('INSERT INTO profiles (user_id, bio, avatar) VALUES (?, ?, ?)', [userId, '', '']);
+            db.run('INSERT INTO active_titles (user_id, title_id) VALUES (?, ?)', [userId, null]);
+            
+            res.json({ success: true, user: name });
+        });
+    });
 });
 
-// Вход
+// ===== ВХОД =====
 app.post('/api/login', (req, res) => {
     const { name, password } = req.body;
-    const db = readDB();
     
     if (!name || !password) {
         return res.status(400).json({ error: 'Имя и пароль обязательны' });
     }
-    
-    if (!db.users[name]) {
-        return res.status(400).json({ error: 'Пользователь не найден' });
-    }
-    
-    if (db.users[name] !== password) {
-        return res.status(400).json({ error: 'Неверный пароль' });
-    }
-    
-    db.currentUser = name;
-    writeDB(db);
-    res.json({ success: true, user: name });
+
+    db.get('SELECT * FROM users WHERE name = ? AND password = ?', [name, password], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        if (!user) {
+            return res.status(400).json({ error: 'Неверное имя или пароль' });
+        }
+        
+        res.json({ success: true, user: name });
+    });
 });
 
-// Выход
+// ===== ВЫХОД =====
 app.post('/api/logout', (req, res) => {
-    const db = readDB();
-    db.currentUser = null;
-    writeDB(db);
     res.json({ success: true });
 });
 
-// Удаление аккаунта
+// ===== ПОЛУЧИТЬ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ =====
+app.get('/api/user/:name', (req, res) => {
+    const name = req.params.name;
+    
+    db.get('SELECT id FROM users WHERE name = ?', [name], (err, user) => {
+        if (err || !user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        const userId = user.id;
+        const result = { favorites: [], achievements: [], activeTitle: null };
+        
+        // Избранное
+        db.all('SELECT anime FROM favorites WHERE user_id = ?', [userId], (err, favs) => {
+            if (!err) {
+                result.favorites = favs.map(f => f.anime);
+            }
+            
+            // Достижения
+            db.all('SELECT achievement_id FROM achievements WHERE user_id = ?', [userId], (err, ach) => {
+                if (!err) {
+                    result.achievements = ach.map(a => a.achievement_id);
+                }
+                
+                // Активный титул
+                db.get('SELECT title_id FROM active_titles WHERE user_id = ?', [userId], (err, title) => {
+                    if (!err && title) {
+                        result.activeTitle = title.title_id;
+                    }
+                    res.json(result);
+                });
+            });
+        });
+    });
+});
+
+// ===== СОХРАНИТЬ ИЗБРАННОЕ =====
+app.post('/api/favorites', (req, res) => {
+    const { name, favorites } = req.body;
+    
+    db.get('SELECT id FROM users WHERE name = ?', [name], (err, user) => {
+        if (err || !user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        const userId = user.id;
+        
+        db.run('DELETE FROM favorites WHERE user_id = ?', [userId], function(err) {
+            if (err) {
+                return res.status(500).json({ error: 'Ошибка сохранения' });
+            }
+            
+            if (favorites && favorites.length > 0) {
+                const stmt = db.prepare('INSERT INTO favorites (user_id, anime) VALUES (?, ?)');
+                favorites.forEach(function(anime) {
+                    stmt.run([userId, anime]);
+                });
+                stmt.finalize();
+            }
+            
+            res.json({ success: true });
+        });
+    });
+});
+
+// ===== СОХРАНИТЬ ДОСТИЖЕНИЯ =====
+app.post('/api/achievements', (req, res) => {
+    const { name, achievements } = req.body;
+    
+    db.get('SELECT id FROM users WHERE name = ?', [name], (err, user) => {
+        if (err || !user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        const userId = user.id;
+        
+        db.run('DELETE FROM achievements WHERE user_id = ?', [userId], function(err) {
+            if (err) {
+                return res.status(500).json({ error: 'Ошибка сохранения' });
+            }
+            
+            if (achievements && achievements.length > 0) {
+                const stmt = db.prepare('INSERT INTO achievements (user_id, achievement_id) VALUES (?, ?)');
+                achievements.forEach(function(achId) {
+                    stmt.run([userId, achId]);
+                });
+                stmt.finalize();
+            }
+            
+            res.json({ success: true });
+        });
+    });
+});
+
+// ===== СОХРАНИТЬ АКТИВНЫЙ ТИТУЛ =====
+app.post('/api/active-title', (req, res) => {
+    const { name, titleId } = req.body;
+    
+    db.get('SELECT id FROM users WHERE name = ?', [name], (err, user) => {
+        if (err || !user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        const userId = user.id;
+        
+        db.run('INSERT OR REPLACE INTO active_titles (user_id, title_id) VALUES (?, ?)', [userId, titleId], function(err) {
+            if (err) {
+                return res.status(500).json({ error: 'Ошибка сохранения' });
+            }
+            res.json({ success: true });
+        });
+    });
+});
+
+// ===== УДАЛЕНИЕ АККАУНТА =====
 app.post('/api/delete-account', (req, res) => {
     const { name } = req.body;
-    const db = readDB();
     
-    if (!name) {
-        return res.status(400).json({ error: 'Имя обязательно' });
-    }
-    
-    delete db.users[name];
-    delete db.profiles[name];
-    delete db.favorites[name];
-    delete db.history[name];
-    delete db.continueWatching[name];
-    delete db.achievements[name];
-    delete db.activeTitle[name];
-    
-    for (let key in db.comments) {
-        db.comments[key] = db.comments[key].filter(c => c.user !== name);
-        if (db.comments[key].length === 0) {
-            delete db.comments[key];
+    db.run('DELETE FROM users WHERE name = ?', [name], function(err) {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка удаления' });
         }
-    }
-    
-    if (db.currentUser === name) {
-        db.currentUser = null;
-    }
-    
-    writeDB(db);
-    res.json({ success: true });
+        res.json({ success: true });
+    });
 });
 
 // ============================================
@@ -224,5 +295,5 @@ app.post('/api/delete-account', (req, res) => {
 app.listen(PORT, () => {
     console.log('🚀 OnikaAnime сервер запущен!');
     console.log(`📡 http://localhost:${PORT}`);
-    console.log(`📁 База данных: ${DB_PATH}`);
+    console.log('📁 База данных: SQLite (database.db)');
 });
