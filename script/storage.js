@@ -1,5 +1,5 @@
 // ============================================
-// ХРАНИЛИЩЕ ONIKAANIME - SQLite ВЕРСИЯ
+// ХРАНИЛИЩЕ ONIKAANIME - EMAIL ВЕРСИЯ
 // ============================================
 
 var DB = {
@@ -20,7 +20,9 @@ var DB = {
     init: function() {
         console.log('🚀 Загрузка данных...');
         this._loadFromLocal();
-        this._loadUserData();
+        if (this._data.currentUser) {
+            this._loadUserData(this._data.currentUser.id);
+        }
         return this;
     },
     
@@ -34,7 +36,10 @@ var DB = {
                         DB._data[key] = parsed[key];
                     }
                 });
-                DB._data.currentUser = localStorage.getItem('onika_currentUser') || null;
+                var user = localStorage.getItem('onika_currentUser');
+                if (user) {
+                    DB._data.currentUser = JSON.parse(user);
+                }
                 DB._loaded = true;
                 console.log('✅ Данные загружены из localStorage');
             }
@@ -49,32 +54,26 @@ var DB = {
             delete data.currentUser;
             localStorage.setItem('onika_data', JSON.stringify(data));
             if (this._data.currentUser) {
-                localStorage.setItem('onika_currentUser', this._data.currentUser);
+                localStorage.setItem('onika_currentUser', JSON.stringify(this._data.currentUser));
             }
         } catch(e) {
             console.error('❌ Ошибка сохранения:', e);
         }
     },
     
-    _loadUserData: function() {
-        var user = this._data.currentUser;
-        if (!user) return;
-        
+    _loadUserData: function(userId) {
         var self = this;
-        fetch('/api/user/' + encodeURIComponent(user))
+        fetch('/api/user/' + userId)
         .then(function(res) { return res.json(); })
         .then(function(data) {
-            if (data.favorites) {
-                self._data.favorites[user] = data.favorites;
+            if (data) {
+                var name = data.name;
+                self._data.favorites[name] = data.favorites || [];
+                self._data.achievements[name] = data.achievements || [];
+                self._data.activeTitle[name] = data.activeTitle || null;
+                self._saveToLocal();
+                console.log('👤 Данные пользователя загружены');
             }
-            if (data.achievements) {
-                self._data.achievements[user] = data.achievements;
-            }
-            if (data.activeTitle) {
-                self._data.activeTitle[user] = data.activeTitle;
-            }
-            self._saveToLocal();
-            console.log('👤 Данные пользователя загружены');
         })
         .catch(function(e) {
             console.warn('⚠️ Не удалось загрузить данные пользователя:', e);
@@ -86,28 +85,28 @@ var DB = {
         
         var user = this._data.currentUser;
         if (user) {
-            // Сохраняем избранное
-            var favs = this._data.favorites[user] || [];
+            var userId = user.id;
+            var name = user.name;
+            
+            var favs = this._data.favorites[name] || [];
             fetch('/api/favorites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: user, favorites: favs })
+                body: JSON.stringify({ userId: userId, favorites: favs })
             }).catch(function(e) { console.error('Ошибка сохранения избранного:', e); });
             
-            // Сохраняем достижения
-            var ach = this._data.achievements[user] || [];
+            var ach = this._data.achievements[name] || [];
             fetch('/api/achievements', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: user, achievements: ach })
+                body: JSON.stringify({ userId: userId, achievements: ach })
             }).catch(function(e) { console.error('Ошибка сохранения достижений:', e); });
             
-            // Сохраняем активный титул
-            var title = this._data.activeTitle[user] || null;
+            var title = this._data.activeTitle[name] || null;
             fetch('/api/active-title', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: user, titleId: title })
+                body: JSON.stringify({ userId: userId, titleId: title })
             }).catch(function(e) { console.error('Ошибка сохранения титула:', e); });
         }
         
