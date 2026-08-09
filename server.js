@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР С SQLite (EMAIL)
+// ONIKAANIME - СЕРВЕР С SQLite (EMAIL + СТАТУСЫ)
 // ============================================
 
 const express = require('express');
@@ -18,6 +18,7 @@ const dbPath = path.join(__dirname, 'database.db');
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(function() {
+    // Пользователи
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
@@ -26,6 +27,7 @@ db.serialize(function() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // Профили
     db.run(`CREATE TABLE IF NOT EXISTS profiles (
         user_id INTEGER PRIMARY KEY,
         bio TEXT,
@@ -33,6 +35,20 @@ db.serialize(function() {
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     )`);
 
+    // История просмотров со статусами
+    db.run(`CREATE TABLE IF NOT EXISTS user_anime (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        anime_id INTEGER NOT NULL,
+        anime_title TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'watching',
+        episodes_watched INTEGER DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, anime_id)
+    )`);
+
+    // Избранное
     db.run(`CREATE TABLE IF NOT EXISTS favorites (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -42,6 +58,7 @@ db.serialize(function() {
         UNIQUE(user_id, anime)
     )`);
 
+    // Комментарии
     db.run(`CREATE TABLE IF NOT EXISTS comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         anime TEXT NOT NULL,
@@ -51,6 +68,7 @@ db.serialize(function() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // Достижения
     db.run(`CREATE TABLE IF NOT EXISTS achievements (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -60,20 +78,14 @@ db.serialize(function() {
         UNIQUE(user_id, achievement_id)
     )`);
 
+    // Активные титулы
     db.run(`CREATE TABLE IF NOT EXISTS active_titles (
         user_id INTEGER PRIMARY KEY,
         title_id TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        anime TEXT NOT NULL,
-        watched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    )`);
-
+    // Продолжение просмотра
     db.run(`CREATE TABLE IF NOT EXISTS continue_watching (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -87,7 +99,80 @@ db.serialize(function() {
     console.log('✅ Таблицы созданы (или уже существовали)');
 });
 
-// ===== РЕГИСТРАЦИЯ =====
+// ============================================
+// API ДЛЯ СТАТУСОВ АНИМЕ
+// ============================================
+
+// Добавить/обновить статус
+app.post('/api/anime-status', (req, res) => {
+    const { userId, animeId, animeTitle, status, episodes } = req.body;
+    
+    if (!userId || !animeId || !animeTitle || !status) {
+        return res.status(400).json({ error: 'Все поля обязательны' });
+    }
+    
+    const validStatuses = ['watching', 'completed', 'dropped', 'planned'];
+    if (status !== 'remove' && !validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Неверный статус' });
+    }
+    
+    // Если удаление
+    if (status === 'remove') {
+        db.run('DELETE FROM user_anime WHERE user_id = ? AND anime_id = ?',
+            [userId, animeId],
+            function(err) {
+                if (err) return res.status(500).json({ error: 'Ошибка удаления' });
+                res.json({ success: true, removed: true });
+            }
+        );
+        return;
+    }
+    
+    db.run(`INSERT OR REPLACE INTO user_anime (user_id, anime_id, anime_title, status, episodes_watched, updated_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [userId, animeId, animeTitle, status, episodes || 0],
+        function(err) {
+            if (err) {
+                console.error('❌ Ошибка сохранения статуса:', err);
+                return res.status(500).json({ error: 'Ошибка сохранения' });
+            }
+            res.json({ success: true });
+        }
+    );
+});
+
+// Получить все статусы пользователя
+app.get('/api/anime-status/:userId', (req, res) => {
+    const userId = req.params.userId;
+    
+    db.all('SELECT * FROM user_anime WHERE user_id = ? ORDER BY updated_at DESC', [userId], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        res.json(rows);
+    });
+});
+
+// Получить статус конкретного аниме
+app.get('/api/anime-status/:userId/:animeId', (req, res) => {
+    const { userId, animeId } = req.params;
+    
+    db.get('SELECT * FROM user_anime WHERE user_id = ? AND anime_id = ?', 
+        [userId, animeId], 
+        (err, row) => {
+            if (err) {
+                return res.status(500).json({ error: 'Ошибка базы данных' });
+            }
+            res.json(row || { status: null });
+        }
+    );
+});
+
+// ============================================
+// ОСТАЛЬНЫЕ API
+// ============================================
+
+// Регистрация
 app.post('/api/register', (req, res) => {
     const { email, name, password } = req.body;
     
@@ -114,7 +199,7 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// ===== ВХОД =====
+// Вход
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
     
@@ -130,19 +215,27 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// ===== ВЫХОД =====
+// Выход
 app.post('/api/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// ===== ПОЛУЧИТЬ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ =====
+// Получить данные пользователя
 app.get('/api/user/:id', (req, res) => {
     const userId = req.params.id;
     
     db.get('SELECT id, email, name FROM users WHERE id = ?', [userId], (err, user) => {
         if (err || !user) return res.status(404).json({ error: 'Пользователь не найден' });
         
-        const result = { id: user.id, email: user.email, name: user.name, favorites: [], achievements: [], activeTitle: null };
+        const result = { 
+            id: user.id, 
+            email: user.email, 
+            name: user.name, 
+            favorites: [], 
+            achievements: [], 
+            activeTitle: null,
+            animeStatuses: []
+        };
         
         db.all('SELECT anime FROM favorites WHERE user_id = ?', [userId], (err, favs) => {
             if (!err && favs) result.favorites = favs.map(f => f.anime);
@@ -152,14 +245,18 @@ app.get('/api/user/:id', (req, res) => {
                 
                 db.get('SELECT title_id FROM active_titles WHERE user_id = ?', [userId], (err, title) => {
                     if (!err && title) result.activeTitle = title.title_id;
-                    res.json(result);
+                    
+                    db.all('SELECT * FROM user_anime WHERE user_id = ?', [userId], (err, statuses) => {
+                        if (!err && statuses) result.animeStatuses = statuses;
+                        res.json(result);
+                    });
                 });
             });
         });
     });
 });
 
-// ===== ОБНОВИТЬ ИМЯ =====
+// Обновить имя
 app.post('/api/update-name', (req, res) => {
     const { userId, newName } = req.body;
     
@@ -173,7 +270,7 @@ app.post('/api/update-name', (req, res) => {
     });
 });
 
-// ===== СОХРАНИТЬ ИЗБРАННОЕ =====
+// Сохранить избранное
 app.post('/api/favorites', (req, res) => {
     const { userId, favorites } = req.body;
     
@@ -189,7 +286,7 @@ app.post('/api/favorites', (req, res) => {
     });
 });
 
-// ===== СОХРАНИТЬ ДОСТИЖЕНИЯ =====
+// Сохранить достижения
 app.post('/api/achievements', (req, res) => {
     const { userId, achievements } = req.body;
     
@@ -205,7 +302,7 @@ app.post('/api/achievements', (req, res) => {
     });
 });
 
-// ===== СОХРАНИТЬ АКТИВНЫЙ ТИТУЛ =====
+// Сохранить активный титул
 app.post('/api/active-title', (req, res) => {
     const { userId, titleId } = req.body;
     
@@ -215,7 +312,7 @@ app.post('/api/active-title', (req, res) => {
     });
 });
 
-// ===== УДАЛЕНИЕ АККАУНТА =====
+// Удаление аккаунта
 app.post('/api/delete-account', (req, res) => {
     const { userId } = req.body;
     
