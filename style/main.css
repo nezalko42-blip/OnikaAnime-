@@ -2371,3 +2371,218 @@ h3 {
 /* ============================================
    КОНЕЦ СТИЛЕЙ
    ============================================ */
+
+/* ============================================
+   МОЙ СПИСОК - КАРТОЧКИ С СТАТУСАМИ
+   ============================================ */
+
+/* Фильтры статусов */
+.status-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    justify-content: center;
+}
+
+.status-filter {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.status-filter:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    background: rgba(108, 92, 231, 0.06);
+}
+
+.status-filter.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 20px rgba(108, 92, 231, 0.2);
+}
+
+/* Карточка в моем списке */
+.my-list-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+}
+
+.my-list-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-glow);
+    border-color: rgba(108, 92, 231, 0.2);
+}
+
+.my-list-card .card-img {
+    aspect-ratio: 3/4;
+    background: var(--bg-secondary);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.my-list-card .card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.my-list-card:hover .card-img img {
+    transform: scale(1.06);
+}
+
+.my-list-card .card-img::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    pointer-events: none;
+}
+
+/* Бейдж статуса на карточке */
+.my-list-card .status-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    z-index: 2;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.watching {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+.status-badge.completed {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+.status-badge.dropped {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+.status-badge.planned {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+}
+
+/* Прогресс на карточке */
+.my-list-card .episode-progress {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    color: #fff;
+    z-index: 2;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.my-list-card .card-body {
+    padding: 10px 12px 14px;
+    position: relative;
+    z-index: 2;
+}
+
+.my-list-card .card-body .title {
+    font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.my-list-card .card-body .status-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* Сетка для моего списка */
+#myAnimeGrid {
+    display: grid;
+    gap: 14px;
+}
+
+@media (max-width: 600px) {
+    #myAnimeGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+    #myAnimeGrid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+    }
+}
+
+@media (min-width: 901px) {
+    #myAnimeGrid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+    }
+}
+
+/* Кнопка удаления из списка на карточке */
+.my-list-card .remove-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    border: none;
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    z-index: 3;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.my-list-card:hover .remove-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.my-list-card .remove-btn:hover {
+    background: #e74c3c;
+    transform: scale(1.1);
+}
