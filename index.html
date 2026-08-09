@@ -173,7 +173,16 @@
                         <h2>Мой список аниме</h2>
                         <div class="count" id="myListCount">0 аниме</div>
                     </div>
-                    <div id="myAnimeList"></div>
+                    
+                    <div class="status-filters" id="statusFilters">
+                        <button class="status-filter active" data-status="all" onclick="filterMyList('all', this)">📚 Все</button>
+                        <button class="status-filter" data-status="watching" onclick="filterMyList('watching', this)">📺 Смотрю</button>
+                        <button class="status-filter" data-status="completed" onclick="filterMyList('completed', this)">✅ Просмотрено</button>
+                        <button class="status-filter" data-status="dropped" onclick="filterMyList('dropped', this)">❌ Заброшено</button>
+                        <button class="status-filter" data-status="planned" onclick="filterMyList('planned', this)">📋 В планах</button>
+                    </div>
+                    
+                    <div class="anime-grid" id="myAnimeGrid"></div>
                 </div>
 
                 <!-- ===== ДОСТИЖЕНИЯ ===== -->
