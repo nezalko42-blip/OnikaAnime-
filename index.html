@@ -8,7 +8,6 @@
     <title>OnikaAnime</title>
     <link rel="stylesheet" href="style/main.css">
     
-    <!-- Прелоадер -->
     <style>
         #preloader {
             position: fixed;
@@ -22,28 +21,22 @@
             gap: 24px;
             transition: opacity 0.6s ease;
         }
-        #preloader.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
+        #preloader.hidden { opacity: 0; pointer-events: none; }
         #preloader .spinner {
             width: 64px;
             height: 64px;
-            border: 3px solid rgba(108, 92, 231, 0.1);
+            border: 3px solid rgba(108,92,231,0.1);
             border-top-color: #6c5ce7;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            box-shadow: 0 0 40px rgba(108, 92, 231, 0.2);
         }
         #preloader .logo-text {
             color: #fff;
             font-size: 32px;
             font-weight: 800;
-            letter-spacing: 3px;
             background: linear-gradient(135deg, #fff, #a29bfe, #fd79a8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
         #preloader .loading-text {
             color: rgba(255,255,255,0.2);
@@ -52,35 +45,26 @@
             animation: pulseText 1.5s ease-in-out infinite;
             text-transform: uppercase;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        @keyframes pulseText {
-            0%, 100% { opacity: 0.2; }
-            50% { opacity: 1; }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulseText { 0%,100%{opacity:0.2}50%{opacity:1} }
     </style>
 </head>
 <body>
 
-    <!-- ===== ПРЕЛОАДЕР ===== -->
     <div id="preloader">
         <div class="spinner"></div>
         <div class="logo-text">OnikaAnime</div>
         <div class="loading-text">Загрузка...</div>
     </div>
 
-    <!-- ===== ФОН ===== -->
     <div class="video-bg">
         <video autoplay muted loop playsinline>
             <source src="bg.mp4" type="video/mp4">
         </video>
     </div>
 
-    <!-- ===== ЗАГРУЗКА АВАТАРА ===== -->
     <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
 
-    <!-- ===== ШАПКА ===== -->
     <header class="header">
         <div class="header-left">
             <button class="menu-toggle" onclick="toggleMenu()">☰</button>
@@ -88,7 +72,6 @@
         <div class="header-center">
             <div class="search-wrapper">
                 <input type="text" id="searchInput" placeholder="🔭 Поиск аниме...">
-                <div id="searchSuggestions"></div>
             </div>
         </div>
         <div class="header-right">
@@ -96,7 +79,6 @@
         </div>
     </header>
 
-    <!-- ===== САЙДБАР ===== -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
 
     <div class="layout">
@@ -110,18 +92,6 @@
 
                 <!-- ===== КАТАЛОГ ===== -->
                 <div id="page-catalog">
-                    <div class="continue-section" id="continueSection" style="display:none;"></div>
-                    
-                    <div id="recommendationsContainer" style="display:none;">
-                        <div class="recommendations-section">
-                            <div class="recommendations-header">
-                                <h3>🎯 Для вас <span class="badge">персонально</span></h3>
-                                <button class="rec-refresh-btn" onclick="generateRecommendations()">🔄 Обновить</button>
-                            </div>
-                            <div class="recommendations-grid" id="recGrid"></div>
-                        </div>
-                    </div>
-
                     <div class="genres" id="genresNav">
                         <a class="active" data-genre="">🌌 Все</a>
                         <a data-genre="1">⚔️ Экшен</a>
@@ -130,7 +100,6 @@
                         <a data-genre="10">🐉 Фэнтези</a>
                         <a data-genre="22">💕 Романтика</a>
                     </div>
-                    
                     <h2 id="title">✨ Популярное аниме</h2>
                     <div class="grid" id="grid"></div>
                     <div class="pagination" id="pagination"></div>
@@ -269,8 +238,9 @@
                                 <div class="profile-name-row">
                                     <h1 id="profileName">--</h1>
                                     <span class="title-badge" id="profileTitle"></span>
-                                    <button class="profile-edit-btn" onclick="editProfile('name')" title="Редактировать имя">✏️</button>
+                                    <button class="profile-edit-btn" onclick="editProfile('name')" title="Редактировать никнейм">✏️</button>
                                 </div>
+                                <div class="profile-email" id="profileEmail" style="color:var(--text-secondary);font-size:13px;margin-top:2px;">📧 --</div>
                                 <div class="status" id="profileStatus">Пользователь</div>
                                 <div class="profile-join-date" id="profileJoinDate">Присоединился: --</div>
                             </div>
@@ -325,8 +295,12 @@
                     <div class="settings-group">
                         <h3>👤 Аккаунт</h3>
                         <div class="setting-row">
-                            <div class="label">Имя</div>
+                            <div class="label">Никнейм</div>
                             <button onclick="editProfile('name')">Изменить</button>
+                        </div>
+                        <div class="setting-row">
+                            <div class="label">Email</div>
+                            <button onclick="editProfile('email')">Изменить</button>
                         </div>
                         <div class="setting-row">
                             <div class="label">Пароль</div>
@@ -402,13 +376,14 @@
                 <button class="modal-tab" onclick="switchAuthTab('register', this)">✨ Регистрация</button>
             </div>
             <div id="loginForm">
-                <input type="text" id="loginName" placeholder="👤 Имя">
+                <input type="email" id="loginEmail" placeholder="📧 Email">
                 <input type="password" id="loginPass" placeholder="🔑 Пароль">
                 <button class="btn-primary" onclick="login()" style="width:100%;">🚀 Войти</button>
             </div>
             <div id="registerForm" style="display:none;">
-                <input type="text" id="regName" placeholder="👤 Придумайте имя">
-                <input type="password" id="regPass" placeholder="🔑 Придумайте пароль">
+                <input type="email" id="regEmail" placeholder="📧 Email">
+                <input type="text" id="regName" placeholder="👤 Никнейм">
+                <input type="password" id="regPass" placeholder="🔑 Пароль">
                 <button class="btn-primary" onclick="register()" style="width:100%;">🌠 Создать аккаунт</button>
             </div>
         </div>
@@ -449,10 +424,10 @@
             <div class="modal-icon">💀</div>
             <h2>⚠️ Удаление аккаунта</h2>
             <p>Это действие <strong>нельзя отменить</strong>. Все ваши данные будут удалены навсегда.</p>
-            <div class="warning-text">❗ Введите ваше имя для подтверждения</div>
-            <input type="text" id="deleteConfirmName" placeholder="Введите ваше имя">
+            <div class="warning-text">❗ Введите ваш никнейм для подтверждения</div>
+            <input type="text" id="deleteConfirmName" placeholder="Введите ваш никнейм">
             <p style="color:var(--text-muted);font-size:12px;text-align:center;margin-bottom:12px;">
-                Ваше имя: <strong class="highlight-text" id="deleteCurrentUser"></strong>
+                Ваш никнейм: <strong class="highlight-text" id="deleteCurrentUser"></strong>
             </p>
             <div class="btn-row">
                 <button class="btn-cancel" onclick="closeModal('deleteAccountModal')">Отмена</button>
@@ -466,7 +441,6 @@
     <script src="script/main.js"></script>
 
     <script>
-        // Скрываем прелоадер
         window.addEventListener('load', function() {
             var preloader = document.getElementById('preloader');
             if (preloader) {
@@ -479,7 +453,6 @@
             }
         });
 
-        // Кнопка "Вверх"
         window.addEventListener('scroll', function() {
             var btn = document.getElementById('scrollTopBtn');
             if (btn) {
