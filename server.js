@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР SQLite
+// ONIKAANIME - СЕРВЕР SQLite (ПОЛНАЯ ВЕРСИЯ)
 // ============================================
 
 const express = require('express');
@@ -18,6 +18,7 @@ const dbPath = path.join(__dirname, 'database.db');
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(function() {
+    // ===== ПОЛЬЗОВАТЕЛИ =====
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
@@ -26,6 +27,7 @@ db.serialize(function() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // ===== ПРОФИЛИ =====
     db.run(`CREATE TABLE IF NOT EXISTS profiles (
         user_id INTEGER PRIMARY KEY,
         bio TEXT,
@@ -33,6 +35,7 @@ db.serialize(function() {
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     )`);
 
+    // ===== ИЗБРАННОЕ =====
     db.run(`CREATE TABLE IF NOT EXISTS favorites (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -42,6 +45,7 @@ db.serialize(function() {
         UNIQUE(user_id, anime)
     )`);
 
+    // ===== КОММЕНТАРИИ =====
     db.run(`CREATE TABLE IF NOT EXISTS comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         anime TEXT NOT NULL,
@@ -51,6 +55,7 @@ db.serialize(function() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // ===== ДОСТИЖЕНИЯ =====
     db.run(`CREATE TABLE IF NOT EXISTS achievements (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -60,12 +65,14 @@ db.serialize(function() {
         UNIQUE(user_id, achievement_id)
     )`);
 
+    // ===== АКТИВНЫЕ ТИТУЛЫ =====
     db.run(`CREATE TABLE IF NOT EXISTS active_titles (
         user_id INTEGER PRIMARY KEY,
         title_id TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     )`);
 
+    // ===== ПРОДОЛЖЕНИЕ ПРОСМОТРА =====
     db.run(`CREATE TABLE IF NOT EXISTS continue_watching (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -76,10 +83,36 @@ db.serialize(function() {
         UNIQUE(user_id, anime)
     )`);
 
-    console.log('✅ Таблицы созданы');
+    // ===== ДРУЗЬЯ =====
+    db.run(`CREATE TABLE IF NOT EXISTS friends (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        friend_id INTEGER NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY(friend_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, friend_id)
+    )`);
+
+    // ===== СООБЩЕНИЯ (ЧАТ) =====
+    db.run(`CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_user_id INTEGER NOT NULL,
+        to_user_id INTEGER NOT NULL,
+        message TEXT NOT NULL,
+        is_read INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY(to_user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`);
+
+    console.log('✅ Все таблицы созданы (или уже существовали)');
 });
 
-// ===== API =====
+// ============================================
+// API АВТОРИЗАЦИИ
+// ============================================
 
 app.post('/api/register', (req, res) => {
     const { email, name, password } = req.body;
@@ -130,6 +163,10 @@ app.post('/api/login', (req, res) => {
 app.post('/api/logout', (req, res) => {
     res.json({ success: true });
 });
+
+// ============================================
+// API ПОЛЬЗОВАТЕЛЕЙ
+// ============================================
 
 app.get('/api/user/:id', (req, res) => {
     const userId = req.params.id;
@@ -185,6 +222,10 @@ app.post('/api/update-name', (req, res) => {
     });
 });
 
+// ============================================
+// API ИЗБРАННОГО
+// ============================================
+
 app.post('/api/favorites', (req, res) => {
     const { userId, favorites } = req.body;
     
@@ -208,6 +249,10 @@ app.post('/api/favorites', (req, res) => {
         res.json({ success: true });
     });
 });
+
+// ============================================
+// API ДОСТИЖЕНИЙ
+// ============================================
 
 app.post('/api/achievements', (req, res) => {
     const { userId, achievements } = req.body;
@@ -247,6 +292,10 @@ app.post('/api/active-title', (req, res) => {
     });
 });
 
+// ============================================
+// API УДАЛЕНИЯ АККАУНТА
+// ============================================
+
 app.post('/api/delete-account', (req, res) => {
     const { userId } = req.body;
     
@@ -261,9 +310,10 @@ app.post('/api/delete-account', (req, res) => {
     });
 });
 
-// ===== КОММЕНТАРИИ =====
+// ============================================
+// API КОММЕНТАРИЕВ
+// ============================================
 
-// Получить комментарии для аниме
 app.get('/api/comments/:anime', (req, res) => {
     const anime = req.params.anime;
     
@@ -276,7 +326,6 @@ app.get('/api/comments/:anime', (req, res) => {
     });
 });
 
-// Получить все комментарии
 app.get('/api/comments/all', (req, res) => {
     db.all('SELECT * FROM comments ORDER BY created_at DESC', (err, rows) => {
         if (err) {
@@ -287,7 +336,6 @@ app.get('/api/comments/all', (req, res) => {
     });
 });
 
-// Добавить комментарий
 app.post('/api/comments', (req, res) => {
     const { anime, user_name, text } = req.body;
     
@@ -319,7 +367,6 @@ app.post('/api/comments', (req, res) => {
     );
 });
 
-// Удалить комментарий
 app.delete('/api/comments/:id', (req, res) => {
     const id = req.params.id;
     const { user_name } = req.body;
@@ -349,6 +396,311 @@ app.delete('/api/comments/:id', (req, res) => {
         });
     });
 });
+
+// ============================================
+// API ДРУЗЕЙ
+// ============================================
+
+// Поиск пользователей
+app.get('/api/users/search', (req, res) => {
+    const { q } = req.query;
+    
+    if (!q || q.length < 1) {
+        return res.json([]);
+    }
+    
+    db.all(
+        'SELECT id, name, email FROM users WHERE id LIKE ? OR name LIKE ? LIMIT 20',
+        ['%' + q + '%', '%' + q + '%'],
+        (err, rows) => {
+            if (err) {
+                console.error('Ошибка поиска:', err);
+                return res.status(500).json({ error: 'Ошибка базы данных' });
+            }
+            res.json(rows || []);
+        }
+    );
+});
+
+// Получить пользователя по ID
+app.get('/api/users/:id', (req, res) => {
+    const userId = req.params.id;
+    
+    db.get('SELECT id, name, email, created_at FROM users WHERE id = ?', [userId], (err, user) => {
+        if (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        res.json(user);
+    });
+});
+
+// Получить профиль друга
+app.get('/api/users/:id/profile', (req, res) => {
+    const userId = req.params.id;
+    const currentUserId = req.query.currentUserId;
+    
+    db.get('SELECT id, name, email, created_at FROM users WHERE id = ?', [userId], (err, user) => {
+        if (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        db.all('SELECT anime FROM favorites WHERE user_id = ?', [userId], (err, favs) => {
+            user.favorites = favs ? favs.map(f => f.anime) : [];
+            
+            db.all('SELECT * FROM comments WHERE user_name = ? ORDER BY created_at DESC LIMIT 50', [user.name], (err, comments) => {
+                user.comments = comments || [];
+                
+                db.all('SELECT achievement_id FROM achievements WHERE user_id = ?', [userId], (err, ach) => {
+                    user.achievements = ach ? ach.map(a => a.achievement_id) : [];
+                    
+                    db.all('SELECT anime, episode, updated_at FROM continue_watching WHERE user_id = ? ORDER BY updated_at DESC LIMIT 20', [userId], (err, history) => {
+                        user.history = history || [];
+                        
+                        if (currentUserId) {
+                            db.get(
+                                'SELECT status FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
+                                [currentUserId, userId, userId, currentUserId],
+                                (err, friend) => {
+                                    user.friendStatus = friend ? friend.status : 'none';
+                                    res.json(user);
+                                }
+                            );
+                        } else {
+                            user.friendStatus = 'none';
+                            res.json(user);
+                        }
+                    });
+                });
+            });
+        });
+    });
+});
+
+// Отправить заявку в друзья
+app.post('/api/friends/request', (req, res) => {
+    const { userId, friendId } = req.body;
+    
+    if (!userId || !friendId) {
+        return res.status(400).json({ error: 'ID пользователей обязательны' });
+    }
+    if (userId === friendId) {
+        return res.status(400).json({ error: 'Нельзя добавить себя в друзья' });
+    }
+    
+    db.get('SELECT id FROM users WHERE id = ?', [friendId], (err, user) => {
+        if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
+        if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+        
+        db.get(
+            'SELECT * FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
+            [userId, friendId, friendId, userId],
+            (err, existing) => {
+                if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
+                if (existing) {
+                    return res.status(400).json({ error: 'Заявка уже существует' });
+                }
+                
+                db.run(
+                    'INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, ?)',
+                    [userId, friendId, 'pending'],
+                    function(err) {
+                        if (err) {
+                            console.error('Ошибка:', err);
+                            return res.status(500).json({ error: 'Ошибка отправки заявки' });
+                        }
+                        res.json({ success: true, message: 'Заявка отправлена' });
+                    }
+                );
+            }
+        );
+    });
+});
+
+// Ответить на заявку
+app.post('/api/friends/respond', (req, res) => {
+    const { userId, friendId, action } = req.body;
+    
+    if (!userId || !friendId || !action) {
+        return res.status(400).json({ error: 'Все поля обязательны' });
+    }
+    
+    if (action === 'accept') {
+        db.run(
+            'UPDATE friends SET status = ? WHERE user_id = ? AND friend_id = ? AND status = ?',
+            ['accepted', friendId, userId, 'pending'],
+            function(err) {
+                if (err) {
+                    console.error('Ошибка:', err);
+                    return res.status(500).json({ error: 'Ошибка принятия заявки' });
+                }
+                if (this.changes === 0) {
+                    return res.status(404).json({ error: 'Заявка не найдена' });
+                }
+                res.json({ success: true, message: 'Друг добавлен' });
+            }
+        );
+    } else if (action === 'reject' || action === 'block') {
+        const status = action === 'block' ? 'blocked' : 'rejected';
+        db.run(
+            'UPDATE friends SET status = ? WHERE user_id = ? AND friend_id = ? AND status = ?',
+            [status, friendId, userId, 'pending'],
+            function(err) {
+                if (err) {
+                    console.error('Ошибка:', err);
+                    return res.status(500).json({ error: 'Ошибка обработки заявки' });
+                }
+                res.json({ success: true, message: action === 'block' ? 'Пользователь заблокирован' : 'Заявка отклонена' });
+            }
+        );
+    } else {
+        res.status(400).json({ error: 'Неизвестное действие' });
+    }
+});
+
+// Получить список друзей
+app.get('/api/friends/:userId', (req, res) => {
+    const userId = req.params.userId;
+    
+    db.all(
+        `SELECT u.id, u.name, u.email, f.status, f.created_at as friend_since 
+         FROM friends f 
+         JOIN users u ON (u.id = f.friend_id OR u.id = f.user_id) 
+         WHERE (f.user_id = ? OR f.friend_id = ?) 
+         AND f.status = 'accepted' 
+         AND u.id != ?`,
+        [userId, userId, userId],
+        (err, rows) => {
+            if (err) {
+                console.error('Ошибка:', err);
+                return res.status(500).json({ error: 'Ошибка базы данных' });
+            }
+            res.json(rows || []);
+        }
+    );
+});
+
+// Получить заявки в друзья
+app.get('/api/friends/requests/:userId', (req, res) => {
+    const userId = req.params.userId;
+    
+    db.all(
+        `SELECT u.id, u.name, u.email, f.created_at 
+         FROM friends f 
+         JOIN users u ON u.id = f.user_id 
+         WHERE f.friend_id = ? AND f.status = 'pending'`,
+        [userId],
+        (err, rows) => {
+            if (err) {
+                console.error('Ошибка:', err);
+                return res.status(500).json({ error: 'Ошибка базы данных' });
+            }
+            res.json(rows || []);
+        }
+    );
+});
+
+// Удалить друга
+app.delete('/api/friends/:userId/:friendId', (req, res) => {
+    const { userId, friendId } = req.params;
+    
+    db.run(
+        'DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
+        [userId, friendId, friendId, userId],
+        function(err) {
+            if (err) {
+                console.error('Ошибка:', err);
+                return res.status(500).json({ error: 'Ошибка удаления' });
+            }
+            res.json({ success: true });
+        }
+    );
+});
+
+// ============================================
+// API ЧАТА
+// ============================================
+
+// Отправить сообщение
+app.post('/api/messages', (req, res) => {
+    const { fromUserId, toUserId, message } = req.body;
+    
+    if (!fromUserId || !toUserId || !message) {
+        return res.status(400).json({ error: 'Все поля обязательны' });
+    }
+    if (message.length > 2000) {
+        return res.status(400).json({ error: 'Сообщение слишком длинное' });
+    }
+    
+    db.run(
+        'INSERT INTO messages (from_user_id, to_user_id, message) VALUES (?, ?, ?)',
+        [fromUserId, toUserId, message],
+        function(err) {
+            if (err) {
+                console.error('Ошибка:', err);
+                return res.status(500).json({ error: 'Ошибка отправки' });
+            }
+            res.json({ success: true, id: this.lastID });
+        }
+    );
+});
+
+// Получить сообщения
+app.get('/api/messages/:userId/:friendId', (req, res) => {
+    const { userId, friendId } = req.params;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+    
+    db.all(
+        `SELECT * FROM messages 
+         WHERE (from_user_id = ? AND to_user_id = ?) 
+         OR (from_user_id = ? AND to_user_id = ?) 
+         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        [userId, friendId, friendId, userId, limit, offset],
+        (err, rows) => {
+            if (err) {
+                console.error('Ошибка:', err);
+                return res.status(500).json({ error: 'Ошибка базы данных' });
+            }
+            
+            db.run(
+                'UPDATE messages SET is_read = 1 WHERE from_user_id = ? AND to_user_id = ?',
+                [friendId, userId],
+                function(err) {}
+            );
+            
+            res.json(rows || []);
+        }
+    );
+});
+
+// Получить непрочитанные сообщения
+app.get('/api/messages/unread/:userId', (req, res) => {
+    const userId = req.params.userId;
+    
+    db.all(
+        'SELECT from_user_id, COUNT(*) as count FROM messages WHERE to_user_id = ? AND is_read = 0 GROUP BY from_user_id',
+        [userId],
+        (err, rows) => {
+            if (err) {
+                console.error('Ошибка:', err);
+                return res.status(500).json({ error: 'Ошибка базы данных' });
+            }
+            res.json(rows || []);
+        }
+    );
+});
+
+// ============================================
+// ЗАПУСК СЕРВЕРА
+// ============================================
 
 app.listen(PORT, () => {
     console.log('🚀 OnikaAnime сервер запущен!');
