@@ -1532,6 +1532,7 @@ function confirmDeleteAccount() {
         xhr.onload = function() {
             DB.set('currentUser', null);
             localStorage.removeItem('onika_currentUser');
+            localStorage.removeItem('onika_data');
             updateUI();
             navigate('catalog');
             showToast('✅ Аккаунт удален', 'success');
@@ -1799,14 +1800,6 @@ function refreshStats() {
     updateSocialStats();
     showToast('📊 Статистика обновлена!', 'success');
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(updateSocialStats, 1000);
-    setInterval(updateSocialStats, 30000);
-});
-
-console.log('📊 Система живой статистики запущена!');
-console.log('💡 Используйте refreshStats() для ручного обновления');
 
 // ============================================
 // ЗАПУСК
