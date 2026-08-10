@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР SQLite (ПОЛНАЯ ВЕРСИЯ)
+// ONIKAANIME - СЕРВЕР SQLite (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================
 
 const express = require('express');
@@ -22,7 +22,7 @@ db.serialize(function() {
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
+        name TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
@@ -111,9 +111,10 @@ db.serialize(function() {
 });
 
 // ============================================
-// API АВТОРИЗАЦИИ
+// API АВТОРИЗАЦИИ (ИСПРАВЛЕННЫЕ)
 // ============================================
 
+// ===== РЕГИСТРАЦИЯ =====
 app.post('/api/register', (req, res) => {
     const { email, name, password } = req.body;
     
@@ -121,25 +122,68 @@ app.post('/api/register', (req, res) => {
         return res.status(400).json({ error: 'Email, имя и пароль обязательны' });
     }
 
-    db.get('SELECT * FROM users WHERE email = ?', [email], (err, user) => {
-        if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-        if (user) return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+    // Проверка email
+    db.get('SELECT id FROM users WHERE email = ?', [email], (err, existingEmail) => {
+        if (err) {
+            console.error('Ошибка базы данных:', err);
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        if (existingEmail) {
+            return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+        }
 
-        db.run('INSERT INTO users (email, name, password) VALUES (?, ?, ?)', 
-            [email, name, password], 
-            function(err) {
-                if (err) return res.status(500).json({ error: 'Ошибка регистрации' });
-                
-                const userId = this.lastID;
-                db.run('INSERT INTO profiles (user_id, bio, avatar) VALUES (?, ?, ?)', [userId, '', '']);
-                db.run('INSERT INTO active_titles (user_id, title_id) VALUES (?, ?)', [userId, null]);
-                
-                res.json({ success: true, user: { id: userId, email, name } });
+        // Проверка имени
+        db.get('SELECT id FROM users WHERE name = ?', [name], (err, existingName) => {
+            if (err) {
+                console.error('Ошибка базы данных:', err);
+                return res.status(500).json({ error: 'Ошибка базы данных' });
             }
-        );
+            if (existingName) {
+                return res.status(400).json({ error: 'Пользователь с таким именем уже существует' });
+            }
+
+            // ВСТАВКА БЕЗ УКАЗАНИЯ ID — автоинкремент работает!
+            db.run(
+                'INSERT INTO users (email, name, password) VALUES (?, ?, ?)',
+                [email, name, password],
+                function(err) {
+                    if (err) {
+                        console.error('Ошибка регистрации:', err);
+                        return res.status(500).json({ error: 'Ошибка регистрации' });
+                    }
+                    
+                    const userId = this.lastID;
+                    console.log('✅ Новый пользователь создан, ID:', userId);
+                    
+                    // Создаем профиль
+                    db.run(
+                        'INSERT INTO profiles (user_id, bio, avatar) VALUES (?, ?, ?)',
+                        [userId, '', ''],
+                        function(err) {
+                            if (err) console.error('Ошибка создания профиля:', err);
+                        }
+                    );
+                    
+                    // Создаем активный титул
+                    db.run(
+                        'INSERT INTO active_titles (user_id, title_id) VALUES (?, ?)',
+                        [userId, null],
+                        function(err) {
+                            if (err) console.error('Ошибка создания титула:', err);
+                        }
+                    );
+                    
+                    res.json({ 
+                        success: true, 
+                        user: { id: userId, email, name } 
+                    });
+                }
+            );
+        });
     });
 });
 
+// ===== ВХОД =====
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
     
@@ -160,6 +204,7 @@ app.post('/api/login', (req, res) => {
     });
 });
 
+// ===== ВЫХОД =====
 app.post('/api/logout', (req, res) => {
     res.json({ success: true });
 });
@@ -211,6 +256,7 @@ app.post('/api/update-name', (req, res) => {
         return res.status(400).json({ error: 'ID пользователя и новое имя обязательны' });
     }
     
+    // Проверяем, не занято ли имя
     db.get('SELECT id FROM users WHERE name = ? AND id != ?', [newName, userId], (err, existing) => {
         if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
         if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
