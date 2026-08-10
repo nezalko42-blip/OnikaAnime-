@@ -71,7 +71,7 @@
         </div>
         <div class="header-center">
             <div class="search-wrapper">
-                <input type="text" id="searchInput" placeholder="🔭 Поиск аниме...">
+                <input type="text" id="searchInput" placeholder="🔭 Поиск аниме..." autocomplete="off" spellcheck="false">
             </div>
         </div>
         <div class="header-right">
@@ -103,6 +103,97 @@
                     <h2 id="title">✨ Популярное аниме</h2>
                     <div class="grid" id="grid"></div>
                     <div class="pagination" id="pagination"></div>
+
+                    <!-- ===== ПОДПИШИСЬ НА НАС (ТОЛЬКО НА ГЛАВНОЙ) ===== -->
+                    <section class="social-section">
+                        <div class="social-container">
+                            <div class="social-header">
+                                <h2>🌍 Подпишись на нас!</h2>
+                                <p>Будь в курсе всех новинок, участвуй в голосованиях и получай эксклюзивный контент первым</p>
+                            </div>
+
+                            <div class="social-grid-3">
+                                <!-- Telegram -->
+                                <div class="social-card telegram-card">
+                                    <div class="social-card-icon">📱</div>
+                                    <h3>Telegram</h3>
+                                    <p>Новости, розыгрыши, общение</p>
+                                    <div class="social-features">
+                                        <span>🔒 Розыгрыши Premium</span>
+                                        <span>🔔 Эксклюзивы</span>
+                                        <span>📢 Новости первыми</span>
+                                    </div>
+                                    <a href="https://t.me/onikaanime" target="_blank" class="social-btn telegram-btn">
+                                        ✈️ Подписаться
+                                    </a>
+                                    <div class="social-stats">
+                                        <span id="tgStats">👥 0 подписчиков</span>
+                                    </div>
+                                </div>
+
+                                <!-- VK -->
+                                <div class="social-card vk-card">
+                                    <div class="social-card-icon">💙</div>
+                                    <h3>VKontakte</h3>
+                                    <p>Сообщество, обсуждения, опросы</p>
+                                    <div class="social-features">
+                                        <span>🎬 Анонсы серий</span>
+                                        <span>💬 Обсуждения</span>
+                                        <span>📸 Арты и мемы</span>
+                                    </div>
+                                    <a href="https://vk.com/onikaanime" target="_blank" class="social-btn vk-btn">
+                                        💙 Подписаться
+                                    </a>
+                                    <div class="social-stats">
+                                        <span id="vkStats">👥 0 подписчиков</span>
+                                    </div>
+                                </div>
+
+                                <!-- TikTok -->
+                                <div class="social-card tiktok-card">
+                                    <div class="social-card-icon">🎵</div>
+                                    <h3>TikTok</h3>
+                                    <p>Клипы, тренды, моменты</p>
+                                    <div class="social-features">
+                                        <span>🎬 Короткие клипы</span>
+                                        <span>🔥 Трендовые моменты</span>
+                                        <span>⭐ Лучшие сцены</span>
+                                    </div>
+                                    <a href="https://tiktok.com/@onikaanime" target="_blank" class="social-btn tiktok-btn">
+                                        🎵 Подписаться
+                                    </a>
+                                    <div class="social-stats">
+                                        <span id="ttStats">👥 0 подписчиков</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Бонусный блок -->
+                            <div class="social-bonus">
+                                <div class="bonus-item">
+                                    <span>🎁</span>
+                                    <div>
+                                        <strong>Розыгрыши</strong>
+                                        <p>Еженедельные розыгрыши Premium-доступа</p>
+                                    </div>
+                                </div>
+                                <div class="bonus-item">
+                                    <span>🌟</span>
+                                    <div>
+                                        <strong>Эксклюзивы</strong>
+                                        <p>Только для подписчиков соцсетей</p>
+                                    </div>
+                                </div>
+                                <div class="bonus-item">
+                                    <span>🗳️</span>
+                                    <div>
+                                        <strong>Голосования</strong>
+                                        <p>Выбирай, что смотреть следующим</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
 
                 <!-- ===== ДЕТАЛЬНАЯ ===== -->
@@ -342,101 +433,6 @@
                     <button class="logout-btn" onclick="logout()">🚪 Выйти из аккаунта</button>
                 </div>
 
-                <!-- ============================================================ -->
-                <!-- ===== БЛОКИ ПОСЛЕ КАТАЛОГА (видны на главной странице) ===== -->
-                <!-- ============================================================ -->
-
-                <!-- ===== ПОДПИШИСЬ НА НАС ===== -->
-                <section class="social-section">
-                    <div class="social-container">
-                        <div class="social-header">
-                            <h2>🌍 Подпишись на нас!</h2>
-                            <p>Будь в курсе всех новинок, участвуй в голосованиях и получай эксклюзивный контент первым</p>
-                        </div>
-
-                        <div class="social-grid">
-                            <!-- Telegram -->
-                            <div class="social-card telegram-card">
-                                <div class="social-card-icon">📱</div>
-                                <h3>Telegram</h3>
-                                <p>Новости, розыгрыши, общение</p>
-                                <div class="social-features">
-                                    <span>🔒 Розыгрыши Premium</span>
-                                    <span>🔔 Эксклюзивы</span>
-                                    <span>📢 Новости первыми</span>
-                                </div>
-                                <a href="https://t.me/onikaanime" target="_blank" class="social-btn telegram-btn">
-                                    ✈️ Подписаться
-                                </a>
-                                <div class="social-stats">
-                                    <span id="tgStats">👥 0 подписчиков</span>
-                                </div>
-                            </div>
-
-                            <!-- VK -->
-                            <div class="social-card vk-card">
-                                <div class="social-card-icon">💙</div>
-                                <h3>VKontakte</h3>
-                                <p>Сообщество, обсуждения, опросы</p>
-                                <div class="social-features">
-                                    <span>🎬 Анонсы серий</span>
-                                    <span>💬 Обсуждения</span>
-                                    <span>📸 Арты и мемы</span>
-                                </div>
-                                <a href="https://vk.com/onikaanime" target="_blank" class="social-btn vk-btn">
-                                    💙 Подписаться
-                                </a>
-                                <div class="social-stats">
-                                    <span id="vkStats">👥 0 подписчиков</span>
-                                </div>
-                            </div>
-
-                            <!-- TikTok -->
-                            <div class="social-card tiktok-card">
-                                <div class="social-card-icon">🎵</div>
-                                <h3>TikTok</h3>
-                                <p>Клипы, тренды, моменты</p>
-                                <div class="social-features">
-                                    <span>🎬 Короткие клипы</span>
-                                    <span>🔥 Трендовые моменты</span>
-                                    <span>⭐ Лучшие сцены</span>
-                                </div>
-                                <a href="https://tiktok.com/@onikaanime" target="_blank" class="social-btn tiktok-btn">
-                                    🎵 Подписаться
-                                </a>
-                                <div class="social-stats">
-                                    <span id="ttStats">👥 0 подписчиков</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Бонусный блок -->
-                        <div class="social-bonus">
-                            <div class="bonus-item">
-                                <span>🎁</span>
-                                <div>
-                                    <strong>Розыгрыши</strong>
-                                    <p>Еженедельные розыгрыши Premium-доступа</p>
-                                </div>
-                            </div>
-                            <div class="bonus-item">
-                                <span>🌟</span>
-                                <div>
-                                    <strong>Эксклюзивы</strong>
-                                    <p>Только для подписчиков соцсетей</p>
-                                </div>
-                            </div>
-                            <div class="bonus-item">
-                                <span>🗳️</span>
-                                <div>
-                                    <strong>Голосования</strong>
-                                    <p>Выбирай, что смотреть следующим</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
             </div>
         </div>
     </div>
@@ -574,6 +570,10 @@
         <div class="footer-bottom">
             <p>© 2026 OnikaAnime. Все права защищены. 🌌</p>
             <div class="footer-links">
+                <a href="sitemap.html">🗺️ Карта сайта</a>
+                <span>•</span>
+                <a href="newsmap.html">📰 Карта новостей</a>
+                <span>•</span>
                 <a href="#" onclick="if(DB.get('currentUser')){deleteAccount()}else{showToast('Войдите в аккаунт', 'warning')}">🗑️ Удалить аккаунт</a>
             </div>
         </div>
