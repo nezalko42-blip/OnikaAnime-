@@ -86,6 +86,8 @@ var ChatSystem = {
         this.stopAutoUpdate();
         var container = document.getElementById('chatContainer');
         if (container) container.innerHTML = '';
+        var panel = document.getElementById('chatPanel');
+        if (panel) panel.classList.remove('active');
     },
     
     startAutoUpdate: function() {
