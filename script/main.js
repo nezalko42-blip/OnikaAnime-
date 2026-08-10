@@ -1056,6 +1056,12 @@ function renderProfile() {
     document.getElementById('profileEmail').textContent = '📧 ' + user.email;
     document.getElementById('profileBio').textContent = profile.bio || 'Нажмите чтобы добавить описание';
     
+    // ID в профиле
+    var profileIdEl = document.getElementById('profileId');
+    if (profileIdEl) {
+        profileIdEl.textContent = '🆔 ID: ' + user.id;
+    }
+    
     var img = document.getElementById('avatarImg');
     var letter = document.getElementById('avatarLetter');
     
