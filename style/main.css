@@ -1718,48 +1718,7 @@ h3 {
 }
 
 .profile-top-users {
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: var(--radius);
-    padding: 18px 20px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.top-user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.02);
-    margin-bottom: 4px;
-}
-
-.top-user .rank {
-    font-weight: 700;
-    font-size: 14px;
-    min-width: 30px;
-    color: var(--text-muted);
-}
-
-.top-user .rank.gold {
-    color: #ffd700;
-}
-.top-user .rank.silver {
-    color: #c0c0c0;
-}
-.top-user .rank.bronze {
-    color: #cd7f32;
-}
-
-.top-user .t-name {
-    flex: 1;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.top-user .t-score {
-    color: var(--text-muted);
-    font-size: 12px;
+    margin-top: 16px;
 }
 
 .achievements-container {
@@ -2369,220 +2328,312 @@ h3 {
 }
 
 /* ============================================
-   КОНЕЦ СТИЛЕЙ
+   ТОП ПОЛЬЗОВАТЕЛЕЙ - СТИЛИ
    ============================================ */
 
-/* ============================================
-   МОЙ СПИСОК - КАРТОЧКИ С СТАТУСАМИ
-   ============================================ */
-
-/* Фильтры статусов */
-.status-filters {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-    justify-content: center;
-}
-
-.status-filter {
-    padding: 6px 16px;
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+.top-users-wrapper {
     background: rgba(255, 255, 255, 0.02);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.status-filter:hover {
-    border-color: var(--accent);
-    color: var(--text-primary);
-    background: rgba(108, 92, 231, 0.06);
-}
-
-.status-filter.active {
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    color: #fff;
-    border-color: transparent;
-    box-shadow: 0 4px 20px rgba(108, 92, 231, 0.2);
-}
-
-/* Карточка в моем списке */
-.my-list-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(20px);
     border-radius: var(--radius);
-    overflow: hidden;
-    cursor: pointer;
+    padding: 20px;
     border: 1px solid rgba(255, 255, 255, 0.04);
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    position: relative;
-}
-
-.my-list-card:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-glow);
-    border-color: rgba(108, 92, 231, 0.2);
-}
-
-.my-list-card .card-img {
-    aspect-ratio: 3/4;
-    background: var(--bg-secondary);
-    position: relative;
     overflow: hidden;
+}
+
+.top-users-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.top-users-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffd700, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+}
+
+.top-users-header .top-update-time {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.top-users-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+}
+
+.top-users-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.top-users-table td {
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.top-users-table tr:hover td {
+    background: rgba(108, 92, 231, 0.05);
+    border-color: rgba(108, 92, 231, 0.1);
+    transform: scale(1.01);
+}
+
+.rank-cell {
+    font-weight: 700;
+    font-size: 16px;
+    text-align: center;
+    width: 50px;
+}
+
+.rank-1 .rank-cell {
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+.rank-2 .rank-cell {
+    color: #c0c0c0;
+    text-shadow: 0 0 15px rgba(192, 192, 192, 0.2);
+}
+.rank-3 .rank-cell {
+    color: #cd7f32;
+    text-shadow: 0 0 15px rgba(205, 127, 50, 0.2);
+}
+
+.user-avatar-mini {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.my-list-card .card-img img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s ease;
-}
-
-.my-list-card:hover .card-img img {
-    transform: scale(1.06);
-}
-
-.my-list-card .card-img::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-    pointer-events: none;
-}
-
-/* Бейдж статуса на карточке */
-.my-list-card .status-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 3px 12px;
-    border-radius: 20px;
-    font-size: 9px;
-    font-weight: 700;
-    color: #fff;
-    z-index: 2;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.status-badge.watching {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-.status-badge.completed {
-    background: linear-gradient(135deg, #3498db, #2980b9);
-}
-.status-badge.dropped {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-.status-badge.planned {
-    background: linear-gradient(135deg, #f39c12, #e67e22);
-}
-
-/* Прогресс на карточке */
-.my-list-card .episode-progress {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 10px;
-    color: #fff;
-    z-index: 2;
-    text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.my-list-card .card-body {
-    padding: 10px 12px 14px;
-    position: relative;
-    z-index: 2;
-}
-
-.my-list-card .card-body .title {
     font-size: 14px;
     font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.avatar-gradient-1 { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+.avatar-gradient-2 { background: linear-gradient(135deg, #fd79a8, #e17055); }
+.avatar-gradient-3 { background: linear-gradient(135deg, #00b894, #00cec9); }
+.avatar-gradient-4 { background: linear-gradient(135deg, #fdcb6e, #f39c12); }
+.avatar-gradient-5 { background: linear-gradient(135deg, #0984e3, #74b9ff); }
+.avatar-gradient-6 { background: linear-gradient(135deg, #6c5ce7, #fd79a8); }
+.avatar-gradient-7 { background: linear-gradient(135deg, #00b894, #0984e3); }
+.avatar-gradient-8 { background: linear-gradient(135deg, #e17055, #d63031); }
+.avatar-gradient-9 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+.avatar-gradient-10 { background: linear-gradient(135deg, #fd79a8, #6c5ce7); }
+
+.user-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-name-cell {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.user-title-cell {
+    font-size: 11px;
+    color: var(--accent-glow);
+    background: rgba(108, 92, 231, 0.1);
+    padding: 2px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(108, 92, 231, 0.1);
+}
+
+.stat-cell {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.stat-cell .stat-number {
+    font-weight: 700;
     color: var(--text-primary);
 }
 
-.my-list-card .card-body .status-label {
-    font-size: 11px;
-    color: var(--text-secondary);
+.stat-cell .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    display: block;
     margin-top: 2px;
 }
 
-/* Сетка для моего списка */
-#myAnimeGrid {
-    display: grid;
-    gap: 14px;
+.time-cell {
+    text-align: center;
+    font-weight: 600;
 }
 
-@media (max-width: 600px) {
-    #myAnimeGrid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-    }
+.time-cell .time-value {
+    font-size: 14px;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
 }
 
-@media (min-width: 601px) and (max-width: 900px) {
-    #myAnimeGrid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 14px;
-    }
+.time-cell .time-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 2px;
 }
 
-@media (min-width: 901px) {
-    #myAnimeGrid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 18px;
-    }
+.xp-bar-wrapper {
+    width: 100%;
+    max-width: 120px;
+    margin: 0 auto;
 }
 
-/* Кнопка удаления из списка на карточке */
-.my-list-card .remove-btn {
+.xp-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.xp-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.8s ease;
+    background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+    position: relative;
+}
+
+.xp-bar-fill::after {
+    content: '';
     position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    border: none;
-    color: #fff;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 12px;
-    z-index: 3;
-    transition: all 0.3s ease;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.xp-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 4px;
+}
+
+.medal {
+    display: inline-block;
+    font-size: 20px;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+    animation: medalPulse 2s ease-in-out infinite;
+}
+
+@keyframes medalPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.status-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.status-legend-item {
     display: flex;
     align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transform: scale(0.8);
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
-.my-list-card:hover .remove-btn {
-    opacity: 1;
-    transform: scale(1);
+.status-legend-item .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
 }
 
-.my-list-card .remove-btn:hover {
-    background: #e74c3c;
-    transform: scale(1.1);
+.dot-online { background: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.3); }
+.dot-idle { background: #f39c12; box-shadow: 0 0 10px rgba(243, 156, 18, 0.3); }
+.dot-offline { background: #666; }
+
+@media (max-width: 768px) {
+    .top-users-table {
+        font-size: 12px;
+    }
+    .top-users-table th,
+    .top-users-table td {
+        padding: 6px 8px;
+    }
+    .user-avatar-mini {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+    .user-name-cell {
+        font-size: 12px;
+    }
+    .stat-cell .stat-number {
+        font-size: 12px;
+    }
+    .time-cell .time-value {
+        font-size: 12px;
+    }
+    .medal {
+        font-size: 16px;
+    }
+    .hide-mobile {
+        display: none;
+    }
 }
+
+@media (max-width: 480px) {
+    .top-users-table th,
+    .top-users-table td {
+        padding: 4px 6px;
+        font-size: 10px;
+    }
+    .user-avatar-mini {
+        width: 24px;
+        height: 24px;
+        font-size: 9px;
+    }
+    .top-users-header h3 {
+        font-size: 15px;
+    }
+    .xp-bar-wrapper {
+        max-width: 80px;
+    }
+}
+
+/* ============================================
+   КОНЕЦ СТИЛЕЙ
+   ============================================ */
