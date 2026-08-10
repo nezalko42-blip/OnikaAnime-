@@ -12,6 +12,9 @@ var DB = {
         history: {},
         achievements: {},
         activeTitle: {},
+        videos: {},
+        onlineTime: {},
+        lastSeen: {},
         currentUser: null,
         settings: { "3d": true, "vibe": true }
     },
@@ -64,10 +67,17 @@ var DB = {
     _loadUserData: function(userId) {
         var self = this;
         fetch('/api/user/' + userId)
-        .then(function(res) { return res.json(); })
+        .then(function(res) {
+            if (!res.ok) throw new Error('Сервер вернул ошибку');
+            return res.json();
+        })
         .then(function(data) {
             if (data) {
                 var name = data.name;
+                if (!self._data.favorites) self._data.favorites = {};
+                if (!self._data.achievements) self._data.achievements = {};
+                if (!self._data.activeTitle) self._data.activeTitle = {};
+                
                 self._data.favorites[name] = data.favorites || [];
                 self._data.achievements[name] = data.achievements || [];
                 self._data.activeTitle[name] = data.activeTitle || null;
@@ -88,21 +98,21 @@ var DB = {
             var userId = user.id;
             var name = user.name;
             
-            var favs = this._data.favorites[name] || [];
+            var favs = (this._data.favorites && this._data.favorites[name]) || [];
             fetch('/api/favorites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: userId, favorites: favs })
             }).catch(function(e) { console.error('Ошибка сохранения избранного:', e); });
             
-            var ach = this._data.achievements[name] || [];
+            var ach = (this._data.achievements && this._data.achievements[name]) || [];
             fetch('/api/achievements', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: userId, achievements: ach })
             }).catch(function(e) { console.error('Ошибка сохранения достижений:', e); });
             
-            var title = this._data.activeTitle[name] || null;
+            var title = (this._data.activeTitle && this._data.activeTitle[name]) || null;
             fetch('/api/active-title', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
