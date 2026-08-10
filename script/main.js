@@ -143,7 +143,6 @@ function startOnlineTracking() {
         DB.setUserData(userNow.name, 'lastSeen', Date.now());
         DB.save();
         
-        // Обновляем топ каждые 2 минуты
         if (elapsed % 120 === 0) {
             renderTopUsers();
         }
@@ -157,7 +156,6 @@ function stopOnlineTracking() {
     }
 }
 
-// Сохраняем время при уходе
 window.addEventListener('beforeunload', function() {
     var userExit = DB.get('currentUser');
     if (userExit) {
@@ -1086,14 +1084,30 @@ function renderProfile() {
     
     var img = document.getElementById('avatarImg');
     var letter = document.getElementById('avatarLetter');
+    
+    // Восстанавливаем аватарку
     if (profile.avatar && profile.avatar.length > 100) {
         img.src = profile.avatar;
         img.style.display = 'block';
-        letter.style.display = 'none';
+        if (letter) letter.style.display = 'none';
     } else {
-        img.style.display = 'none';
-        letter.style.display = 'flex';
-        letter.textContent = user.name[0].toUpperCase();
+        // Пробуем восстановить из бэкапа
+        var backupAvatar = localStorage.getItem('avatar_' + user.name);
+        if (backupAvatar) {
+            img.src = backupAvatar;
+            img.style.display = 'block';
+            if (letter) letter.style.display = 'none';
+            // Сохраняем в профиль
+            if (!profiles[user.name]) profiles[user.name] = {};
+            profiles[user.name].avatar = backupAvatar;
+            DB.set('profiles', profiles);
+        } else {
+            img.style.display = 'none';
+            if (letter) {
+                letter.style.display = 'flex';
+                letter.textContent = user.name[0].toUpperCase();
+            }
+        }
     }
     
     var favs = DB.getUserData(user.name, 'favorites', []);
@@ -1352,21 +1366,6 @@ function renderTopUsers() {
 // АВАТАР
 // ============================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    var input = document.getElementById('avatarFileInput');
-    if (input) {
-        input.addEventListener('change', function(e) {
-            uploadAvatar(this);
-        });
-    }
-    
-    // Запускаем отслеживание времени если пользователь залогинен
-    var user = DB.get('currentUser');
-    if (user) {
-        startOnlineTracking();
-    }
-});
-
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
         showToast('Выберите файл!', 'error');
@@ -1399,14 +1398,19 @@ function uploadAvatar(input) {
         var profiles = DB.get('profiles', {});
         if (!profiles[user.name]) profiles[user.name] = {};
         
-        profiles[user.name].avatar = e.target.result;
+        var avatarData = e.target.result;
+        profiles[user.name].avatar = avatarData;
         DB.set('profiles', profiles);
+        
+        // Сохраняем в бэкап
+        localStorage.setItem('avatar_' + user.name, avatarData);
+        
         DB.save();
         
         var img = document.getElementById('avatarImg');
         var letter = document.getElementById('avatarLetter');
         if (img) {
-            img.src = e.target.result;
+            img.src = avatarData;
             img.style.display = 'block';
         }
         if (letter) letter.style.display = 'none';
@@ -1684,6 +1688,18 @@ function saveEdit() {
                         delete DB._data.lastSeen[oldName];
                     }
                     
+                    // Обновляем бэкапы
+                    var backupFavs = localStorage.getItem('favorites_' + oldName);
+                    if (backupFavs) {
+                        localStorage.setItem('favorites_' + val, backupFavs);
+                        localStorage.removeItem('favorites_' + oldName);
+                    }
+                    var backupAvatar = localStorage.getItem('avatar_' + oldName);
+                    if (backupAvatar) {
+                        localStorage.setItem('avatar_' + val, backupAvatar);
+                        localStorage.removeItem('avatar_' + oldName);
+                    }
+                    
                     DB.save();
                     closeModal('editModal');
                     renderProfile();
@@ -1711,25 +1727,90 @@ function saveEdit() {
 }
 
 // ============================================
+// ВОССТАНОВЛЕНИЕ ДАННЫХ ПРИ ЗАГРУЗКЕ
+// ============================================
+
+function restoreAllData() {
+    console.log('🔄 Восстановление данных...');
+    
+    var user = DB.get('currentUser');
+    if (!user) return;
+    
+    // Восстанавливаем избранное из бэкапа
+    var backupFavs = localStorage.getItem('favorites_' + user.name);
+    if (backupFavs) {
+        try {
+            var parsed = JSON.parse(backupFavs);
+            if (parsed && parsed.length > 0) {
+                var currentFavs = DB.getUserData(user.name, 'favorites', []);
+                if (currentFavs.length === 0) {
+                    DB.setUserData(user.name, 'favorites', parsed);
+                    console.log('📚 Восстановлено избранное:', parsed.length);
+                }
+            }
+        } catch(e) {}
+    }
+    
+    // Восстанавливаем аватарку из бэкапа
+    var backupAvatar = localStorage.getItem('avatar_' + user.name);
+    if (backupAvatar) {
+        var profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        if (!profiles[user.name].avatar) {
+            profiles[user.name].avatar = backupAvatar;
+            DB.set('profiles', profiles);
+            console.log('🖼️ Восстановлена аватарка');
+        }
+    }
+    
+    DB.save();
+    
+    // Обновляем UI
+    if (typeof renderProfile === 'function') renderProfile();
+    if (typeof renderFavorites === 'function') renderFavorites();
+    if (typeof renderAchievements === 'function') renderAchievements();
+    
+    console.log('✅ Восстановление завершено');
+}
+
+// ============================================
 // ЗАПУСК
 // ============================================
 
-console.log('🌟 OnikaAnime загружен!');
-updateUI();
-navigate('catalog');
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🌟 OnikaAnime загружается...');
+    
+    // Восстанавливаем данные
+    restoreAllData();
+    
+    // Обновляем UI
+    updateUI();
+    navigate('catalog');
+    
+    // Запускаем отслеживание времени
+    var user = DB.get('currentUser');
+    if (user) {
+        startOnlineTracking();
+    }
+    
+    // Тестовые видео
+    var videos = DB.get('videos', {});
+    if (Object.keys(videos).length === 0) {
+        videos = {
+            'Атака Титанов': [
+                { ep: 1, url: 'https://www.youtube.com/embed/1IOcJ33PjWM' },
+                { ep: 2, url: 'https://www.youtube.com/embed/UK_t6Y-q_mk' }
+            ],
+            'Наруто': [
+                { ep: 1, url: 'https://www.youtube.com/embed/5M_FsMBMbeQ' },
+                { ep: 2, url: 'https://www.youtube.com/embed/wZWr8dj84So' }
+            ]
+        };
+        DB.set('videos', videos);
+    }
+    
+    console.log('✅ OnikaAnime готов!');
+});
 
-// Тестовые видео
-var videos = DB.get('videos', {});
-if (Object.keys(videos).length === 0) {
-    videos = {
-        'Атака Титанов': [
-            { ep: 1, url: 'https://www.youtube.com/embed/1IOcJ33PjWM' },
-            { ep: 2, url: 'https://www.youtube.com/embed/UK_t6Y-q_mk' }
-        ],
-        'Наруто': [
-            { ep: 1, url: 'https://www.youtube.com/embed/5M_FsMBMbeQ' },
-            { ep: 2, url: 'https://www.youtube.com/embed/wZWr8dj84So' }
-        ]
-    };
-    DB.set('videos', videos);
-}
+console.log('🌟 OnikaAnime загружен!');
+console.log('💡 Используйте restoreAllData() для восстановления данных');
