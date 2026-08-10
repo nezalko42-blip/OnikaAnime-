@@ -104,7 +104,7 @@
                     <div class="grid" id="grid"></div>
                     <div class="pagination" id="pagination"></div>
 
-                    <!-- ===== ПОДПИШИСЬ НА НАС (ТОЛЬКО НА ГЛАВНОЙ) ===== -->
+                    <!-- ===== ПОДПИШИСЬ НА НАС ===== -->
                     <section class="social-section">
                         <div class="social-container">
                             <div class="social-header">
@@ -113,7 +113,6 @@
                             </div>
 
                             <div class="social-grid-3">
-                                <!-- Telegram -->
                                 <div class="social-card telegram-card">
                                     <div class="social-card-icon">📱</div>
                                     <h3>Telegram</h3>
@@ -131,7 +130,6 @@
                                     </div>
                                 </div>
 
-                                <!-- VK -->
                                 <div class="social-card vk-card">
                                     <div class="social-card-icon">💙</div>
                                     <h3>VKontakte</h3>
@@ -149,7 +147,6 @@
                                     </div>
                                 </div>
 
-                                <!-- TikTok -->
                                 <div class="social-card tiktok-card">
                                     <div class="social-card-icon">🎵</div>
                                     <h3>TikTok</h3>
@@ -168,7 +165,6 @@
                                 </div>
                             </div>
 
-                            <!-- Бонусный блок -->
                             <div class="social-bonus">
                                 <div class="bonus-item">
                                     <span>🎁</span>
@@ -433,6 +429,12 @@
                     <button class="logout-btn" onclick="logout()">🚪 Выйти из аккаунта</button>
                 </div>
 
+                <!-- ===== ДРУЗЬЯ ===== -->
+                <div id="page-friends" style="display:none;">
+                    <span class="back-btn" onclick="goBack()">← Назад</span>
+                    <div id="friendsPageContent"></div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -545,6 +547,7 @@
                     <li><a href="#" onclick="navigate('achievements')">Достижения</a></li>
                     <li><a href="#" onclick="navigate('profile')">Профиль</a></li>
                     <li><a href="#" onclick="navigate('settings')">Настройки</a></li>
+                    <li><a href="#" onclick="navigate('friends')">👥 Друзья</a></li>
                 </ul>
             </div>
             
@@ -582,6 +585,9 @@
     <!-- ===== СКРИПТЫ ===== -->
     <script src="script/storage.js"></script>
     <script src="script/auth.js"></script>
+    <script src="script/friends.js"></script>
+    <script src="script/chat.js"></script>
+    <script src="script/friends-ui.js"></script>
     <script src="script/main.js"></script>
 
     <script>
