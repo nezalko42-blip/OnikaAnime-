@@ -261,6 +261,95 @@ app.post('/api/delete-account', (req, res) => {
     });
 });
 
+// ===== КОММЕНТАРИИ =====
+
+// Получить комментарии для аниме
+app.get('/api/comments/:anime', (req, res) => {
+    const anime = req.params.anime;
+    
+    db.all('SELECT * FROM comments WHERE anime = ? ORDER BY created_at DESC', [anime], (err, rows) => {
+        if (err) {
+            console.error('Ошибка получения комментариев:', err);
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        res.json(rows || []);
+    });
+});
+
+// Получить все комментарии
+app.get('/api/comments/all', (req, res) => {
+    db.all('SELECT * FROM comments ORDER BY created_at DESC', (err, rows) => {
+        if (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        res.json(rows || []);
+    });
+});
+
+// Добавить комментарий
+app.post('/api/comments', (req, res) => {
+    const { anime, user_name, text } = req.body;
+    
+    if (!anime || !user_name || !text) {
+        return res.status(400).json({ error: 'Все поля обязательны' });
+    }
+    
+    const date = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    
+    db.run(
+        'INSERT INTO comments (anime, user_name, text, date) VALUES (?, ?, ?, ?)',
+        [anime, user_name, text, date],
+        function(err) {
+            if (err) {
+                console.error('Ошибка добавления комментария:', err);
+                return res.status(500).json({ error: 'Ошибка базы данных' });
+            }
+            res.json({ 
+                success: true, 
+                comment: { 
+                    id: this.lastID, 
+                    anime, 
+                    user_name, 
+                    text, 
+                    date 
+                } 
+            });
+        }
+    );
+});
+
+// Удалить комментарий
+app.delete('/api/comments/:id', (req, res) => {
+    const id = req.params.id;
+    const { user_name } = req.body;
+    
+    if (!user_name) {
+        return res.status(400).json({ error: 'Имя пользователя обязательно' });
+    }
+    
+    db.get('SELECT * FROM comments WHERE id = ?', [id], (err, comment) => {
+        if (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        if (!comment) {
+            return res.status(404).json({ error: 'Комментарий не найден' });
+        }
+        if (comment.user_name !== user_name) {
+            return res.status(403).json({ error: 'Вы не можете удалить этот комментарий' });
+        }
+        
+        db.run('DELETE FROM comments WHERE id = ?', [id], function(err) {
+            if (err) {
+                console.error('Ошибка удаления:', err);
+                return res.status(500).json({ error: 'Ошибка базы данных' });
+            }
+            res.json({ success: true });
+        });
+    });
+});
+
 app.listen(PORT, () => {
     console.log('🚀 OnikaAnime сервер запущен!');
     console.log(`📡 http://localhost:${PORT}`);
