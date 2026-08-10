@@ -126,8 +126,13 @@ app.post('/api/login', (req, res) => {
     }
 
     db.get('SELECT * FROM users WHERE email = ? AND password = ?', [email, password], (err, user) => {
-        if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-        if (!user) return res.status(400).json({ error: 'Неверный email или пароль' });
+        if (err) {
+            console.error('Ошибка базы данных:', err);
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        if (!user) {
+            return res.status(400).json({ error: 'Неверный email или пароль' });
+        }
         
         res.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
     });
@@ -143,7 +148,13 @@ app.get('/api/user/:id', (req, res) => {
     const userId = req.params.id;
     
     db.get('SELECT id, email, name FROM users WHERE id = ?', [userId], (err, user) => {
-        if (err || !user) return res.status(404).json({ error: 'Пользователь не найден' });
+        if (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: 'Ошибка базы данных' });
+        }
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
         
         const result = { 
             id: user.id, 
@@ -177,9 +188,14 @@ app.post('/api/update-name', (req, res) => {
         return res.status(400).json({ error: 'ID пользователя и новое имя обязательны' });
     }
     
-    db.run('UPDATE users SET name = ? WHERE id = ?', [newName, userId], function(err) {
-        if (err) return res.status(500).json({ error: 'Ошибка обновления имени' });
-        res.json({ success: true, name: newName });
+    db.get('SELECT id FROM users WHERE name = ? AND id != ?', [newName, userId], (err, existing) => {
+        if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
+        if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
+        
+        db.run('UPDATE users SET name = ? WHERE id = ?', [newName, userId], function(err) {
+            if (err) return res.status(500).json({ error: 'Ошибка обновления имени' });
+            res.json({ success: true, name: newName });
+        });
     });
 });
 
@@ -187,12 +203,21 @@ app.post('/api/update-name', (req, res) => {
 app.post('/api/favorites', (req, res) => {
     const { userId, favorites } = req.body;
     
+    if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
+    
     db.run('DELETE FROM favorites WHERE user_id = ?', [userId], function(err) {
-        if (err) return res.status(500).json({ error: 'Ошибка сохранения' });
+        if (err) {
+            console.error('Ошибка удаления:', err);
+            return res.status(500).json({ error: 'Ошибка сохранения' });
+        }
         
         if (favorites && favorites.length > 0) {
             const stmt = db.prepare('INSERT INTO favorites (user_id, anime) VALUES (?, ?)');
-            favorites.forEach(function(anime) { stmt.run([userId, anime]); });
+            favorites.forEach(function(anime) { 
+                stmt.run([userId, anime], function(err) {
+                    if (err) console.error('Ошибка вставки:', err);
+                });
+            });
             stmt.finalize();
         }
         res.json({ success: true });
@@ -203,12 +228,21 @@ app.post('/api/favorites', (req, res) => {
 app.post('/api/achievements', (req, res) => {
     const { userId, achievements } = req.body;
     
+    if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
+    
     db.run('DELETE FROM achievements WHERE user_id = ?', [userId], function(err) {
-        if (err) return res.status(500).json({ error: 'Ошибка сохранения' });
+        if (err) {
+            console.error('Ошибка удаления:', err);
+            return res.status(500).json({ error: 'Ошибка сохранения' });
+        }
         
         if (achievements && achievements.length > 0) {
             const stmt = db.prepare('INSERT INTO achievements (user_id, achievement_id) VALUES (?, ?)');
-            achievements.forEach(function(achId) { stmt.run([userId, achId]); });
+            achievements.forEach(function(achId) { 
+                stmt.run([userId, achId], function(err) {
+                    if (err) console.error('Ошибка вставки:', err);
+                });
+            });
             stmt.finalize();
         }
         res.json({ success: true });
@@ -219,8 +253,13 @@ app.post('/api/achievements', (req, res) => {
 app.post('/api/active-title', (req, res) => {
     const { userId, titleId } = req.body;
     
+    if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
+    
     db.run('INSERT OR REPLACE INTO active_titles (user_id, title_id) VALUES (?, ?)', [userId, titleId], function(err) {
-        if (err) return res.status(500).json({ error: 'Ошибка сохранения' });
+        if (err) {
+            console.error('Ошибка сохранения:', err);
+            return res.status(500).json({ error: 'Ошибка сохранения' });
+        }
         res.json({ success: true });
     });
 });
@@ -229,8 +268,13 @@ app.post('/api/active-title', (req, res) => {
 app.post('/api/delete-account', (req, res) => {
     const { userId } = req.body;
     
+    if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
+    
     db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
-        if (err) return res.status(500).json({ error: 'Ошибка удаления' });
+        if (err) {
+            console.error('Ошибка удаления:', err);
+            return res.status(500).json({ error: 'Ошибка удаления' });
+        }
         res.json({ success: true });
     });
 });
