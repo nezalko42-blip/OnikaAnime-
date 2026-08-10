@@ -18,7 +18,6 @@ const dbPath = path.join(__dirname, 'database.db');
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(function() {
-    // Пользователи
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
@@ -27,7 +26,6 @@ db.serialize(function() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Профили
     db.run(`CREATE TABLE IF NOT EXISTS profiles (
         user_id INTEGER PRIMARY KEY,
         bio TEXT,
@@ -35,7 +33,6 @@ db.serialize(function() {
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     )`);
 
-    // Избранное
     db.run(`CREATE TABLE IF NOT EXISTS favorites (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -45,7 +42,6 @@ db.serialize(function() {
         UNIQUE(user_id, anime)
     )`);
 
-    // Комментарии
     db.run(`CREATE TABLE IF NOT EXISTS comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         anime TEXT NOT NULL,
@@ -55,7 +51,6 @@ db.serialize(function() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Достижения
     db.run(`CREATE TABLE IF NOT EXISTS achievements (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -65,14 +60,12 @@ db.serialize(function() {
         UNIQUE(user_id, achievement_id)
     )`);
 
-    // Активные титулы
     db.run(`CREATE TABLE IF NOT EXISTS active_titles (
         user_id INTEGER PRIMARY KEY,
         title_id TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     )`);
 
-    // Продолжение просмотра
     db.run(`CREATE TABLE IF NOT EXISTS continue_watching (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -83,14 +76,11 @@ db.serialize(function() {
         UNIQUE(user_id, anime)
     )`);
 
-    console.log('✅ Таблицы созданы (или уже существовали)');
+    console.log('✅ Таблицы созданы');
 });
 
-// ============================================
-// API
-// ============================================
+// ===== API =====
 
-// Регистрация
 app.post('/api/register', (req, res) => {
     const { email, name, password } = req.body;
     
@@ -117,7 +107,6 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// Вход
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
     
@@ -138,12 +127,10 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// Выход
 app.post('/api/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// Получить данные пользователя
 app.get('/api/user/:id', (req, res) => {
     const userId = req.params.id;
     
@@ -180,7 +167,6 @@ app.get('/api/user/:id', (req, res) => {
     });
 });
 
-// Обновить имя
 app.post('/api/update-name', (req, res) => {
     const { userId, newName } = req.body;
     
@@ -199,7 +185,6 @@ app.post('/api/update-name', (req, res) => {
     });
 });
 
-// Сохранить избранное
 app.post('/api/favorites', (req, res) => {
     const { userId, favorites } = req.body;
     
@@ -224,7 +209,6 @@ app.post('/api/favorites', (req, res) => {
     });
 });
 
-// Сохранить достижения
 app.post('/api/achievements', (req, res) => {
     const { userId, achievements } = req.body;
     
@@ -249,7 +233,6 @@ app.post('/api/achievements', (req, res) => {
     });
 });
 
-// Сохранить активный титул
 app.post('/api/active-title', (req, res) => {
     const { userId, titleId } = req.body;
     
@@ -264,7 +247,6 @@ app.post('/api/active-title', (req, res) => {
     });
 });
 
-// Удаление аккаунта
 app.post('/api/delete-account', (req, res) => {
     const { userId } = req.body;
     
