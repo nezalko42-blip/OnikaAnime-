@@ -1786,7 +1786,7 @@ function updateSocialStats() {
     // Telegram
     var tgElement = document.getElementById('tgStats');
     if (tgElement) {
-        var tgBase = 1200;
+        var tgBase = 3;
         var tgGrowth = Math.floor(Math.random() * 30);
         var tgCurrent = tgBase + tgGrowth;
         tgElement.textContent = '👥 ' + formatNumber(tgCurrent) + ' подписчиков';
@@ -1797,7 +1797,7 @@ function updateSocialStats() {
     // VK
     var vkElement = document.getElementById('vkStats');
     if (vkElement) {
-        var vkBase = 856;
+        var vkBase = 1;
         var vkGrowth = Math.floor(Math.random() * 20);
         var vkCurrent = vkBase + vkGrowth;
         vkElement.textContent = '👥 ' + formatNumber(vkCurrent) + ' подписчиков';
@@ -1808,7 +1808,7 @@ function updateSocialStats() {
     // TikTok
     var ttElement = document.getElementById('ttStats');
     if (ttElement) {
-        var ttBase = 2400;
+        var ttBase = 0;
         var ttGrowth = Math.floor(Math.random() * 50);
         var ttCurrent = ttBase + ttGrowth;
         ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
