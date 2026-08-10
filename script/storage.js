@@ -1,5 +1,5 @@
 // ============================================
-// ХРАНИЛИЩЕ ONIKAANIME (ФИНАЛЬНАЯ ВЕРСИЯ)
+// ХРАНИЛИЩЕ ONIKAANIME
 // ============================================
 
 var DB = {
@@ -9,7 +9,6 @@ var DB = {
     init: function() {
         console.log('🚀 Инициализация хранилища...');
         
-        // Пытаемся загрузить сохраненные данные
         var saved = localStorage.getItem('onika_data');
         
         if (saved) {
@@ -25,7 +24,6 @@ var DB = {
             this._data = this._getDefaultData();
         }
         
-        // Восстанавливаем текущего пользователя
         var user = localStorage.getItem('onika_currentUser');
         if (user) {
             try {
@@ -38,12 +36,10 @@ var DB = {
         
         this._initialized = true;
         
-        // Загружаем данные с сервера в фоне
         if (this._data.currentUser) {
             this._loadUserDataFromServer(this._data.currentUser.id);
         }
         
-        // Автосохранение каждые 5 секунд
         if (window._saveInterval) clearInterval(window._saveInterval);
         window._saveInterval = setInterval(function() {
             DB._saveToLocal();
@@ -74,17 +70,14 @@ var DB = {
         if (!this._data) return;
         
         try {
-            // Сохраняем все данные
             var dataToSave = JSON.parse(JSON.stringify(this._data));
             delete dataToSave.currentUser;
             localStorage.setItem('onika_data', JSON.stringify(dataToSave));
             
-            // Сохраняем текущего пользователя отдельно
             if (this._data.currentUser) {
                 localStorage.setItem('onika_currentUser', JSON.stringify(this._data.currentUser));
             }
             
-            // Дополнительный бэкап аватарок
             if (this._data.profiles) {
                 for (var name in this._data.profiles) {
                     if (this._data.profiles[name] && this._data.profiles[name].avatar) {
@@ -93,7 +86,6 @@ var DB = {
                 }
             }
             
-            // Дополнительный бэкап избранного
             if (this._data.favorites && this._data.currentUser) {
                 var userName = this._data.currentUser.name;
                 if (this._data.favorites[userName]) {
@@ -120,11 +112,9 @@ var DB = {
             if (data && data.name) {
                 console.log('📡 Данные с сервера получены');
                 
-                // Сохраняем только если локальных данных нет или они пустые
                 var localFavs = self._data.favorites && self._data.favorites[data.name];
                 var localAch = self._data.achievements && self._data.achievements[data.name];
                 
-                // Если локально пусто - загружаем с сервера
                 if (!localFavs || localFavs.length === 0) {
                     if (!self._data.favorites) self._data.favorites = {};
                     self._data.favorites[data.name] = data.favorites || [];
@@ -151,19 +141,14 @@ var DB = {
         });
     },
     
-    // ===== ПУБЛИЧНЫЕ МЕТОДЫ =====
-    
     save: function(cb) {
-        // Сохраняем в localStorage
         this._saveToLocal();
         
-        // Отправляем на сервер если есть пользователь
         var user = this._data.currentUser;
         if (user && user.id) {
             var userId = user.id;
             var name = user.name;
             
-            // Сохраняем избранное
             var favs = (this._data.favorites && this._data.favorites[name]) || [];
             fetch('/api/favorites', {
                 method: 'POST',
@@ -171,7 +156,6 @@ var DB = {
                 body: JSON.stringify({ userId: userId, favorites: favs })
             }).catch(function(e) { console.error('⚠️ Ошибка сохранения избранного:', e); });
             
-            // Сохраняем достижения
             var ach = (this._data.achievements && this._data.achievements[name]) || [];
             fetch('/api/achievements', {
                 method: 'POST',
@@ -179,7 +163,6 @@ var DB = {
                 body: JSON.stringify({ userId: userId, achievements: ach })
             }).catch(function(e) { console.error('⚠️ Ошибка сохранения достижений:', e); });
             
-            // Сохраняем титул
             var title = (this._data.activeTitle && this._data.activeTitle[name]) || null;
             fetch('/api/active-title', {
                 method: 'POST',
@@ -251,14 +234,12 @@ var DB = {
         return true;
     },
     
-    // Восстановление данных после обновления
     restoreData: function() {
         var user = this._data.currentUser;
         if (!user) return;
         
         var name = user.name;
         
-        // Восстанавливаем избранное из бэкапа
         var backupFavs = localStorage.getItem('favorites_' + name);
         if (backupFavs) {
             try {
@@ -271,7 +252,6 @@ var DB = {
             } catch(e) {}
         }
         
-        // Восстанавливаем аватарку из бэкапа
         var backupAvatar = localStorage.getItem('avatar_' + name);
         if (backupAvatar) {
             if (!this._data.profiles) this._data.profiles = {};
@@ -286,33 +266,23 @@ var DB = {
     }
 };
 
-// ============================================
-// ИНИЦИАЛИЗАЦИЯ
-// ============================================
-
 DB.init();
-
-// Восстанавливаем данные из бэкапа
 DB.restoreData();
 
-// Сохраняем при закрытии страницы
 window.addEventListener('beforeunload', function() {
     DB.save();
 });
 
-// Сохраняем при потере фокуса (пользователь переключил вкладку)
 document.addEventListener('visibilitychange', function() {
     if (document.hidden) {
         DB.save();
     }
 });
 
-// Глобальные функции
 function saveDB() { DB.save(); }
 function saveAll() { DB.save(); }
 function $(id) { return document.getElementById(id); }
 
-// Проверка данных
 window.checkData = function() {
     var user = DB._data ? DB._data.currentUser : null;
     console.log('📊 СТАТУС ХРАНИЛИЩА:');
@@ -327,7 +297,6 @@ window.checkData = function() {
     console.log('Все данные:', DB._data);
 };
 
-// Принудительное восстановление
 window.forceRestore = function() {
     DB.restoreData();
     DB.save();
