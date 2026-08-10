@@ -1,9 +1,7 @@
 /* ============================================
    ONIKAANIME - КОСМИЧЕСКАЯ ТЕМА
-   ПОЛНАЯ ВЕРСИЯ
    ============================================ */
 
-/* === ПЕРЕМЕННЫЕ === */
 :root {
     --bg-primary: #0a0a1a;
     --bg-secondary: #0f0f2a;
@@ -23,7 +21,6 @@
     --transition: 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* === СБРОС === */
 * {
     margin: 0;
     padding: 0;
@@ -43,7 +40,6 @@ body {
     line-height: 1.6;
 }
 
-/* === СКРОЛЛ === */
 ::-webkit-scrollbar {
     width: 6px;
 }
@@ -58,7 +54,6 @@ body {
     background: var(--accent-glow);
 }
 
-/* === ФОН === */
 .video-bg {
     position: fixed;
     top: 0;
@@ -81,7 +76,6 @@ body {
     background: radial-gradient(ellipse at center, rgba(10, 10, 26, 0.2) 0%, rgba(10, 10, 26, 0.9) 100%);
 }
 
-/* === ШАПКА === */
 .header {
     background: rgba(10, 10, 26, 0.92);
     backdrop-filter: blur(20px);
@@ -195,7 +189,6 @@ body {
     box-shadow: 0 0 40px rgba(108, 92, 231, 0.05);
 }
 
-/* === САЙДБАР === */
 .sidebar {
     position: fixed;
     top: 56px;
@@ -320,7 +313,6 @@ body {
     }
 }
 
-/* === ЛЕЙАУТ === */
 .layout {
     display: flex;
     min-height: calc(100vh - 56px);
@@ -338,7 +330,6 @@ body {
     width: 100%;
 }
 
-/* === ЗАГОЛОВКИ === */
 h2 {
     font-size: 24px;
     text-align: center;
@@ -379,7 +370,6 @@ h3 {
     transform: translateX(-4px);
 }
 
-/* === ЖАНРЫ === */
 .genres {
     display: flex;
     gap: 8px;
@@ -414,7 +404,6 @@ h3 {
     box-shadow: 0 4px 20px rgba(108, 92, 231, 0.2);
 }
 
-/* === СЕТКА === */
 .grid {
     display: grid;
     gap: 16px;
@@ -441,7 +430,6 @@ h3 {
     }
 }
 
-/* === КАРТОЧКА === */
 .card {
     background: var(--bg-card);
     backdrop-filter: blur(20px);
@@ -544,7 +532,6 @@ h3 {
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* === ПАГИНАЦИЯ === */
 .pagination {
     display: flex;
     justify-content: center;
@@ -585,7 +572,6 @@ h3 {
     cursor: default;
 }
 
-/* === ДЕТАЛЬНАЯ === */
 .detail-content {
     display: flex;
     gap: 28px;
@@ -625,31 +611,15 @@ h3 {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
-.age-badge.age-0 {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-.age-badge.age-6 {
-    background: linear-gradient(135deg, #3498db, #2980b9);
-}
-.age-badge.age-12 {
-    background: linear-gradient(135deg, #f1c40f, #f39c12);
-}
-.age-badge.age-16 {
-    background: linear-gradient(135deg, #e67e22, #d35400);
-}
-.age-badge.age-18 {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-    animation: agePulse 1.5s ease-in-out infinite;
-}
+.age-badge.age-0 { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+.age-badge.age-6 { background: linear-gradient(135deg, #3498db, #2980b9); }
+.age-badge.age-12 { background: linear-gradient(135deg, #f1c40f, #f39c12); }
+.age-badge.age-16 { background: linear-gradient(135deg, #e67e22, #d35400); }
+.age-badge.age-18 { background: linear-gradient(135deg, #e74c3c, #c0392b); animation: agePulse 1.5s ease-in-out infinite; }
 
 @keyframes agePulse {
-    0%,
-    100% {
-        box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
-    }
-    50% {
-        box-shadow: 0 4px 30px rgba(231, 76, 60, 0.6);
-    }
+    0%, 100% { box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); }
+    50% { box-shadow: 0 4px 30px rgba(231, 76, 60, 0.6); }
 }
 
 .detail-info {
@@ -768,10 +738,6 @@ h3 {
 .desc-toggle .arrow {
     display: inline-block;
     transition: transform 0.3s ease;
-}
-
-.desc-toggle .arrow.open {
-    transform: rotate(180deg);
 }
 
 .fav-btn {
@@ -1056,7 +1022,6 @@ h3 {
     margin-top: 4px;
 }
 
-/* === НАСТРОЙКИ === */
 .settings-group {
     background: rgba(255, 255, 255, 0.02);
     border-radius: var(--radius);
@@ -1182,7 +1147,6 @@ h3 {
     box-shadow: 0 8px 30px rgba(108, 92, 231, 0.05);
 }
 
-/* === МОДАЛЬНЫЕ ОКНА === */
 .modal {
     display: none;
     position: fixed;
@@ -1201,14 +1165,8 @@ h3 {
 }
 
 @keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 .modal-box {
@@ -1224,14 +1182,8 @@ h3 {
 }
 
 @keyframes modalSlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-close {
@@ -1334,17 +1286,6 @@ h3 {
     box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
 }
 
-.modal-box .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-secondary);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.modal-box .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-primary);
-}
-
 .modal-box .btn-cancel {
     background: rgba(255, 255, 255, 0.03);
     color: var(--text-muted);
@@ -1427,7 +1368,6 @@ h3 {
     }
 }
 
-/* === КНОПКА ВВЕРХ === */
 .scroll-top {
     position: fixed;
     bottom: 24px;
@@ -1461,7 +1401,6 @@ h3 {
     box-shadow: 0 8px 40px rgba(108, 92, 231, 0.4);
 }
 
-/* === ПРОФИЛЬ === */
 .profile-container {
     max-width: 700px;
     margin: 0 auto;
@@ -1994,20 +1933,6 @@ h3 {
     }
 }
 
-@keyframes float {
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-6px);
-    }
-}
-
-.page-transition {
-    animation: fadeInUp 0.4s ease forwards;
-}
-
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -2059,32 +1984,6 @@ h3 {
 
 .recommendations-section {
     margin: 20px 0;
-}
-
-.recommendations-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 14px;
-}
-
-.rec-refresh-btn {
-    padding: 8px 18px;
-    border-radius: 20px;
-    border: 1px solid rgba(108, 92, 231, 0.1);
-    background: rgba(108, 92, 231, 0.03);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: var(--transition);
-}
-
-.rec-refresh-btn:hover {
-    border-color: var(--accent);
-    color: var(--text-primary);
 }
 
 .recommendations-grid {
@@ -2327,10 +2226,6 @@ h3 {
     }
 }
 
-/* ============================================
-   ТОП ПОЛЬЗОВАТЕЛЕЙ - СТИЛИ
-   ============================================ */
-
 .top-users-wrapper {
     background: rgba(255, 255, 255, 0.02);
     border-radius: var(--radius);
@@ -2542,18 +2437,6 @@ h3 {
     margin-top: 4px;
 }
 
-.medal {
-    display: inline-block;
-    font-size: 20px;
-    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
-    animation: medalPulse 2s ease-in-out infinite;
-}
-
-@keyframes medalPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
 .status-legend {
     display: flex;
     gap: 16px;
@@ -2607,9 +2490,6 @@ h3 {
     .time-cell .time-value {
         font-size: 12px;
     }
-    .medal {
-        font-size: 16px;
-    }
     .hide-mobile {
         display: none;
     }
@@ -2634,6 +2514,154 @@ h3 {
     }
 }
 
-/* ============================================
-   КОНЕЦ СТИЛЕЙ
-   ============================================ */
+/* ===== ФУТЕР ===== */
+.site-footer {
+    margin-top: 40px;
+    background: rgba(10, 10, 26, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(108, 92, 231, 0.08);
+    padding: 40px 20px 20px;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.footer-column h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent-glow), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.footer-column p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.footer-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-column ul li {
+    margin-bottom: 8px;
+}
+
+.footer-column ul li a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.footer-column ul li a:hover {
+    color: var(--accent-glow);
+    padding-left: 4px;
+}
+
+.footer-social {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+.footer-social a:hover {
+    background: rgba(108, 92, 231, 0.1);
+    border-color: var(--accent);
+    color: var(--accent-glow);
+    transform: translateY(-3px);
+}
+
+.footer-bottom {
+    max-width: 1200px;
+    margin: 20px auto 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 16px;
+}
+
+.footer-bottom p {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.footer-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.footer-links a:hover {
+    color: var(--accent-glow);
+}
+
+.footer-links span {
+    color: var(--text-muted);
+    opacity: 0.3;
+}
+
+@media (max-width: 600px) {
+    .footer-content {
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+    }
+    .footer-links {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 400px) {
+    .footer-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .footer-social {
+        justify-content: center;
+    }
+}
