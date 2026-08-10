@@ -1,5 +1,5 @@
 // ============================================
-// АВТОРИЗАЦИЯ
+// АВТОРИЗАЦИЯ - ИСПРАВЛЕННАЯ ВЕРСИЯ
 // ============================================
 
 function showLoginModal() {
@@ -47,6 +47,8 @@ function login() {
                 updateUI();
                 navigate('catalog');
                 showToast('Добро пожаловать, ' + user.name + '! 🚀', 'success');
+                
+                // Принудительно обновляем данные
                 if (typeof DB._loadUserDataFromServer === 'function') {
                     DB._loadUserDataFromServer(user.id);
                 }
@@ -101,10 +103,15 @@ function register() {
                 var user = data.user;
                 DB._data.currentUser = user;
                 localStorage.setItem('onika_currentUser', JSON.stringify(user));
+                
+                // Очищаем кэш данных
+                localStorage.removeItem('onika_data');
+                
                 closeLoginModal();
                 updateUI();
                 navigate('catalog');
                 showToast('Аккаунт создан! Добро пожаловать, ' + user.name + '! 🌟', 'success');
+                
                 if (typeof DB._loadUserDataFromServer === 'function') {
                     DB._loadUserDataFromServer(user.id);
                 }
@@ -132,6 +139,7 @@ function logout() {
         var name = DB.get('currentUser').name;
         DB.set('currentUser', null);
         localStorage.removeItem('onika_currentUser');
+        localStorage.removeItem('onika_data');
         updateUI();
         navigate('catalog');
         showToast('👋 До свидания, ' + name + '!', 'info');
