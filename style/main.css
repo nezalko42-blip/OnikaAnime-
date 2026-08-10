@@ -3100,3 +3100,480 @@ h3 {
         font-size: 11px;
     }
 }
+
+/* ============================================
+   ДРУЗЬЯ И ЧАТ - СТИЛИ
+   ============================================ */
+
+.friends-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.friends-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.friends-header h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.friends-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.friends-btn {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.3s ease;
+}
+
+.friends-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    background: rgba(108,92,231,0.05);
+}
+
+/* ===== ПОИСК ===== */
+.friends-search {
+    background: rgba(255,255,255,0.02);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+
+.friends-search input {
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.friends-search input:focus {
+    border-color: var(--accent);
+    background: rgba(108,92,231,0.03);
+}
+
+#searchResults {
+    margin-top: 8px;
+}
+
+.search-result {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.search-result:hover {
+    background: rgba(108,92,231,0.05);
+}
+
+.search-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.search-info {
+    flex: 1;
+}
+
+.search-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.search-id {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.search-add {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(46,204,113,0.1);
+    color: #2ecc71;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.search-add:hover {
+    background: rgba(46,204,113,0.2);
+    transform: scale(1.1);
+}
+
+/* ===== ВКЛАДКИ ===== */
+.friends-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.tab-btn {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.04);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    border-color: rgba(108,92,231,0.1);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    color: #fff;
+    border-color: transparent;
+}
+
+.tab-btn #badge {
+    display: none;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 10px;
+    padding: 0 6px;
+    border-radius: 10px;
+    margin-left: 4px;
+}
+
+.tab-btn #badge:not(:empty) {
+    display: inline;
+}
+
+/* ===== СПИСОК ===== */
+.friends-list-container {
+    min-height: 200px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+}
+
+.empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+.empty .empty-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.friend-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.friend-item:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+.friend-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.friend-info {
+    flex: 1;
+}
+
+.friend-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.friend-id {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.friend-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.friend-status.online {
+    background: #2ecc71;
+    box-shadow: 0 0 10px rgba(46,204,113,0.3);
+}
+
+.friend-status.offline {
+    background: #666;
+}
+
+/* ===== ЗАЯВКИ ===== */
+.request-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+.request-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.request-accept,
+.request-reject {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.request-accept {
+    background: rgba(46,204,113,0.1);
+    color: #2ecc71;
+}
+
+.request-accept:hover {
+    background: rgba(46,204,113,0.2);
+    transform: scale(1.05);
+}
+
+.request-reject {
+    background: rgba(231,76,60,0.1);
+    color: #e74c3c;
+}
+
+.request-reject:hover {
+    background: rgba(231,76,60,0.2);
+    transform: scale(1.05);
+}
+
+/* ===== ЧАТ ===== */
+.chat-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 360px;
+    max-width: 90vw;
+    height: 480px;
+    max-height: 80vh;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(108,92,231,0.1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 200;
+}
+
+.chat-panel.active {
+    display: flex;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    background: rgba(0,0,0,0.15);
+}
+
+.chat-close {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 18px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.chat-close:hover {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.05);
+}
+
+.chat-user {
+    flex: 1;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 12px 16px;
+    overflow-y: auto;
+    min-height: 100px;
+}
+
+.chat-messages::-webkit-scrollbar {
+    width: 4px;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 10px;
+}
+
+.chat-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+.msg {
+    margin-bottom: 6px;
+    max-width: 80%;
+    padding: 8px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    word-wrap: break-word;
+}
+
+.msg.mine {
+    margin-left: auto;
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.msg.theirs {
+    margin-right: auto;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+}
+
+.msg-time {
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 2px;
+    text-align: right;
+}
+
+.msg.theirs .msg-time {
+    color: var(--text-muted);
+}
+
+.chat-input {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    background: rgba(0,0,0,0.1);
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+}
+
+.chat-input input:focus {
+    border-color: var(--accent);
+}
+
+.chat-input button {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.chat-input button:hover {
+    transform: scale(1.05);
+}
+
+/* ===== АДАПТИВ ===== */
+@media (max-width: 600px) {
+    .chat-panel {
+        width: 100%;
+        max-width: 100%;
+        bottom: 0;
+        right: 0;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+    
+    .friends-header h2 {
+        font-size: 18px;
+    }
+    
+    .friends-btn {
+        font-size: 12px;
+        padding: 4px 12px;
+    }
+}
