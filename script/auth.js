@@ -24,75 +24,120 @@ function switchAuthTab(tab, btn) {
 }
 
 function login() {
-    var name = document.getElementById('loginName').value.trim();
+    var email = document.getElementById('loginEmail').value.trim();
     var pass = document.getElementById('loginPass').value.trim();
     
-    if (!name || !pass) {
+    if (!email || !pass) {
         showToast('Заполните все поля!', 'error');
         return;
     }
     
-    var users = DB.get('users', {});
-    if (!users[name]) {
-        showToast('Пользователь не найден!', 'error');
-        return;
-    }
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/login');
+    xhr.setRequestHeader('Content-Type', 'application/json');
     
-    if (users[name] !== pass) {
-        showToast('Неверный пароль!', 'error');
-        return;
-    }
+    xhr.onload = function() {
+        try {
+            var data = JSON.parse(xhr.responseText);
+            if (data.success) {
+                var user = data.user;
+                DB._data.currentUser = user;
+                localStorage.setItem('onika_currentUser', JSON.stringify(user));
+                closeLoginModal();
+                updateUI();
+                navigate('catalog');
+                showToast('Добро пожаловать, ' + user.name + '! 🚀', 'success');
+                if (typeof DB._loadUserData === 'function') {
+                    DB._loadUserData(user.id);
+                }
+                // Запускаем отслеживание времени
+                if (typeof startOnlineTracking === 'function') {
+                    startOnlineTracking();
+                }
+            } else {
+                showToast(data.error || 'Ошибка входа', 'error');
+            }
+        } catch(e) {
+            showToast('Ошибка сервера', 'error');
+        }
+    };
     
-    DB.set('currentUser', name);
-    DB.save();
+    xhr.onerror = function() {
+        showToast('Ошибка сети', 'error');
+    };
     
-    closeLoginModal();
-    updateUI();
-    navigate('catalog');
-    showToast('Добро пожаловать, ' + name + '! 🚀', 'success');
+    xhr.send(JSON.stringify({ email: email, password: pass }));
 }
 
 function register() {
+    var email = document.getElementById('regEmail').value.trim();
     var name = document.getElementById('regName').value.trim();
     var pass = document.getElementById('regPass').value.trim();
     
-    if (!name || !pass) {
+    if (!email || !name || !pass) {
         showToast('Заполните все поля!', 'error');
         return;
     }
-    
+    if (!email.includes('@') || !email.includes('.')) {
+        showToast('Введите корректный email!', 'error');
+        return;
+    }
     if (name.length < 3) {
         showToast('Имя должно быть минимум 3 символа!', 'error');
         return;
     }
-    
     if (pass.length < 4) {
         showToast('Пароль должен быть минимум 4 символа!', 'error');
         return;
     }
     
-    var users = DB.get('users', {});
-    if (users[name]) {
-        showToast('Имя уже занято!', 'error');
-        return;
-    }
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/register');
+    xhr.setRequestHeader('Content-Type', 'application/json');
     
-    users[name] = pass;
-    DB.set('users', users);
-    DB.set('currentUser', name);
+    xhr.onload = function() {
+        try {
+            var data = JSON.parse(xhr.responseText);
+            if (data.success) {
+                var user = data.user;
+                DB._data.currentUser = user;
+                localStorage.setItem('onika_currentUser', JSON.stringify(user));
+                closeLoginModal();
+                updateUI();
+                navigate('catalog');
+                showToast('Аккаунт создан! Добро пожаловать, ' + user.name + '! 🌟', 'success');
+                if (typeof DB._loadUserData === 'function') {
+                    DB._loadUserData(user.id);
+                }
+                if (typeof startOnlineTracking === 'function') {
+                    startOnlineTracking();
+                }
+            } else {
+                showToast(data.error || 'Ошибка регистрации', 'error');
+            }
+        } catch(e) {
+            showToast('Ошибка сервера', 'error');
+        }
+    };
     
-    var profiles = DB.get('profiles', {});
-    profiles[name] = { bio: '', avatar: '' };
-    DB.set('profiles', profiles);
+    xhr.onerror = function() {
+        showToast('Ошибка сети', 'error');
+    };
     
-    var favorites = DB.get('favorites', {});
-    favorites[name] = [];
-    DB.set('favorites', favorites);
-    
-    DB.save();
-    
-    closeLoginModal();
-    updateUI();
-    navigate('catalog');
-    showToast('Аккаунт создан! Добро пожаловать, ' + name + '! 🌟', 'success');
+    xhr.send(JSON.stringify({ email: email, name: name, password: pass }));
+}
+
+function logout() {
+    if (!DB.get('currentUser')) return;
+    showConfirmModal('🚪 Выход', 'Вы уверены?', function() {
+        var name = DB.get('currentUser').name;
+        DB.set('currentUser', null);
+        localStorage.removeItem('onika_currentUser');
+        updateUI();
+        navigate('catalog');
+        showToast('👋 До свидания, ' + name + '!', 'info');
+        if (typeof stopOnlineTracking === 'function') {
+            stopOnlineTracking();
+        }
+    });
 }
