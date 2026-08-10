@@ -540,37 +540,41 @@ function showDetail(anime) {
 }
 
 // ============================================
-// КОММЕНТАРИИ
+// КОММЕНТАРИИ - СЕРВЕРНАЯ ВЕРСИЯ
 // ============================================
 
 function renderComments(animeName) {
-    var comments = DB.get('comments', {});
-    var list = comments[animeName] || [];
     var container = document.getElementById('commentsList');
     if (!container) return;
     
-    if (list.length === 0) {
-        container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев</div>';
-        return;
-    }
-    
-    var user = DB.get('currentUser');
-    var html = '';
-    
-    for (var i = list.length - 1; i >= 0; i--) {
-        var c = list[i];
-        var canDelete = user && c.user === user.name;
-        html += `
-            <div class="comment-item" data-comment-index="${i}">
-                <div class="c-user">${c.user}</div>
-                <div class="c-text">${c.text}</div>
-                <div class="c-date">${c.date}</div>
-                ${canDelete ? `<button class="c-delete-btn" onclick="deleteComment('${animeName}', ${i})">✕</button>` : ''}
-            </div>
-        `;
-    }
-    
-    container.innerHTML = html;
+    fetch('/api/comments/' + encodeURIComponent(animeName))
+        .then(function(res) { return res.json(); })
+        .then(function(comments) {
+            if (!comments || comments.length === 0) {
+                container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев. Будьте первым!</div>';
+                return;
+            }
+            
+            var user = DB.get('currentUser');
+            var html = '';
+            
+            comments.forEach(function(c) {
+                var canDelete = user && c.user_name === user.name;
+                html += `
+                    <div class="comment-item" data-comment-id="${c.id}">
+                        <div class="c-user">${c.user_name}</div>
+                        <div class="c-text">${c.text}</div>
+                        <div class="c-date">${c.date}</div>
+                        ${canDelete ? `<button class="c-delete-btn" onclick="deleteComment(${c.id})">✕</button>` : ''}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        })
+        .catch(function() {
+            container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">⚠️ Ошибка загрузки комментариев</div>';
+        });
 }
 
 function addComment() {
@@ -596,61 +600,75 @@ function addComment() {
         return;
     }
     
-    var comments = DB.get('comments', {});
-    if (!comments[title]) comments[title] = [];
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/comments');
+    xhr.setRequestHeader('Content-Type', 'application/json');
     
-    comments[title].push({
-        user: user.name,
-        text: text,
-        date: new Date().toISOString().slice(0, 16).replace('T', ' ')
-    });
+    xhr.onload = function() {
+        try {
+            var data = JSON.parse(xhr.responseText);
+            if (data.success) {
+                input.value = '';
+                renderComments(title);
+                checkAchievements(title);
+                showToast('💬 Комментарий добавлен!', 'success');
+            } else {
+                showToast(data.error || 'Ошибка', 'error');
+            }
+        } catch(e) {
+            showToast('Ошибка сервера', 'error');
+        }
+    };
     
-    DB.set('comments', comments);
-    DB.save();
-    input.value = '';
+    xhr.onerror = function() {
+        showToast('Ошибка сети', 'error');
+    };
     
-    renderComments(title);
-    checkAchievements(title);
-    showToast('💬 Комментарий добавлен!', 'success');
+    xhr.send(JSON.stringify({
+        anime: title,
+        user_name: user.name,
+        text: text
+    }));
 }
 
-function deleteComment(animeName, index) {
+function deleteComment(id) {
     var user = DB.get('currentUser');
     if (!user) {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
     
-    var comments = DB.get('comments', {});
-    var list = comments[animeName];
-    if (!list || !list[index]) {
-        showToast('Комментарий не найден', 'error');
-        return;
-    }
-    
-    if (list[index].user !== user.name) {
-        showToast('Вы не можете удалить этот комментарий', 'error');
-        return;
-    }
-    
-    list.splice(index, 1);
-    if (list.length === 0) {
-        delete comments[animeName];
-    }
-    DB.set('comments', comments);
-    DB.save();
-    
-    if (currentPage === 'detail') {
-        renderComments(animeName);
-    }
-    if (currentPage === 'mycomments') {
-        renderMyComments();
-    }
-    showToast('🗑️ Комментарий удален', 'success');
+    showConfirmModal('🗑️ Удалить комментарий', 'Вы уверены?', function() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('DELETE', '/api/comments/' + id);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        
+        xhr.onload = function() {
+            try {
+                var data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    var titleEl = document.getElementById('detailTitle');
+                    var title = titleEl ? titleEl.textContent : '';
+                    if (title) renderComments(title);
+                    showToast('🗑️ Комментарий удален', 'success');
+                } else {
+                    showToast(data.error || 'Ошибка', 'error');
+                }
+            } catch(e) {
+                showToast('Ошибка сервера', 'error');
+            }
+        };
+        
+        xhr.onerror = function() {
+            showToast('Ошибка сети', 'error');
+        };
+        
+        xhr.send(JSON.stringify({ user_name: user.name }));
+    });
 }
 
 // ============================================
-// МОИ КОММЕНТАРИИ
+// МОИ КОММЕНТАРИИ (серверная версия)
 // ============================================
 
 function renderMyComments() {
@@ -665,91 +683,47 @@ function renderMyComments() {
         return;
     }
     
-    var allComments = DB.get('comments', {});
-    var myComments = [];
-    
-    for (var animeName in allComments) {
-        var list = allComments[animeName];
-        for (var i = 0; i < list.length; i++) {
-            if (list[i].user === user.name) {
-                myComments.push({
-                    anime: animeName,
-                    text: list[i].text,
-                    date: list[i].date,
-                    index: i
-                });
-            }
-        }
-    }
-    
-    myComments.sort(function(a, b) {
-        return b.date.localeCompare(a.date);
-    });
-    
-    var countEl = document.getElementById('myCommentsCount');
-    if (countEl) countEl.textContent = myComments.length + ' комментариев';
-    
     var container = document.getElementById('myCommentsList');
     if (!container) return;
     
-    if (myComments.length === 0) {
-        container.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>';
-        return;
-    }
-    
-    var html = '';
-    myComments.forEach(function(c) {
-        html += `
-            <div class="my-comment-item">
-                <div class="my-comment-header">
-                    <span class="my-comment-anime" onclick="searchAndOpen('${c.anime}')">📺 ${c.anime}</span>
-                    <button class="c-delete-btn" onclick="deleteMyComment('${c.anime}', ${c.index})">✕</button>
-                </div>
-                <div class="my-comment-text">${c.text}</div>
-                <div class="my-comment-date">${c.date}</div>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
-}
-
-function deleteMyComment(animeName, index) {
-    var user = DB.get('currentUser');
-    if (!user) {
-        showToast('Войдите в аккаунт!', 'error');
-        return;
-    }
-    
-    var comments = DB.get('comments', {});
-    var list = comments[animeName];
-    if (!list || !list[index]) {
-        showToast('Комментарий не найден', 'error');
-        return;
-    }
-    
-    if (list[index].user !== user.name) {
-        showToast('Вы не можете удалить этот комментарий', 'error');
-        return;
-    }
-    
-    list.splice(index, 1);
-    if (list.length === 0) {
-        delete comments[animeName];
-    }
-    DB.set('comments', comments);
-    DB.save();
-    
-    renderMyComments();
-    
-    if (currentPage === 'detail') {
-        var titleEl = document.getElementById('detailTitle');
-        var currentTitle = titleEl ? titleEl.textContent : '';
-        if (currentTitle === animeName) {
-            renderComments(animeName);
-        }
-    }
-    showToast('🗑️ Комментарий удален', 'success');
+    fetch('/api/comments/all')
+        .then(function(res) { return res.json(); })
+        .then(function(comments) {
+            var myComments = comments.filter(function(c) {
+                return c.user_name === user.name;
+            });
+            
+            myComments.sort(function(a, b) {
+                return b.date.localeCompare(a.date);
+            });
+            
+            var countEl = document.getElementById('myCommentsCount');
+            if (countEl) countEl.textContent = myComments.length + ' комментариев';
+            
+            if (myComments.length === 0) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>';
+                return;
+            }
+            
+            var html = '';
+            myComments.forEach(function(c) {
+                html += `
+                    <div class="my-comment-item">
+                        <div class="my-comment-header">
+                            <span class="my-comment-anime" onclick="searchAndOpen('${c.anime}')">📺 ${c.anime}</span>
+                            <button class="c-delete-btn" onclick="deleteComment(${c.id})">✕</button>
+                        </div>
+                        <div class="my-comment-text">${c.text}</div>
+                        <div class="my-comment-date">${c.date}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        })
+        .catch(function() {
+            container.innerHTML = '<div class="empty-state"><p>⚠️ Ошибка загрузки</p></div>';
+        });
 }
 
 function searchAndOpen(name) {
@@ -1772,21 +1746,18 @@ function restoreAllData() {
 // ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 
-// Форматирование чисел
 function formatNumber(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return num.toString();
 }
 
-// Функция обновления статистики
 function updateSocialStats() {
     console.log('🔄 Обновление статистики соцсетей...');
     
-    // Telegram
     var tgElement = document.getElementById('tgStats');
     if (tgElement) {
-        var tgBase = 3;
+        var tgBase = 1200;
         var tgGrowth = Math.floor(Math.random() * 30);
         var tgCurrent = tgBase + tgGrowth;
         tgElement.textContent = '👥 ' + formatNumber(tgCurrent) + ' подписчиков';
@@ -1794,10 +1765,9 @@ function updateSocialStats() {
         setTimeout(function() { tgElement.classList.remove('pulse'); }, 500);
     }
     
-    // VK
     var vkElement = document.getElementById('vkStats');
     if (vkElement) {
-        var vkBase = 1;
+        var vkBase = 856;
         var vkGrowth = Math.floor(Math.random() * 20);
         var vkCurrent = vkBase + vkGrowth;
         vkElement.textContent = '👥 ' + formatNumber(vkCurrent) + ' подписчиков';
@@ -1805,10 +1775,9 @@ function updateSocialStats() {
         setTimeout(function() { vkElement.classList.remove('pulse'); }, 500);
     }
     
-    // TikTok
     var ttElement = document.getElementById('ttStats');
     if (ttElement) {
-        var ttBase = 0;
+        var ttBase = 2400;
         var ttGrowth = Math.floor(Math.random() * 50);
         var ttCurrent = ttBase + ttGrowth;
         ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
@@ -1817,13 +1786,11 @@ function updateSocialStats() {
     }
 }
 
-// Функция для ручного обновления
 function refreshStats() {
     updateSocialStats();
     showToast('📊 Статистика обновлена!', 'success');
 }
 
-// Запускаем обновление при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(updateSocialStats, 1000);
     setInterval(updateSocialStats, 30000);
