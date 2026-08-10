@@ -3030,3 +3030,368 @@ h3 {
         padding: 3px 10px;
     }
 }
+
+/* ============================================
+   СОЦИАЛЬНЫЕ СЕТИ - СТИЛИ
+   ============================================ */
+
+.social-section {
+    margin: 40px 0 20px;
+    padding: 0 0;
+}
+
+.social-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, rgba(10, 10, 26, 0.95), rgba(20, 20, 50, 0.9));
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(108, 92, 231, 0.08);
+    padding: 50px 40px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.social-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(108, 92, 231, 0.05), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.social-container::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(253, 121, 168, 0.04), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.social-header {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 35px;
+}
+
+.social-header h2 {
+    font-size: 32px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--accent-glow), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+}
+
+.social-header p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.social-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.social-card {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius);
+    padding: 28px 24px 24px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    overflow: hidden;
+}
+
+.social-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    border-radius: var(--radius);
+}
+
+.social-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.social-card:hover::before {
+    opacity: 1;
+}
+
+.social-card-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    display: block;
+    animation: float 3s ease-in-out infinite;
+}
+
+.social-card h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+}
+
+.social-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+}
+
+.social-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.social-features span {
+    font-size: 12px;
+    padding: 4px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+}
+
+.social-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.social-stats {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* Telegram Card */
+.telegram-card {
+    border-color: rgba(0, 136, 204, 0.15);
+}
+
+.telegram-card::before {
+    background: radial-gradient(circle at 50% 0%, rgba(0, 136, 204, 0.05), transparent 70%);
+}
+
+.telegram-card:hover {
+    border-color: rgba(0, 136, 204, 0.3);
+}
+
+.telegram-btn {
+    background: linear-gradient(135deg, #0088cc, #00acee);
+}
+
+.telegram-btn:hover {
+    box-shadow: 0 8px 30px rgba(0, 136, 204, 0.3);
+}
+
+/* VK Card */
+.vk-card {
+    border-color: rgba(78, 128, 180, 0.15);
+}
+
+.vk-card::before {
+    background: radial-gradient(circle at 50% 0%, rgba(78, 128, 180, 0.05), transparent 70%);
+}
+
+.vk-card:hover {
+    border-color: rgba(78, 128, 180, 0.3);
+}
+
+.vk-btn {
+    background: linear-gradient(135deg, #4e80b4, #6b9bd2);
+}
+
+.vk-btn:hover {
+    box-shadow: 0 8px 30px rgba(78, 128, 180, 0.3);
+}
+
+/* TikTok Card */
+.tiktok-card {
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+.tiktok-card::before {
+    background: radial-gradient(circle at 50% 0%, rgba(0, 0, 0, 0.05), transparent 70%);
+}
+
+.tiktok-card:hover {
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+.tiktok-btn {
+    background: linear-gradient(135deg, #000000, #25f4ee);
+}
+
+.tiktok-btn:hover {
+    box-shadow: 0 8px 30px rgba(37, 244, 238, 0.2);
+}
+
+/* Бонусный блок */
+.social-bonus {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    position: relative;
+    z-index: 1;
+}
+
+.bonus-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    transition: all 0.3s ease;
+}
+
+.bonus-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(108, 92, 231, 0.1);
+    transform: translateY(-2px);
+}
+
+.bonus-item span {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.bonus-item strong {
+    display: block;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.bonus-item p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Анимация для статистики */
+.social-stats span {
+    transition: all 0.5s ease;
+    display: inline-block;
+}
+
+@keyframes statPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); color: #ffd700; }
+    100% { transform: scale(1); }
+}
+
+.social-stats span.pulse {
+    animation: statPulse 0.5s ease;
+}
+
+/* Анимации */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+    .social-container {
+        padding: 30px 20px;
+    }
+
+    .social-header h2 {
+        font-size: 24px;
+    }
+
+    .social-grid {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .social-bonus {
+        grid-template-columns: 1fr;
+    }
+
+    .bonus-item {
+        padding: 14px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .social-container {
+        padding: 20px 14px;
+        border-radius: var(--radius);
+    }
+
+    .social-header h2 {
+        font-size: 20px;
+    }
+
+    .social-header p {
+        font-size: 14px;
+    }
+
+    .social-card {
+        padding: 20px 16px;
+    }
+
+    .social-card-icon {
+        font-size: 36px;
+    }
+
+    .social-btn {
+        font-size: 13px;
+        padding: 10px 20px;
+    }
+
+    .social-features span {
+        font-size: 10px;
+        padding: 3px 10px;
+    }
+}
