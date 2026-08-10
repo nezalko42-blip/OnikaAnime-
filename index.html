@@ -433,6 +433,62 @@
         </div>
     </div>
 
+    <!-- ===== ФУТЕР ===== -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-column">
+                <h4>🌟 OnikaAnime</h4>
+                <p>Твой космический портал в мир аниме. Смотри любимые сериалы, получай достижения и становись лучшим в рейтинге!</p>
+                <div class="footer-social">
+                    <a href="#" title="Telegram">📱</a>
+                    <a href="#" title="VK">💙</a>
+                    <a href="#" title="YouTube">▶️</a>
+                    <a href="#" title="Discord">💬</a>
+                </div>
+            </div>
+            
+            <div class="footer-column">
+                <h4>📚 Разделы</h4>
+                <ul>
+                    <li><a href="#" onclick="navigate('catalog')">Главная</a></li>
+                    <li><a href="#" onclick="navigate('favorites')">Избранное</a></li>
+                    <li><a href="#" onclick="navigate('achievements')">Достижения</a></li>
+                    <li><a href="#" onclick="navigate('profile')">Профиль</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h4>📞 Контакты</h4>
+                <ul>
+                    <li>📧 <a href="mailto:support@onikaanime.com">support@onikaanime.com</a></li>
+                    <li>📱 <a href="#">Telegram-канал</a></li>
+                    <li>💬 <a href="#">Чат в Discord</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h4>⚖️ Информация</h4>
+                <ul>
+                    <li><a href="#" onclick="showToast('📜 Публичная оферта', 'info')">Публичная оферта</a></li>
+                    <li><a href="#" onclick="showToast('🔒 Политика конфиденциальности', 'info')">Политика конфиденциальности</a></li>
+                    <li><a href="#" onclick="showToast('📋 Пользовательское соглашение', 'info')">Пользовательское соглашение</a></li>
+                    <li><a href="#" onclick="showToast('© Информация для правообладателей', 'info')">Для правообладателей</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>© 2026 OnikaAnime. Все права защищены. 🌌</p>
+            <div class="footer-links">
+                <a href="#" onclick="showToast('🗺️ Карта сайта', 'info')">Карта сайта</a>
+                <span>•</span>
+                <a href="#" onclick="showToast('📰 Карта новостей', 'info')">Карта новостей</a>
+                <span>•</span>
+                <a href="#" onclick="if(DB.get('currentUser')){deleteAccount()}else{showToast('Войдите в аккаунт', 'warning')}">🗑️ Удалить аккаунт</a>
+            </div>
+        </div>
+    </footer>
+
     <!-- ===== СКРИПТЫ ===== -->
     <script src="script/storage.js"></script>
     <script src="script/auth.js"></script>
