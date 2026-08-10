@@ -47,10 +47,9 @@ function login() {
                 updateUI();
                 navigate('catalog');
                 showToast('Добро пожаловать, ' + user.name + '! 🚀', 'success');
-                if (typeof DB._loadUserData === 'function') {
-                    DB._loadUserData(user.id);
+                if (typeof DB._loadUserDataFromServer === 'function') {
+                    DB._loadUserDataFromServer(user.id);
                 }
-                // Запускаем отслеживание времени
                 if (typeof startOnlineTracking === 'function') {
                     startOnlineTracking();
                 }
@@ -106,8 +105,8 @@ function register() {
                 updateUI();
                 navigate('catalog');
                 showToast('Аккаунт создан! Добро пожаловать, ' + user.name + '! 🌟', 'success');
-                if (typeof DB._loadUserData === 'function') {
-                    DB._loadUserData(user.id);
+                if (typeof DB._loadUserDataFromServer === 'function') {
+                    DB._loadUserDataFromServer(user.id);
                 }
                 if (typeof startOnlineTracking === 'function') {
                     startOnlineTracking();
