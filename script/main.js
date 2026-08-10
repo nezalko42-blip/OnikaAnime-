@@ -9,6 +9,30 @@ var genre = '';
 var query = '';
 var currentAnime = null;
 var totalPages = 1;
+var onlineTimer = null;
+var startTime = Date.now();
+
+// ============================================
+// СПИСОК ДОСТИЖЕНИЙ
+// ============================================
+
+var ACHIEVEMENTS_LIST = [
+    { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель' },
+    { id: 'ep200', name: '🎬 Зритель 2 уровня', desc: 'Посмотреть 200 серий', icon: '🎥', title: 'Любопытный' },
+    { id: 'ep500', name: '🎬 Зритель 3 уровня', desc: 'Посмотреть 500 серий', icon: '📺', title: 'Заядлый' },
+    { id: 'ep750', name: '🎬 Зритель 4 уровня', desc: 'Посмотреть 750 серий', icon: '🌟', title: 'Эксперт' },
+    { id: 'ep1000', name: '🎬 Зритель 5 уровня', desc: 'Посмотреть 1000 серий', icon: '🏆', title: 'Легенда' },
+    { id: 'cm100', name: '💬 Комментатор 1 уровня', desc: 'Оставить 100 комментариев', icon: '💬', title: 'Говорун' },
+    { id: 'cm200', name: '💬 Комментатор 2 уровня', desc: 'Оставить 200 комментариев', icon: '🗣️', title: 'Собеседник' },
+    { id: 'cm500', name: '💬 Комментатор 3 уровня', desc: 'Оставить 500 комментариев', icon: '🎙️', title: 'Оратор' },
+    { id: 'cm750', name: '💬 Комментатор 4 уровня', desc: 'Оставить 750 комментариев', icon: '📢', title: 'Мастер слова' },
+    { id: 'cm1000', name: '💬 Комментатор 5 уровня', desc: 'Оставить 1000 комментариев', icon: '👑', title: 'Глашатай' },
+    { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме в избранное', icon: '❤️', title: 'Коллекционер' },
+    { id: 'fv200', name: '❤️ Коллекционер 2 уровня', desc: 'Добавить 200 аниме в избранное', icon: '💝', title: 'Ценитель' },
+    { id: 'fv500', name: '❤️ Коллекционер 3 уровня', desc: 'Добавить 500 аниме в избранное', icon: '💎', title: 'Знаток' },
+    { id: 'fv750', name: '❤️ Коллекционер 4 уровня', desc: 'Добавить 750 аниме в избранное', icon: '👑', title: 'Библиофил' },
+    { id: 'fv1000', name: '❤️ Коллекционер 5 уровня', desc: 'Добавить 1000 аниме в избранное', icon: '🏆', title: 'Хранитель' }
+];
 
 // ============================================
 // НАВИГАЦИЯ
@@ -94,280 +118,56 @@ function closeMenu() {
 }
 
 // ============================================
-// АВТОРИЗАЦИЯ (EMAIL)
+// ОТСЛЕЖИВАНИЕ ВРЕМЕНИ НА САЙТЕ
 // ============================================
 
-function showLoginModal() {
-    document.getElementById('loginModal').style.display = 'flex';
-}
-
-function closeLoginModal() {
-    document.getElementById('loginModal').style.display = 'none';
-}
-
-function switchAuthTab(tab, btn) {
-    document.querySelectorAll('.modal-tab').forEach(function(t) {
-        t.classList.remove('active');
-    });
-    btn.classList.add('active');
-    document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
-    document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
-}
-
-function login() {
-    var email = document.getElementById('loginEmail').value.trim();
-    var pass = document.getElementById('loginPass').value.trim();
+function startOnlineTracking() {
+    var user = DB.get('currentUser');
+    if (!user) return;
     
-    if (!email || !pass) {
-        showToast('Заполните все поля!', 'error');
-        return;
-    }
+    startTime = Date.now();
     
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/login');
-    xhr.setRequestHeader('Content-Type', 'application/json');
+    if (onlineTimer) clearInterval(onlineTimer);
     
-    xhr.onload = function() {
-        try {
-            var data = JSON.parse(xhr.responseText);
-            if (data.success) {
-                var user = data.user;
-                DB._data.currentUser = user;
-                localStorage.setItem('onika_currentUser', JSON.stringify(user));
-                closeLoginModal();
-                updateUI();
-                navigate('catalog');
-                showToast('Добро пожаловать, ' + user.name + '! 🚀', 'success');
-                if (typeof DB._loadUserData === 'function') {
-                    DB._loadUserData(user.id);
-                }
-            } else {
-                showToast(data.error || 'Ошибка входа', 'error');
-            }
-        } catch(e) {
-            showToast('Ошибка сервера', 'error');
+    onlineTimer = setInterval(function() {
+        var userNow = DB.get('currentUser');
+        if (!userNow) {
+            clearInterval(onlineTimer);
+            return;
         }
-    };
-    
-    xhr.onerror = function() {
-        showToast('Ошибка сети', 'error');
-    };
-    
-    xhr.send(JSON.stringify({ email: email, password: pass }));
-}
-
-function register() {
-    var email = document.getElementById('regEmail').value.trim();
-    var name = document.getElementById('regName').value.trim();
-    var pass = document.getElementById('regPass').value.trim();
-    
-    if (!email || !name || !pass) {
-        showToast('Заполните все поля!', 'error');
-        return;
-    }
-    if (!email.includes('@') || !email.includes('.')) {
-        showToast('Введите корректный email!', 'error');
-        return;
-    }
-    if (name.length < 3) {
-        showToast('Имя должно быть минимум 3 символа!', 'error');
-        return;
-    }
-    if (pass.length < 4) {
-        showToast('Пароль должен быть минимум 4 символа!', 'error');
-        return;
-    }
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/register');
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    
-    xhr.onload = function() {
-        try {
-            var data = JSON.parse(xhr.responseText);
-            if (data.success) {
-                var user = data.user;
-                DB._data.currentUser = user;
-                localStorage.setItem('onika_currentUser', JSON.stringify(user));
-                closeLoginModal();
-                updateUI();
-                navigate('catalog');
-                showToast('Аккаунт создан! Добро пожаловать, ' + user.name + '! 🌟', 'success');
-                if (typeof DB._loadUserData === 'function') {
-                    DB._loadUserData(user.id);
-                }
-            } else {
-                showToast(data.error || 'Ошибка регистрации', 'error');
-            }
-        } catch(e) {
-            showToast('Ошибка сервера', 'error');
+        
+        var elapsed = Math.floor((Date.now() - startTime) / 1000);
+        var totalTime = DB.getUserData(userNow.name, 'onlineTime', 0);
+        totalTime += 30;
+        DB.setUserData(userNow.name, 'onlineTime', totalTime);
+        DB.setUserData(userNow.name, 'lastSeen', Date.now());
+        DB.save();
+        
+        // Обновляем топ каждые 2 минуты
+        if (elapsed % 120 === 0) {
+            renderTopUsers();
         }
-    };
-    
-    xhr.onerror = function() {
-        showToast('Ошибка сети', 'error');
-    };
-    
-    xhr.send(JSON.stringify({ email: email, name: name, password: pass }));
+    }, 30000);
 }
 
-function logout() {
-    if (!DB.get('currentUser')) return;
-    showConfirmModal('🚪 Выход', 'Вы уверены?', function() {
-        var name = DB.get('currentUser').name;
-        DB.set('currentUser', null);
-        localStorage.removeItem('onika_currentUser');
-        updateUI();
-        navigate('catalog');
-        showToast('👋 До свидания, ' + name + '!', 'info');
-    });
-}
-
-function confirmDeleteAccount() {
-    var user = DB.get('currentUser');
-    var input = document.getElementById('deleteConfirmName');
-    if (!user || input.value.trim() !== user.name) {
-        showToast('❌ Имя не совпадает!', 'error');
-        return;
-    }
-    
-    closeModal('deleteAccountModal');
-    showConfirmModal('💀 Удаление аккаунта', 'Вы уверены?', function() {
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/delete-account');
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.onload = function() {
-            DB.set('currentUser', null);
-            localStorage.removeItem('onika_currentUser');
-            updateUI();
-            navigate('catalog');
-            showToast('✅ Аккаунт удален', 'success');
-            setTimeout(function() { location.reload(); }, 500);
-        };
-        xhr.send(JSON.stringify({ userId: user.id }));
-    });
-}
-
-// ============================================
-// РЕДАКТИРОВАНИЕ ПРОФИЛЯ
-// ============================================
-
-function editProfile(type) {
-    var user = DB.get('currentUser');
-    if (!user) {
-        showToast('Войдите в аккаунт!', 'error');
-        return;
-    }
-    
-    window._editType = type;
-    var input = document.getElementById('editInput');
-    var textarea = document.getElementById('editTextarea');
-    var title = document.getElementById('editTitle');
-    
-    if (!input || !textarea || !title) return;
-    
-    input.style.display = type === 'bio' ? 'none' : 'block';
-    textarea.style.display = type === 'bio' ? 'block' : 'none';
-    
-    if (type === 'name') {
-        title.textContent = '✏️ Изменить никнейм';
-        input.value = user.name;
-        input.placeholder = 'Введите новый никнейм';
-        input.type = 'text';
-    } else if (type === 'email') {
-        title.textContent = '✏️ Изменить email';
-        input.value = user.email;
-        input.placeholder = 'Введите новый email';
-        input.type = 'email';
-    } else if (type === 'pass') {
-        title.textContent = '🔑 Изменить пароль';
-        input.value = '';
-        input.placeholder = 'Введите новый пароль';
-        input.type = 'password';
-    } else if (type === 'bio') {
-        title.textContent = '📝 Изменить описание';
-        input.style.display = 'none';
-        textarea.style.display = 'block';
-        var profiles = DB.get('profiles', {});
-        textarea.value = (profiles[user.name] && profiles[user.name].bio) || '';
-        textarea.placeholder = 'Введите описание';
-    }
-    
-    document.getElementById('editModal').style.display = 'flex';
-}
-
-function saveEdit() {
-    var user = DB.get('currentUser');
-    if (!user) {
-        showToast('Войдите в аккаунт!', 'error');
-        return;
-    }
-    
-    var input = document.getElementById('editInput');
-    var textarea = document.getElementById('editTextarea');
-    var type = window._editType || 'bio';
-    var val = type === 'bio' ? textarea.value.trim() : input.value.trim();
-    
-    if (!val) {
-        showToast('Поле не может быть пустым!', 'error');
-        return;
-    }
-    
-    if (type === 'name') {
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/update-name');
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.onload = function() {
-            try {
-                var data = JSON.parse(xhr.responseText);
-                if (data.success) {
-                    var oldName = user.name;
-                    user.name = val;
-                    localStorage.setItem('onika_currentUser', JSON.stringify(user));
-                    DB._data.currentUser = user;
-                    
-                    if (DB._data.favorites[oldName]) {
-                        DB._data.favorites[val] = DB._data.favorites[oldName];
-                        delete DB._data.favorites[oldName];
-                    }
-                    if (DB._data.achievements[oldName]) {
-                        DB._data.achievements[val] = DB._data.achievements[oldName];
-                        delete DB._data.achievements[oldName];
-                    }
-                    if (DB._data.activeTitle[oldName]) {
-                        DB._data.activeTitle[val] = DB._data.activeTitle[oldName];
-                        delete DB._data.activeTitle[oldName];
-                    }
-                    if (DB._data.profiles[oldName]) {
-                        DB._data.profiles[val] = DB._data.profiles[oldName];
-                        delete DB._data.profiles[oldName];
-                    }
-                    
-                    DB.save();
-                    closeModal('editModal');
-                    renderProfile();
-                    updateUI();
-                    showToast('✅ Никнейм изменен на ' + val, 'success');
-                } else {
-                    showToast(data.error || 'Ошибка', 'error');
-                }
-            } catch(e) {
-                showToast('Ошибка сервера', 'error');
-            }
-        };
-        xhr.send(JSON.stringify({ userId: user.id, newName: val }));
-    } else if (type === 'bio') {
-        var profiles = DB.get('profiles', {});
-        if (!profiles[user.name]) profiles[user.name] = {};
-        profiles[user.name].bio = val;
-        DB.set('profiles', profiles);
-        closeModal('editModal');
-        renderProfile();
-        showToast('✅ Описание обновлено!', 'success');
-    } else {
-        showToast('❌ Изменение этого поля пока не поддерживается', 'warning');
+function stopOnlineTracking() {
+    if (onlineTimer) {
+        clearInterval(onlineTimer);
+        onlineTimer = null;
     }
 }
+
+// Сохраняем время при уходе
+window.addEventListener('beforeunload', function() {
+    var userExit = DB.get('currentUser');
+    if (userExit) {
+        var elapsedExit = Math.floor((Date.now() - startTime) / 1000);
+        var totalTimeExit = DB.getUserData(userExit.name, 'onlineTime', 0);
+        DB.setUserData(userExit.name, 'onlineTime', totalTimeExit + elapsedExit);
+        DB.setUserData(userExit.name, 'lastSeen', Date.now());
+        DB.save();
+    }
+});
 
 // ============================================
 // КАТАЛОГ
@@ -958,6 +758,22 @@ function deleteMyComment(animeName, index) {
     showToast('🗑️ Комментарий удален', 'success');
 }
 
+function searchAndOpen(name) {
+    if (!name) return;
+    query = name;
+    page = 1;
+    genre = '';
+    
+    var searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = name;
+    
+    var titleEl = document.getElementById('title');
+    if (titleEl) titleEl.textContent = '🔍 Поиск: ' + name;
+    
+    navigate('catalog');
+    loadCatalog();
+}
+
 // ============================================
 // ИЗБРАННОЕ
 // ============================================
@@ -1053,37 +869,9 @@ function renderFavorites() {
     grid.innerHTML = html;
 }
 
-function searchAndOpen(name) {
-    query = name;
-    page = 1;
-    var searchInput = document.getElementById('searchInput');
-    if (searchInput) searchInput.value = name;
-    var titleEl = document.getElementById('title');
-    if (titleEl) titleEl.textContent = '🔍 Поиск: ' + name;
-    navigate('catalog');
-}
-
 // ============================================
 // ДОСТИЖЕНИЯ
 // ============================================
-
-var ACHIEVEMENTS_LIST = [
-    { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель' },
-    { id: 'ep200', name: '🎬 Зритель 2 уровня', desc: 'Посмотреть 200 серий', icon: '🎥', title: 'Любопытный' },
-    { id: 'ep500', name: '🎬 Зритель 3 уровня', desc: 'Посмотреть 500 серий', icon: '📺', title: 'Заядлый' },
-    { id: 'ep750', name: '🎬 Зритель 4 уровня', desc: 'Посмотреть 750 серий', icon: '🌟', title: 'Эксперт' },
-    { id: 'ep1000', name: '🎬 Зритель 5 уровня', desc: 'Посмотреть 1000 серий', icon: '🏆', title: 'Легенда' },
-    { id: 'cm100', name: '💬 Комментатор 1 уровня', desc: 'Оставить 100 комментариев', icon: '💬', title: 'Говорун' },
-    { id: 'cm200', name: '💬 Комментатор 2 уровня', desc: 'Оставить 200 комментариев', icon: '🗣️', title: 'Собеседник' },
-    { id: 'cm500', name: '💬 Комментатор 3 уровня', desc: 'Оставить 500 комментариев', icon: '🎙️', title: 'Оратор' },
-    { id: 'cm750', name: '💬 Комментатор 4 уровня', desc: 'Оставить 750 комментариев', icon: '📢', title: 'Мастер слова' },
-    { id: 'cm1000', name: '💬 Комментатор 5 уровня', desc: 'Оставить 1000 комментариев', icon: '👑', title: 'Глашатай' },
-    { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме в избранное', icon: '❤️', title: 'Коллекционер' },
-    { id: 'fv200', name: '❤️ Коллекционер 2 уровня', desc: 'Добавить 200 аниме в избранное', icon: '💝', title: 'Ценитель' },
-    { id: 'fv500', name: '❤️ Коллекционер 3 уровня', desc: 'Добавить 500 аниме в избранное', icon: '💎', title: 'Знаток' },
-    { id: 'fv750', name: '❤️ Коллекционер 4 уровня', desc: 'Добавить 750 аниме в избранное', icon: '👑', title: 'Библиофил' },
-    { id: 'fv1000', name: '❤️ Коллекционер 5 уровня', desc: 'Добавить 1000 аниме в избранное', icon: '🏆', title: 'Хранитель' }
-];
 
 function renderAchievements() {
     var user = DB.get('currentUser');
@@ -1368,51 +1156,195 @@ function renderProfileAchievements(user) {
     grid.innerHTML = html;
 }
 
+// ============================================
+// ТОП ПОЛЬЗОВАТЕЛЕЙ
+// ============================================
+
 function renderTopUsers() {
     var container = document.getElementById('topUsers');
     if (!container) return;
     
     var users = DB.get('users', {});
-    var scores = {};
+    var allData = {};
     
     for (var u in users) {
-        scores[u] = 0;
+        var onlineTime = DB.getUserData(u, 'onlineTime', 0);
+        var lastSeen = DB.getUserData(u, 'lastSeen', 0);
         var favs = DB.getUserData(u, 'favorites', []);
-        scores[u] += favs.length * 10;
-        
         var comments = DB.get('comments', {});
+        var commentCount = 0;
+        
         for (var k in comments) {
             comments[k].forEach(function(c) {
-                if (c.user === u) scores[u] += 5;
+                if (c.user === u) commentCount++;
             });
         }
         
         var earned = DB.getAchievements(u);
-        scores[u] += earned.length * 20;
+        var activeTitle = DB.getActiveTitle(u);
+        var titleName = '';
+        if (activeTitle) {
+            var ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === activeTitle; });
+            if (ach) titleName = ach.title;
+        }
+        
+        var xp = favs.length * 10 + commentCount * 5 + earned.length * 20 + Math.floor(onlineTime / 60);
+        
+        allData[u] = {
+            name: u,
+            email: users[u] || '',
+            favs: favs.length,
+            comments: commentCount,
+            achievements: earned.length,
+            onlineTime: onlineTime,
+            lastSeen: lastSeen,
+            xp: xp,
+            title: titleName,
+            isOnline: (Date.now() - lastSeen) < 300000
+        };
     }
     
-    var sorted = Object.keys(scores).sort(function(a, b) {
-        return scores[b] - scores[a];
-    }).slice(0, 10);
+    var sorted = Object.values(allData).sort(function(a, b) {
+        return b.xp - a.xp;
+    }).slice(0, 20);
     
     if (sorted.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Нет пользователей</div>';
+        container.innerHTML = `
+            <div style="color:var(--text-muted);text-align:center;padding:30px;">
+                <span style="font-size:48px;display:block;margin-bottom:12px;">👑</span>
+                <p>Нет пользователей</p>
+                <p style="font-size:12px;">Станьте первым!</p>
+            </div>
+        `;
         return;
     }
     
-    var ranks = ['gold', 'silver', 'bronze'];
-    var html = '';
-    sorted.forEach(function(u, i) {
-        var rankClass = i < 3 ? ranks[i] : '';
-        var rankIcon = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : '#' + (i + 1)));
-        html += `
-            <div class="top-user">
-                <span class="rank ${rankClass}">${rankIcon}</span>
-                <span class="t-name">${u}</span>
-                <span class="t-score">${scores[u]} XP</span>
+    function formatTime(seconds) {
+        if (seconds < 60) return Math.floor(seconds) + 'с';
+        if (seconds < 3600) return Math.floor(seconds / 60) + 'м';
+        if (seconds < 86400) return Math.floor(seconds / 3600) + 'ч';
+        return Math.floor(seconds / 86400) + 'д';
+    }
+    
+    function formatFullTime(seconds) {
+        var days = Math.floor(seconds / 86400);
+        var hours = Math.floor((seconds % 86400) / 3600);
+        var minutes = Math.floor((seconds % 3600) / 60);
+        var parts = [];
+        if (days > 0) parts.push(days + 'д');
+        if (hours > 0) parts.push(hours + 'ч');
+        if (minutes > 0) parts.push(minutes + 'м');
+        return parts.join(' ') || '0м';
+    }
+    
+    var medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+    var avatarGradients = ['avatar-gradient-1', 'avatar-gradient-2', 'avatar-gradient-3', 
+                           'avatar-gradient-4', 'avatar-gradient-5', 'avatar-gradient-6',
+                           'avatar-gradient-7', 'avatar-gradient-8', 'avatar-gradient-9', 'avatar-gradient-10'];
+    
+    var html = `
+        <div class="top-users-wrapper">
+            <div class="top-users-header">
+                <h3>👑 Топ пользователей</h3>
+                <span class="top-update-time">🔄 Обновлено: ${new Date().toLocaleTimeString()}</span>
             </div>
+            
+            <div style="overflow-x:auto;">
+                <table class="top-users-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Пользователь</th>
+                            <th class="hide-mobile">📚 В изб.</th>
+                            <th class="hide-mobile">💬 Комм.</th>
+                            <th>🏆 Дост.</th>
+                            <th>⏱ Время</th>
+                            <th>⭐ XP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    
+    var maxXP = sorted.length > 0 ? sorted[0].xp : 1;
+    
+    sorted.forEach(function(user, index) {
+        var rankClass = index === 0 ? 'rank-1' : (index === 1 ? 'rank-2' : (index === 2 ? 'rank-3' : ''));
+        var medal = index < 10 ? medals[index] : '#' + (index + 1);
+        var avatarGrad = avatarGradients[index % avatarGradients.length];
+        var initial = user.name[0].toUpperCase();
+        
+        var xpPercent = Math.min((user.xp / maxXP) * 100, 100);
+        var statusDot = user.isOnline ? '🟢' : (user.lastSeen > 0 ? '🟡' : '⚪');
+        
+        html += `
+            <tr class="${rankClass}">
+                <td class="rank-cell">${medal}</td>
+                <td>
+                    <div class="user-info-cell">
+                        <div class="user-avatar-mini ${avatarGrad}">
+                            ${initial}
+                        </div>
+                        <div>
+                            <div class="user-name-cell">
+                                ${user.name} 
+                                <span style="font-size:11px;color:${user.isOnline ? '#2ecc71' : '#666'};">
+                                    ${statusDot}
+                                </span>
+                            </div>
+                            ${user.title ? `<div class="user-title-cell">🎖️ ${user.title}</div>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td class="stat-cell hide-mobile">
+                    <span class="stat-number">${user.favs}</span>
+                    <span class="stat-label">аниме</span>
+                </td>
+                <td class="stat-cell hide-mobile">
+                    <span class="stat-number">${user.comments}</span>
+                    <span class="stat-label">комм.</span>
+                </td>
+                <td class="stat-cell">
+                    <span class="stat-number">${user.achievements}</span>
+                    <span class="stat-label">достиж.</span>
+                </td>
+                <td class="time-cell">
+                    <div class="time-value">${formatTime(user.onlineTime)}</div>
+                    <span class="time-label">${formatFullTime(user.onlineTime)}</span>
+                </td>
+                <td>
+                    <div class="xp-bar-wrapper">
+                        <div class="xp-bar-bg">
+                            <div class="xp-bar-fill" style="width:${xpPercent}%;"></div>
+                        </div>
+                        <div class="xp-text">${user.xp} XP</div>
+                    </div>
+                </td>
+            </tr>
         `;
     });
+    
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="status-legend">
+                <span class="status-legend-item">
+                    <span class="dot dot-online"></span> Онлайн
+                </span>
+                <span class="status-legend-item">
+                    <span class="dot dot-idle"></span> Недавно был
+                </span>
+                <span class="status-legend-item">
+                    <span class="dot dot-offline"></span> Не в сети
+                </span>
+                <span class="status-legend-item">
+                    ⭐ XP = Изб×10 + Комм×5 + Дост×20 + Время
+                </span>
+            </div>
+        </div>
+    `;
+    
     container.innerHTML = html;
 }
 
@@ -1426,6 +1358,12 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('change', function(e) {
             uploadAvatar(this);
         });
+    }
+    
+    // Запускаем отслеживание времени если пользователь залогинен
+    var user = DB.get('currentUser');
+    if (user) {
+        startOnlineTracking();
     }
 });
 
@@ -1592,6 +1530,34 @@ function deleteAccount() {
     modal.style.display = 'flex';
 }
 
+function confirmDeleteAccount() {
+    var user = DB.get('currentUser');
+    var input = document.getElementById('deleteConfirmName');
+    if (!user || input.value.trim() !== user.name) {
+        showToast('❌ Имя не совпадает!', 'error');
+        return;
+    }
+    
+    closeModal('deleteAccountModal');
+    showConfirmModal('💀 Удаление аккаунта', 'Вы уверены?', function() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/delete-account');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            DB.set('currentUser', null);
+            localStorage.removeItem('onika_currentUser');
+            updateUI();
+            navigate('catalog');
+            showToast('✅ Аккаунт удален', 'success');
+            if (typeof stopOnlineTracking === 'function') {
+                stopOnlineTracking();
+            }
+            setTimeout(function() { location.reload(); }, 500);
+        };
+        xhr.send(JSON.stringify({ userId: user.id }));
+    });
+}
+
 function closeModal(id) {
     var el = document.getElementById(id);
     if (el) {
@@ -1616,9 +1582,154 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
+// РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// ============================================
+
+function editProfile(type) {
+    var user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    
+    window._editType = type;
+    var input = document.getElementById('editInput');
+    var textarea = document.getElementById('editTextarea');
+    var title = document.getElementById('editTitle');
+    
+    if (!input || !textarea || !title) return;
+    
+    input.style.display = type === 'bio' ? 'none' : 'block';
+    textarea.style.display = type === 'bio' ? 'block' : 'none';
+    
+    if (type === 'name') {
+        title.textContent = '✏️ Изменить никнейм';
+        input.value = user.name;
+        input.placeholder = 'Введите новый никнейм';
+        input.type = 'text';
+    } else if (type === 'email') {
+        title.textContent = '✏️ Изменить email';
+        input.value = user.email;
+        input.placeholder = 'Введите новый email';
+        input.type = 'email';
+    } else if (type === 'pass') {
+        title.textContent = '🔑 Изменить пароль';
+        input.value = '';
+        input.placeholder = 'Введите новый пароль';
+        input.type = 'password';
+    } else if (type === 'bio') {
+        title.textContent = '📝 Изменить описание';
+        input.style.display = 'none';
+        textarea.style.display = 'block';
+        var profiles = DB.get('profiles', {});
+        textarea.value = (profiles[user.name] && profiles[user.name].bio) || '';
+        textarea.placeholder = 'Введите описание';
+    }
+    
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function saveEdit() {
+    var user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    
+    var input = document.getElementById('editInput');
+    var textarea = document.getElementById('editTextarea');
+    var type = window._editType || 'bio';
+    var val = type === 'bio' ? textarea.value.trim() : input.value.trim();
+    
+    if (!val) {
+        showToast('Поле не может быть пустым!', 'error');
+        return;
+    }
+    
+    if (type === 'name') {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/update-name');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            try {
+                var data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    var oldName = user.name;
+                    user.name = val;
+                    localStorage.setItem('onika_currentUser', JSON.stringify(user));
+                    DB._data.currentUser = user;
+                    
+                    if (DB._data.favorites[oldName]) {
+                        DB._data.favorites[val] = DB._data.favorites[oldName];
+                        delete DB._data.favorites[oldName];
+                    }
+                    if (DB._data.achievements[oldName]) {
+                        DB._data.achievements[val] = DB._data.achievements[oldName];
+                        delete DB._data.achievements[oldName];
+                    }
+                    if (DB._data.activeTitle[oldName]) {
+                        DB._data.activeTitle[val] = DB._data.activeTitle[oldName];
+                        delete DB._data.activeTitle[oldName];
+                    }
+                    if (DB._data.profiles[oldName]) {
+                        DB._data.profiles[val] = DB._data.profiles[oldName];
+                        delete DB._data.profiles[oldName];
+                    }
+                    if (DB._data.onlineTime && DB._data.onlineTime[oldName]) {
+                        DB._data.onlineTime[val] = DB._data.onlineTime[oldName];
+                        delete DB._data.onlineTime[oldName];
+                    }
+                    if (DB._data.lastSeen && DB._data.lastSeen[oldName]) {
+                        DB._data.lastSeen[val] = DB._data.lastSeen[oldName];
+                        delete DB._data.lastSeen[oldName];
+                    }
+                    
+                    DB.save();
+                    closeModal('editModal');
+                    renderProfile();
+                    updateUI();
+                    showToast('✅ Никнейм изменен на ' + val, 'success');
+                } else {
+                    showToast(data.error || 'Ошибка', 'error');
+                }
+            } catch(e) {
+                showToast('Ошибка сервера', 'error');
+            }
+        };
+        xhr.send(JSON.stringify({ userId: user.id, newName: val }));
+    } else if (type === 'bio') {
+        var profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        profiles[user.name].bio = val;
+        DB.set('profiles', profiles);
+        closeModal('editModal');
+        renderProfile();
+        showToast('✅ Описание обновлено!', 'success');
+    } else {
+        showToast('❌ Изменение этого поля пока не поддерживается', 'warning');
+    }
+}
+
+// ============================================
 // ЗАПУСК
 // ============================================
 
 console.log('🌟 OnikaAnime загружен!');
 updateUI();
 navigate('catalog');
+
+// Тестовые видео
+var videos = DB.get('videos', {});
+if (Object.keys(videos).length === 0) {
+    videos = {
+        'Атака Титанов': [
+            { ep: 1, url: 'https://www.youtube.com/embed/1IOcJ33PjWM' },
+            { ep: 2, url: 'https://www.youtube.com/embed/UK_t6Y-q_mk' }
+        ],
+        'Наруто': [
+            { ep: 1, url: 'https://www.youtube.com/embed/5M_FsMBMbeQ' },
+            { ep: 2, url: 'https://www.youtube.com/embed/wZWr8dj84So' }
+        ]
+    };
+    DB.set('videos', videos);
+}
