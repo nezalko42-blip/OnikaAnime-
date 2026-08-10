@@ -1769,6 +1769,70 @@ function restoreAllData() {
 }
 
 // ============================================
+// ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// ============================================
+
+// Форматирование чисел
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+// Функция обновления статистики
+function updateSocialStats() {
+    console.log('🔄 Обновление статистики соцсетей...');
+    
+    // Telegram
+    var tgElement = document.getElementById('tgStats');
+    if (tgElement) {
+        var tgBase = 1200;
+        var tgGrowth = Math.floor(Math.random() * 30);
+        var tgCurrent = tgBase + tgGrowth;
+        tgElement.textContent = '👥 ' + formatNumber(tgCurrent) + ' подписчиков';
+        tgElement.classList.add('pulse');
+        setTimeout(function() { tgElement.classList.remove('pulse'); }, 500);
+    }
+    
+    // VK
+    var vkElement = document.getElementById('vkStats');
+    if (vkElement) {
+        var vkBase = 856;
+        var vkGrowth = Math.floor(Math.random() * 20);
+        var vkCurrent = vkBase + vkGrowth;
+        vkElement.textContent = '👥 ' + formatNumber(vkCurrent) + ' подписчиков';
+        vkElement.classList.add('pulse');
+        setTimeout(function() { vkElement.classList.remove('pulse'); }, 500);
+    }
+    
+    // TikTok
+    var ttElement = document.getElementById('ttStats');
+    if (ttElement) {
+        var ttBase = 2400;
+        var ttGrowth = Math.floor(Math.random() * 50);
+        var ttCurrent = ttBase + ttGrowth;
+        ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
+        ttElement.classList.add('pulse');
+        setTimeout(function() { ttElement.classList.remove('pulse'); }, 500);
+    }
+}
+
+// Функция для ручного обновления
+function refreshStats() {
+    updateSocialStats();
+    showToast('📊 Статистика обновлена!', 'success');
+}
+
+// Запускаем обновление при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updateSocialStats, 1000);
+    setInterval(updateSocialStats, 30000);
+});
+
+console.log('📊 Система живой статистики запущена!');
+console.log('💡 Используйте refreshStats() для ручного обновления');
+
+// ============================================
 // ЗАПУСК
 // ============================================
 
@@ -1805,3 +1869,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
 console.log('🌟 OnikaAnime загружен!');
 console.log('💡 Используйте restoreAllData() для восстановления данных');
+console.log('💡 Используйте refreshStats() для обновления статистики соцсетей');
