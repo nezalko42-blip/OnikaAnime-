@@ -12,10 +12,6 @@ var totalPages = 1;
 var onlineTimer = null;
 var startTime = Date.now();
 
-// ============================================
-// СПИСОК ДОСТИЖЕНИЙ
-// ============================================
-
 var ACHIEVEMENTS_LIST = [
     { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель' },
     { id: 'ep200', name: '🎬 Зритель 2 уровня', desc: 'Посмотреть 200 серий', icon: '🎥', title: 'Любопытный' },
@@ -118,7 +114,7 @@ function closeMenu() {
 }
 
 // ============================================
-// ОТСЛЕЖИВАНИЕ ВРЕМЕНИ НА САЙТЕ
+// ОТСЛЕЖИВАНИЕ ВРЕМЕНИ
 // ============================================
 
 function startOnlineTracking() {
@@ -1085,28 +1081,34 @@ function renderProfile() {
     var img = document.getElementById('avatarImg');
     var letter = document.getElementById('avatarLetter');
     
-    // Восстанавливаем аватарку
+    var avatarFound = false;
+    
     if (profile.avatar && profile.avatar.length > 100) {
         img.src = profile.avatar;
         img.style.display = 'block';
         if (letter) letter.style.display = 'none';
-    } else {
-        // Пробуем восстановить из бэкапа
+        avatarFound = true;
+    }
+    
+    if (!avatarFound) {
         var backupAvatar = localStorage.getItem('avatar_' + user.name);
-        if (backupAvatar) {
+        if (backupAvatar && backupAvatar.length > 100) {
             img.src = backupAvatar;
             img.style.display = 'block';
             if (letter) letter.style.display = 'none';
-            // Сохраняем в профиль
             if (!profiles[user.name]) profiles[user.name] = {};
             profiles[user.name].avatar = backupAvatar;
             DB.set('profiles', profiles);
-        } else {
-            img.style.display = 'none';
-            if (letter) {
-                letter.style.display = 'flex';
-                letter.textContent = user.name[0].toUpperCase();
-            }
+            DB.save();
+            avatarFound = true;
+        }
+    }
+    
+    if (!avatarFound) {
+        img.style.display = 'none';
+        if (letter) {
+            letter.style.display = 'flex';
+            letter.textContent = user.name[0].toUpperCase();
         }
     }
     
@@ -1395,16 +1397,13 @@ function uploadAvatar(input) {
     
     var reader = new FileReader();
     reader.onload = function(e) {
+        var avatarData = e.target.result;
         var profiles = DB.get('profiles', {});
         if (!profiles[user.name]) profiles[user.name] = {};
         
-        var avatarData = e.target.result;
         profiles[user.name].avatar = avatarData;
         DB.set('profiles', profiles);
-        
-        // Сохраняем в бэкап
         localStorage.setItem('avatar_' + user.name, avatarData);
-        
         DB.save();
         
         var img = document.getElementById('avatarImg');
@@ -1452,7 +1451,7 @@ function playVideo(name, url) {
 }
 
 // ============================================
-// TOAST УВЕДОМЛЕНИЯ
+// TOAST
 // ============================================
 
 function showToast(message, type) {
@@ -1688,7 +1687,6 @@ function saveEdit() {
                         delete DB._data.lastSeen[oldName];
                     }
                     
-                    // Обновляем бэкапы
                     var backupFavs = localStorage.getItem('favorites_' + oldName);
                     if (backupFavs) {
                         localStorage.setItem('favorites_' + val, backupFavs);
@@ -1727,7 +1725,7 @@ function saveEdit() {
 }
 
 // ============================================
-// ВОССТАНОВЛЕНИЕ ДАННЫХ ПРИ ЗАГРУЗКЕ
+// ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 
 function restoreAllData() {
@@ -1736,7 +1734,6 @@ function restoreAllData() {
     var user = DB.get('currentUser');
     if (!user) return;
     
-    // Восстанавливаем избранное из бэкапа
     var backupFavs = localStorage.getItem('favorites_' + user.name);
     if (backupFavs) {
         try {
@@ -1751,7 +1748,6 @@ function restoreAllData() {
         } catch(e) {}
     }
     
-    // Восстанавливаем аватарку из бэкапа
     var backupAvatar = localStorage.getItem('avatar_' + user.name);
     if (backupAvatar) {
         var profiles = DB.get('profiles', {});
@@ -1765,7 +1761,6 @@ function restoreAllData() {
     
     DB.save();
     
-    // Обновляем UI
     if (typeof renderProfile === 'function') renderProfile();
     if (typeof renderFavorites === 'function') renderFavorites();
     if (typeof renderAchievements === 'function') renderAchievements();
@@ -1780,20 +1775,16 @@ function restoreAllData() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
     
-    // Восстанавливаем данные
     restoreAllData();
     
-    // Обновляем UI
     updateUI();
     navigate('catalog');
     
-    // Запускаем отслеживание времени
     var user = DB.get('currentUser');
     if (user) {
         startOnlineTracking();
     }
     
-    // Тестовые видео
     var videos = DB.get('videos', {});
     if (Object.keys(videos).length === 0) {
         videos = {
