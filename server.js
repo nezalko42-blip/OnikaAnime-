@@ -1,10 +1,10 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР SQLite (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// ONIKAANIME - СЕРВЕР (POSTGRESQL)
 // ============================================
 
 const express = require('express');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const path = require('path');
 
 const app = express();
@@ -14,217 +14,238 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
 
-const dbPath = path.join(__dirname, 'database.db');
-const db = new sqlite3.Database(dbPath);
-
-db.serialize(function() {
-    // ===== ПОЛЬЗОВАТЕЛИ =====
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        name TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    // ===== ПРОФИЛИ =====
-    db.run(`CREATE TABLE IF NOT EXISTS profiles (
-        user_id INTEGER PRIMARY KEY,
-        bio TEXT,
-        avatar TEXT,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    )`);
-
-    // ===== ИЗБРАННОЕ =====
-    db.run(`CREATE TABLE IF NOT EXISTS favorites (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        anime TEXT NOT NULL,
-        added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE(user_id, anime)
-    )`);
-
-    // ===== КОММЕНТАРИИ =====
-    db.run(`CREATE TABLE IF NOT EXISTS comments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        anime TEXT NOT NULL,
-        user_name TEXT NOT NULL,
-        text TEXT NOT NULL,
-        date TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    // ===== ДОСТИЖЕНИЯ =====
-    db.run(`CREATE TABLE IF NOT EXISTS achievements (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        achievement_id TEXT NOT NULL,
-        earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE(user_id, achievement_id)
-    )`);
-
-    // ===== АКТИВНЫЕ ТИТУЛЫ =====
-    db.run(`CREATE TABLE IF NOT EXISTS active_titles (
-        user_id INTEGER PRIMARY KEY,
-        title_id TEXT,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    )`);
-
-    // ===== ПРОДОЛЖЕНИЕ ПРОСМОТРА =====
-    db.run(`CREATE TABLE IF NOT EXISTS continue_watching (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        anime TEXT NOT NULL,
-        episode INTEGER DEFAULT 0,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE(user_id, anime)
-    )`);
-
-    // ===== ДРУЗЬЯ =====
-    db.run(`CREATE TABLE IF NOT EXISTS friends (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        friend_id INTEGER NOT NULL,
-        status TEXT DEFAULT 'pending',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY(friend_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE(user_id, friend_id)
-    )`);
-
-    // ===== СООБЩЕНИЯ (ЧАТ) =====
-    db.run(`CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        from_user_id INTEGER NOT NULL,
-        to_user_id INTEGER NOT NULL,
-        message TEXT NOT NULL,
-        is_read INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(from_user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY(to_user_id) REFERENCES users(id) ON DELETE CASCADE
-    )`);
-
-    console.log('✅ Все таблицы созданы (или уже существовали)');
+// ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL =====
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
+// ===== СОЗДАНИЕ ТАБЛИЦ =====
+async function initDatabase() {
+    try {
+        // УДАЛЯЕМ СТАРЫЕ ТАБЛИЦЫ (ЕСЛИ ЕСТЬ)
+        await pool.query(`DROP TABLE IF EXISTS messages`);
+        await pool.query(`DROP TABLE IF EXISTS friends`);
+        await pool.query(`DROP TABLE IF EXISTS continue_watching`);
+        await pool.query(`DROP TABLE IF EXISTS active_titles`);
+        await pool.query(`DROP TABLE IF EXISTS achievements`);
+        await pool.query(`DROP TABLE IF EXISTS comments`);
+        await pool.query(`DROP TABLE IF EXISTS favorites`);
+        await pool.query(`DROP TABLE IF EXISTS profiles`);
+        await pool.query(`DROP TABLE IF EXISTS users`);
+
+        console.log('🗑️ Старые таблицы удалены');
+
+        // СОЗДАЕМ ТАБЛИЦЫ
+        await pool.query(`
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                name TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE profiles (
+                user_id INTEGER PRIMARY KEY,
+                bio TEXT,
+                avatar TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE favorites (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                anime TEXT NOT NULL,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(user_id, anime)
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE comments (
+                id SERIAL PRIMARY KEY,
+                anime TEXT NOT NULL,
+                user_name TEXT NOT NULL,
+                text TEXT NOT NULL,
+                date TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE achievements (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                achievement_id TEXT NOT NULL,
+                earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(user_id, achievement_id)
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE active_titles (
+                user_id INTEGER PRIMARY KEY,
+                title_id TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE continue_watching (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                anime TEXT NOT NULL,
+                episode INTEGER DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(user_id, anime)
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE friends (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                friend_id INTEGER NOT NULL,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(friend_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(user_id, friend_id)
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE messages (
+                id SERIAL PRIMARY KEY,
+                from_user_id INTEGER NOT NULL,
+                to_user_id INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                is_read INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(to_user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+
+        console.log('✅ Все таблицы созданы!');
+        console.log('📊 База данных PostgreSQL готова!');
+    } catch (err) {
+        console.error('❌ Ошибка создания таблиц:', err);
+    }
+}
+
+initDatabase();
+
 // ============================================
-// API АВТОРИЗАЦИИ (ИСПРАВЛЕННЫЕ)
+// API РЕГИСТРАЦИИ
 // ============================================
 
-// ===== РЕГИСТРАЦИЯ =====
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
     const { email, name, password } = req.body;
     
     if (!email || !name || !password) {
         return res.status(400).json({ error: 'Email, имя и пароль обязательны' });
     }
 
-    // Проверка email
-    db.get('SELECT id FROM users WHERE email = ?', [email], (err, existingEmail) => {
-        if (err) {
-            console.error('Ошибка базы данных:', err);
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        if (existingEmail) {
+    try {
+        // Проверка email
+        const existingEmail = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (existingEmail.rows.length > 0) {
             return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
         }
 
         // Проверка имени
-        db.get('SELECT id FROM users WHERE name = ?', [name], (err, existingName) => {
-            if (err) {
-                console.error('Ошибка базы данных:', err);
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            if (existingName) {
-                return res.status(400).json({ error: 'Пользователь с таким именем уже существует' });
-            }
+        const existingName = await pool.query('SELECT id FROM users WHERE name = $1', [name]);
+        if (existingName.rows.length > 0) {
+            return res.status(400).json({ error: 'Пользователь с таким именем уже существует' });
+        }
 
-            // ВСТАВКА БЕЗ УКАЗАНИЯ ID — автоинкремент работает!
-            db.run(
-                'INSERT INTO users (email, name, password) VALUES (?, ?, ?)',
-                [email, name, password],
-                function(err) {
-                    if (err) {
-                        console.error('Ошибка регистрации:', err);
-                        return res.status(500).json({ error: 'Ошибка регистрации' });
-                    }
-                    
-                    const userId = this.lastID;
-                    console.log('✅ Новый пользователь создан, ID:', userId);
-                    
-                    // Создаем профиль
-                    db.run(
-                        'INSERT INTO profiles (user_id, bio, avatar) VALUES (?, ?, ?)',
-                        [userId, '', ''],
-                        function(err) {
-                            if (err) console.error('Ошибка создания профиля:', err);
-                        }
-                    );
-                    
-                    // Создаем активный титул
-                    db.run(
-                        'INSERT INTO active_titles (user_id, title_id) VALUES (?, ?)',
-                        [userId, null],
-                        function(err) {
-                            if (err) console.error('Ошибка создания титула:', err);
-                        }
-                    );
-                    
-                    res.json({ 
-                        success: true, 
-                        user: { id: userId, email, name } 
-                    });
-                }
-            );
+        // ВСТАВКА — SERIAL даст уникальный ID!
+        const result = await pool.query(
+            'INSERT INTO users (email, name, password) VALUES ($1, $2, $3) RETURNING id',
+            [email, name, password]
+        );
+        
+        const userId = result.rows[0].id;
+        console.log('✅ Новый пользователь создан, ID:', userId);
+
+        // Создаем профиль
+        await pool.query('INSERT INTO profiles (user_id, bio, avatar) VALUES ($1, $2, $3)', [userId, '', '']);
+        
+        // Создаем активный титул
+        await pool.query('INSERT INTO active_titles (user_id, title_id) VALUES ($1, $2)', [userId, null]);
+        
+        res.json({ 
+            success: true, 
+            user: { id: userId, email, name } 
         });
-    });
+    } catch (err) {
+        console.error('Ошибка регистрации:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// ===== ВХОД =====
-app.post('/api/login', (req, res) => {
+// ============================================
+// API ВХОДА
+// ============================================
+
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     
     if (!email || !password) {
         return res.status(400).json({ error: 'Email и пароль обязательны' });
     }
 
-    db.get('SELECT * FROM users WHERE email = ? AND password = ?', [email, password], (err, user) => {
-        if (err) {
-            console.error('Ошибка базы данных:', err);
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        if (!user) {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM users WHERE email = $1 AND password = $2',
+            [email, password]
+        );
+        
+        if (result.rows.length === 0) {
             return res.status(400).json({ error: 'Неверный email или пароль' });
         }
         
+        const user = result.rows[0];
         res.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
-    });
+    } catch (err) {
+        console.error('Ошибка входа:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// ===== ВЫХОД =====
+// ============================================
+// API ВЫХОДА
+// ============================================
+
 app.post('/api/logout', (req, res) => {
     res.json({ success: true });
 });
 
 // ============================================
-// API ПОЛЬЗОВАТЕЛЕЙ
+// API ПОЛЬЗОВАТЕЛЯ
 // ============================================
 
-app.get('/api/user/:id', (req, res) => {
+app.get('/api/user/:id', async (req, res) => {
     const userId = req.params.id;
     
-    db.get('SELECT id, email, name FROM users WHERE id = ?', [userId], (err, user) => {
-        if (err) {
-            console.error('Ошибка:', err);
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        if (!user) {
+    try {
+        const userResult = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0) {
             return res.status(404).json({ error: 'Пользователь не найден' });
         }
         
+        const user = userResult.rows[0];
         const result = { 
             id: user.id, 
             email: user.email, 
@@ -234,155 +255,163 @@ app.get('/api/user/:id', (req, res) => {
             activeTitle: null
         };
         
-        db.all('SELECT anime FROM favorites WHERE user_id = ?', [userId], (err, favs) => {
-            if (!err && favs) result.favorites = favs.map(f => f.anime);
-            
-            db.all('SELECT achievement_id FROM achievements WHERE user_id = ?', [userId], (err, ach) => {
-                if (!err && ach) result.achievements = ach.map(a => a.achievement_id);
-                
-                db.get('SELECT title_id FROM active_titles WHERE user_id = ?', [userId], (err, title) => {
-                    if (!err && title) result.activeTitle = title.title_id;
-                    res.json(result);
-                });
-            });
-        });
-    });
+        const favs = await pool.query('SELECT anime FROM favorites WHERE user_id = $1', [userId]);
+        result.favorites = favs.rows.map(f => f.anime);
+        
+        const ach = await pool.query('SELECT achievement_id FROM achievements WHERE user_id = $1', [userId]);
+        result.achievements = ach.rows.map(a => a.achievement_id);
+        
+        const title = await pool.query('SELECT title_id FROM active_titles WHERE user_id = $1', [userId]);
+        if (title.rows.length > 0) result.activeTitle = title.rows[0].title_id;
+        
+        res.json(result);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-app.post('/api/update-name', (req, res) => {
+app.post('/api/update-name', async (req, res) => {
     const { userId, newName } = req.body;
     
     if (!userId || !newName) {
         return res.status(400).json({ error: 'ID пользователя и новое имя обязательны' });
     }
     
-    // Проверяем, не занято ли имя
-    db.get('SELECT id FROM users WHERE name = ? AND id != ?', [newName, userId], (err, existing) => {
-        if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-        if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
+    try {
+        const existing = await pool.query('SELECT id FROM users WHERE name = $1 AND id != $2', [newName, userId]);
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ error: 'Это имя уже занято' });
+        }
         
-        db.run('UPDATE users SET name = ? WHERE id = ?', [newName, userId], function(err) {
-            if (err) return res.status(500).json({ error: 'Ошибка обновления имени' });
-            res.json({ success: true, name: newName });
-        });
-    });
+        await pool.query('UPDATE users SET name = $1 WHERE id = $2', [newName, userId]);
+        res.json({ success: true, name: newName });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 // ============================================
 // API ИЗБРАННОГО
 // ============================================
 
-app.post('/api/favorites', (req, res) => {
+app.post('/api/favorites', async (req, res) => {
     const { userId, favorites } = req.body;
     
     if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
     
-    db.run('DELETE FROM favorites WHERE user_id = ?', [userId], function(err) {
-        if (err) {
-            console.error('Ошибка удаления:', err);
-            return res.status(500).json({ error: 'Ошибка сохранения' });
-        }
+    try {
+        await pool.query('DELETE FROM favorites WHERE user_id = $1', [userId]);
         
         if (favorites && favorites.length > 0) {
-            const stmt = db.prepare('INSERT INTO favorites (user_id, anime) VALUES (?, ?)');
-            favorites.forEach(function(anime) { 
-                stmt.run([userId, anime], function(err) {
-                    if (err) console.error('Ошибка вставки:', err);
-                });
-            });
-            stmt.finalize();
+            for (const anime of favorites) {
+                await pool.query(
+                    'INSERT INTO favorites (user_id, anime) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                    [userId, anime]
+                );
+            }
         }
         res.json({ success: true });
-    });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 // ============================================
 // API ДОСТИЖЕНИЙ
 // ============================================
 
-app.post('/api/achievements', (req, res) => {
+app.post('/api/achievements', async (req, res) => {
     const { userId, achievements } = req.body;
     
     if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
     
-    db.run('DELETE FROM achievements WHERE user_id = ?', [userId], function(err) {
-        if (err) {
-            console.error('Ошибка удаления:', err);
-            return res.status(500).json({ error: 'Ошибка сохранения' });
-        }
+    try {
+        await pool.query('DELETE FROM achievements WHERE user_id = $1', [userId]);
         
         if (achievements && achievements.length > 0) {
-            const stmt = db.prepare('INSERT INTO achievements (user_id, achievement_id) VALUES (?, ?)');
-            achievements.forEach(function(achId) { 
-                stmt.run([userId, achId], function(err) {
-                    if (err) console.error('Ошибка вставки:', err);
-                });
-            });
-            stmt.finalize();
+            for (const achId of achievements) {
+                await pool.query(
+                    'INSERT INTO achievements (user_id, achievement_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                    [userId, achId]
+                );
+            }
         }
         res.json({ success: true });
-    });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-app.post('/api/active-title', (req, res) => {
+app.post('/api/active-title', async (req, res) => {
     const { userId, titleId } = req.body;
     
     if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
     
-    db.run('INSERT OR REPLACE INTO active_titles (user_id, title_id) VALUES (?, ?)', [userId, titleId], function(err) {
-        if (err) {
-            console.error('Ошибка сохранения:', err);
-            return res.status(500).json({ error: 'Ошибка сохранения' });
-        }
+    try {
+        await pool.query(
+            `INSERT INTO active_titles (user_id, title_id) VALUES ($1, $2) 
+             ON CONFLICT (user_id) DO UPDATE SET title_id = $2`,
+            [userId, titleId]
+        );
         res.json({ success: true });
-    });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 // ============================================
 // API УДАЛЕНИЯ АККАУНТА
 // ============================================
 
-app.post('/api/delete-account', (req, res) => {
+app.post('/api/delete-account', async (req, res) => {
     const { userId } = req.body;
     
     if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
     
-    db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
-        if (err) {
-            console.error('Ошибка удаления:', err);
-            return res.status(500).json({ error: 'Ошибка удаления' });
-        }
+    try {
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
         res.json({ success: true });
-    });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 // ============================================
 // API КОММЕНТАРИЕВ
 // ============================================
 
-app.get('/api/comments/:anime', (req, res) => {
+app.get('/api/comments/:anime', async (req, res) => {
     const anime = req.params.anime;
     
-    db.all('SELECT * FROM comments WHERE anime = ? ORDER BY created_at DESC', [anime], (err, rows) => {
-        if (err) {
-            console.error('Ошибка получения комментариев:', err);
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        res.json(rows || []);
-    });
+    try {
+        const result = await pool.query(
+            'SELECT * FROM comments WHERE anime = $1 ORDER BY created_at DESC',
+            [anime]
+        );
+        res.json(result.rows || []);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-app.get('/api/comments/all', (req, res) => {
-    db.all('SELECT * FROM comments ORDER BY created_at DESC', (err, rows) => {
-        if (err) {
-            console.error('Ошибка:', err);
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        res.json(rows || []);
-    });
+app.get('/api/comments/all', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM comments ORDER BY created_at DESC');
+        res.json(result.rows || []);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-app.post('/api/comments', (req, res) => {
+app.post('/api/comments', async (req, res) => {
     const { anime, user_name, text } = req.body;
     
     if (!anime || !user_name || !text) {
@@ -391,29 +420,28 @@ app.post('/api/comments', (req, res) => {
     
     const date = new Date().toISOString().slice(0, 16).replace('T', ' ');
     
-    db.run(
-        'INSERT INTO comments (anime, user_name, text, date) VALUES (?, ?, ?, ?)',
-        [anime, user_name, text, date],
-        function(err) {
-            if (err) {
-                console.error('Ошибка добавления комментария:', err);
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            res.json({ 
-                success: true, 
-                comment: { 
-                    id: this.lastID, 
-                    anime, 
-                    user_name, 
-                    text, 
-                    date 
-                } 
-            });
-        }
-    );
+    try {
+        const result = await pool.query(
+            'INSERT INTO comments (anime, user_name, text, date) VALUES ($1, $2, $3, $4) RETURNING id',
+            [anime, user_name, text, date]
+        );
+        res.json({ 
+            success: true, 
+            comment: { 
+                id: result.rows[0].id, 
+                anime, 
+                user_name, 
+                text, 
+                date 
+            } 
+        });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-app.delete('/api/comments/:id', (req, res) => {
+app.delete('/api/comments/:id', async (req, res) => {
     const id = req.params.id;
     const { user_name } = req.body;
     
@@ -421,261 +449,242 @@ app.delete('/api/comments/:id', (req, res) => {
         return res.status(400).json({ error: 'Имя пользователя обязательно' });
     }
     
-    db.get('SELECT * FROM comments WHERE id = ?', [id], (err, comment) => {
-        if (err) {
-            console.error('Ошибка:', err);
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        if (!comment) {
+    try {
+        const comment = await pool.query('SELECT * FROM comments WHERE id = $1', [id]);
+        if (comment.rows.length === 0) {
             return res.status(404).json({ error: 'Комментарий не найден' });
         }
-        if (comment.user_name !== user_name) {
+        if (comment.rows[0].user_name !== user_name) {
             return res.status(403).json({ error: 'Вы не можете удалить этот комментарий' });
         }
         
-        db.run('DELETE FROM comments WHERE id = ?', [id], function(err) {
-            if (err) {
-                console.error('Ошибка удаления:', err);
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            res.json({ success: true });
-        });
-    });
+        await pool.query('DELETE FROM comments WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 // ============================================
 // API ДРУЗЕЙ
 // ============================================
 
-// Поиск пользователей
-app.get('/api/users/search', (req, res) => {
+app.get('/api/users/search', async (req, res) => {
     const { q } = req.query;
     
     if (!q || q.length < 1) {
         return res.json([]);
     }
     
-    db.all(
-        'SELECT id, name, email FROM users WHERE id LIKE ? OR name LIKE ? LIMIT 20',
-        ['%' + q + '%', '%' + q + '%'],
-        (err, rows) => {
-            if (err) {
-                console.error('Ошибка поиска:', err);
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            res.json(rows || []);
-        }
-    );
+    try {
+        const result = await pool.query(
+            `SELECT id, name, email FROM users WHERE id::text LIKE $1 OR name LIKE $2 LIMIT 20`,
+            ['%' + q + '%', '%' + q + '%']
+        );
+        res.json(result.rows || []);
+    } catch (err) {
+        console.error('Ошибка поиска:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// Получить пользователя по ID
-app.get('/api/users/:id', (req, res) => {
+app.get('/api/users/:id', async (req, res) => {
     const userId = req.params.id;
     
-    db.get('SELECT id, name, email, created_at FROM users WHERE id = ?', [userId], (err, user) => {
-        if (err) {
-            console.error('Ошибка:', err);
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        if (!user) {
+    try {
+        const result = await pool.query(
+            'SELECT id, name, email, created_at FROM users WHERE id = $1',
+            [userId]
+        );
+        if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Пользователь не найден' });
         }
-        res.json(user);
-    });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// Получить профиль друга
-app.get('/api/users/:id/profile', (req, res) => {
+app.get('/api/users/:id/profile', async (req, res) => {
     const userId = req.params.id;
     const currentUserId = req.query.currentUserId;
     
-    db.get('SELECT id, name, email, created_at FROM users WHERE id = ?', [userId], (err, user) => {
-        if (err) {
-            console.error('Ошибка:', err);
-            return res.status(500).json({ error: 'Ошибка базы данных' });
-        }
-        if (!user) {
+    try {
+        const userResult = await pool.query(
+            'SELECT id, name, email, created_at FROM users WHERE id = $1',
+            [userId]
+        );
+        if (userResult.rows.length === 0) {
             return res.status(404).json({ error: 'Пользователь не найден' });
         }
         
-        db.all('SELECT anime FROM favorites WHERE user_id = ?', [userId], (err, favs) => {
-            user.favorites = favs ? favs.map(f => f.anime) : [];
-            
-            db.all('SELECT * FROM comments WHERE user_name = ? ORDER BY created_at DESC LIMIT 50', [user.name], (err, comments) => {
-                user.comments = comments || [];
-                
-                db.all('SELECT achievement_id FROM achievements WHERE user_id = ?', [userId], (err, ach) => {
-                    user.achievements = ach ? ach.map(a => a.achievement_id) : [];
-                    
-                    db.all('SELECT anime, episode, updated_at FROM continue_watching WHERE user_id = ? ORDER BY updated_at DESC LIMIT 20', [userId], (err, history) => {
-                        user.history = history || [];
-                        
-                        if (currentUserId) {
-                            db.get(
-                                'SELECT status FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
-                                [currentUserId, userId, userId, currentUserId],
-                                (err, friend) => {
-                                    user.friendStatus = friend ? friend.status : 'none';
-                                    res.json(user);
-                                }
-                            );
-                        } else {
-                            user.friendStatus = 'none';
-                            res.json(user);
-                        }
-                    });
-                });
-            });
-        });
-    });
+        const user = userResult.rows[0];
+        user.favorites = [];
+        user.comments = [];
+        user.achievements = [];
+        user.history = [];
+        user.friendStatus = 'none';
+        
+        const favs = await pool.query('SELECT anime FROM favorites WHERE user_id = $1', [userId]);
+        user.favorites = favs.rows.map(f => f.anime);
+        
+        const comments = await pool.query(
+            'SELECT * FROM comments WHERE user_name = $1 ORDER BY created_at DESC LIMIT 50',
+            [user.name]
+        );
+        user.comments = comments.rows || [];
+        
+        const ach = await pool.query('SELECT achievement_id FROM achievements WHERE user_id = $1', [userId]);
+        user.achievements = ach.rows.map(a => a.achievement_id);
+        
+        const history = await pool.query(
+            'SELECT anime, episode, updated_at FROM continue_watching WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 20',
+            [userId]
+        );
+        user.history = history.rows || [];
+        
+        if (currentUserId) {
+            const friend = await pool.query(
+                `SELECT status FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+                [currentUserId, userId]
+            );
+            if (friend.rows.length > 0) {
+                user.friendStatus = friend.rows[0].status;
+            }
+        }
+        
+        res.json(user);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// Отправить заявку в друзья
-app.post('/api/friends/request', (req, res) => {
+app.post('/api/friends/request', async (req, res) => {
     const { userId, friendId } = req.body;
     
     if (!userId || !friendId) {
         return res.status(400).json({ error: 'ID пользователей обязательны' });
     }
-    if (userId === friendId) {
+    if (parseInt(userId) === parseInt(friendId)) {
         return res.status(400).json({ error: 'Нельзя добавить себя в друзья' });
     }
     
-    db.get('SELECT id FROM users WHERE id = ?', [friendId], (err, user) => {
-        if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-        if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    try {
+        const user = await pool.query('SELECT id FROM users WHERE id = $1', [friendId]);
+        if (user.rows.length === 0) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
         
-        db.get(
-            'SELECT * FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
-            [userId, friendId, friendId, userId],
-            (err, existing) => {
-                if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-                if (existing) {
-                    return res.status(400).json({ error: 'Заявка уже существует' });
-                }
-                
-                db.run(
-                    'INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, ?)',
-                    [userId, friendId, 'pending'],
-                    function(err) {
-                        if (err) {
-                            console.error('Ошибка:', err);
-                            return res.status(500).json({ error: 'Ошибка отправки заявки' });
-                        }
-                        res.json({ success: true, message: 'Заявка отправлена' });
-                    }
-                );
-            }
+        const existing = await pool.query(
+            `SELECT * FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+            [userId, friendId]
         );
-    });
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ error: 'Заявка уже существует' });
+        }
+        
+        await pool.query(
+            'INSERT INTO friends (user_id, friend_id, status) VALUES ($1, $2, $3)',
+            [userId, friendId, 'pending']
+        );
+        res.json({ success: true, message: 'Заявка отправлена' });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// Ответить на заявку
-app.post('/api/friends/respond', (req, res) => {
+app.post('/api/friends/respond', async (req, res) => {
     const { userId, friendId, action } = req.body;
     
     if (!userId || !friendId || !action) {
         return res.status(400).json({ error: 'Все поля обязательны' });
     }
     
-    if (action === 'accept') {
-        db.run(
-            'UPDATE friends SET status = ? WHERE user_id = ? AND friend_id = ? AND status = ?',
-            ['accepted', friendId, userId, 'pending'],
-            function(err) {
-                if (err) {
-                    console.error('Ошибка:', err);
-                    return res.status(500).json({ error: 'Ошибка принятия заявки' });
-                }
-                if (this.changes === 0) {
-                    return res.status(404).json({ error: 'Заявка не найдена' });
-                }
-                res.json({ success: true, message: 'Друг добавлен' });
+    try {
+        if (action === 'accept') {
+            const result = await pool.query(
+                `UPDATE friends SET status = 'accepted' WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
+                [friendId, userId]
+            );
+            if (result.rowCount === 0) {
+                return res.status(404).json({ error: 'Заявка не найдена' });
             }
-        );
-    } else if (action === 'reject' || action === 'block') {
-        const status = action === 'block' ? 'blocked' : 'rejected';
-        db.run(
-            'UPDATE friends SET status = ? WHERE user_id = ? AND friend_id = ? AND status = ?',
-            [status, friendId, userId, 'pending'],
-            function(err) {
-                if (err) {
-                    console.error('Ошибка:', err);
-                    return res.status(500).json({ error: 'Ошибка обработки заявки' });
-                }
-                res.json({ success: true, message: action === 'block' ? 'Пользователь заблокирован' : 'Заявка отклонена' });
-            }
-        );
-    } else {
-        res.status(400).json({ error: 'Неизвестное действие' });
+            res.json({ success: true, message: 'Друг добавлен' });
+        } else {
+            await pool.query(
+                `DELETE FROM friends WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
+                [friendId, userId]
+            );
+            res.json({ success: true, message: 'Заявка отклонена' });
+        }
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// Получить список друзей
-app.get('/api/friends/:userId', (req, res) => {
+app.get('/api/friends/:userId', async (req, res) => {
     const userId = req.params.userId;
     
-    db.all(
-        `SELECT u.id, u.name, u.email, f.status, f.created_at as friend_since 
-         FROM friends f 
-         JOIN users u ON (u.id = f.friend_id OR u.id = f.user_id) 
-         WHERE (f.user_id = ? OR f.friend_id = ?) 
-         AND f.status = 'accepted' 
-         AND u.id != ?`,
-        [userId, userId, userId],
-        (err, rows) => {
-            if (err) {
-                console.error('Ошибка:', err);
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            res.json(rows || []);
-        }
-    );
+    try {
+        const result = await pool.query(
+            `SELECT u.id, u.name, u.email, f.status, f.created_at as friend_since 
+             FROM friends f 
+             JOIN users u ON (u.id = f.friend_id OR u.id = f.user_id) 
+             WHERE (f.user_id = $1 OR f.friend_id = $1) 
+             AND f.status = 'accepted' 
+             AND u.id != $1`,
+            [userId]
+        );
+        res.json(result.rows || []);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// Получить заявки в друзья
-app.get('/api/friends/requests/:userId', (req, res) => {
+app.get('/api/friends/requests/:userId', async (req, res) => {
     const userId = req.params.userId;
     
-    db.all(
-        `SELECT u.id, u.name, u.email, f.created_at 
-         FROM friends f 
-         JOIN users u ON u.id = f.user_id 
-         WHERE f.friend_id = ? AND f.status = 'pending'`,
-        [userId],
-        (err, rows) => {
-            if (err) {
-                console.error('Ошибка:', err);
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            res.json(rows || []);
-        }
-    );
+    try {
+        const result = await pool.query(
+            `SELECT u.id, u.name, u.email, f.created_at 
+             FROM friends f 
+             JOIN users u ON u.id = f.user_id 
+             WHERE f.friend_id = $1 AND f.status = 'pending'`,
+            [userId]
+        );
+        res.json(result.rows || []);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// Удалить друга
-app.delete('/api/friends/:userId/:friendId', (req, res) => {
+app.delete('/api/friends/:userId/:friendId', async (req, res) => {
     const { userId, friendId } = req.params;
     
-    db.run(
-        'DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
-        [userId, friendId, friendId, userId],
-        function(err) {
-            if (err) {
-                console.error('Ошибка:', err);
-                return res.status(500).json({ error: 'Ошибка удаления' });
-            }
-            res.json({ success: true });
-        }
-    );
+    try {
+        await pool.query(
+            `DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+            [userId, friendId]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 // ============================================
 // API ЧАТА
 // ============================================
 
-// Отправить сообщение
-app.post('/api/messages', (req, res) => {
+app.post('/api/messages', async (req, res) => {
     const { fromUserId, toUserId, message } = req.body;
     
     if (!fromUserId || !toUserId || !message) {
@@ -685,63 +694,57 @@ app.post('/api/messages', (req, res) => {
         return res.status(400).json({ error: 'Сообщение слишком длинное' });
     }
     
-    db.run(
-        'INSERT INTO messages (from_user_id, to_user_id, message) VALUES (?, ?, ?)',
-        [fromUserId, toUserId, message],
-        function(err) {
-            if (err) {
-                console.error('Ошибка:', err);
-                return res.status(500).json({ error: 'Ошибка отправки' });
-            }
-            res.json({ success: true, id: this.lastID });
-        }
-    );
+    try {
+        const result = await pool.query(
+            'INSERT INTO messages (from_user_id, to_user_id, message) VALUES ($1, $2, $3) RETURNING id',
+            [fromUserId, toUserId, message]
+        );
+        res.json({ success: true, id: result.rows[0].id });
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// Получить сообщения
-app.get('/api/messages/:userId/:friendId', (req, res) => {
+app.get('/api/messages/:userId/:friendId', async (req, res) => {
     const { userId, friendId } = req.params;
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
     
-    db.all(
-        `SELECT * FROM messages 
-         WHERE (from_user_id = ? AND to_user_id = ?) 
-         OR (from_user_id = ? AND to_user_id = ?) 
-         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-        [userId, friendId, friendId, userId, limit, offset],
-        (err, rows) => {
-            if (err) {
-                console.error('Ошибка:', err);
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            
-            db.run(
-                'UPDATE messages SET is_read = 1 WHERE from_user_id = ? AND to_user_id = ?',
-                [friendId, userId],
-                function(err) {}
-            );
-            
-            res.json(rows || []);
-        }
-    );
+    try {
+        const result = await pool.query(
+            `SELECT * FROM messages 
+             WHERE (from_user_id = $1 AND to_user_id = $2) 
+             OR (from_user_id = $2 AND to_user_id = $1) 
+             ORDER BY created_at DESC LIMIT $3 OFFSET $4`,
+            [userId, friendId, limit, offset]
+        );
+        
+        await pool.query(
+            'UPDATE messages SET is_read = 1 WHERE from_user_id = $1 AND to_user_id = $2',
+            [friendId, userId]
+        );
+        
+        res.json(result.rows || []);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
-// Получить непрочитанные сообщения
-app.get('/api/messages/unread/:userId', (req, res) => {
+app.get('/api/messages/unread/:userId', async (req, res) => {
     const userId = req.params.userId;
     
-    db.all(
-        'SELECT from_user_id, COUNT(*) as count FROM messages WHERE to_user_id = ? AND is_read = 0 GROUP BY from_user_id',
-        [userId],
-        (err, rows) => {
-            if (err) {
-                console.error('Ошибка:', err);
-                return res.status(500).json({ error: 'Ошибка базы данных' });
-            }
-            res.json(rows || []);
-        }
-    );
+    try {
+        const result = await pool.query(
+            'SELECT from_user_id, COUNT(*) as count FROM messages WHERE to_user_id = $1 AND is_read = 0 GROUP BY from_user_id',
+            [userId]
+        );
+        res.json(result.rows || []);
+    } catch (err) {
+        console.error('Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
 });
 
 // ============================================
