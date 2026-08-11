@@ -1,5 +1,6 @@
 // ============================================
 // ONIKAANIME - СЕРВЕР (POSTGRESQL)
+// ИСПРАВЛЕННАЯ ВЕРСИЯ
 // ============================================
 
 const express = require('express');
@@ -22,10 +23,20 @@ const pool = new Pool({
     }
 });
 
-// ===== СОЗДАНИЕ ТАБЛИЦ =====
+// ===== ПРОВЕРКА ПОДКЛЮЧЕНИЯ =====
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('❌ Ошибка подключения к PostgreSQL:', err.message);
+        return;
+    }
+    console.log('✅ Подключение к PostgreSQL успешно!');
+    release();
+});
+
+// ===== СОЗДАНИЕ ТАБЛИЦ (ИСПРАВЛЕННОЕ) =====
 async function initDatabase() {
     try {
-        // УДАЛЯЕМ СТАРЫЕ ТАБЛИЦЫ (ЕСЛИ ЕСТЬ)
+        // УДАЛЯЕМ ВСЕ ТАБЛИЦЫ
         await pool.query(`DROP TABLE IF EXISTS messages`);
         await pool.query(`DROP TABLE IF EXISTS friends`);
         await pool.query(`DROP TABLE IF EXISTS continue_watching`);
@@ -38,7 +49,8 @@ async function initDatabase() {
 
         console.log('🗑️ Старые таблицы удалены');
 
-        // СОЗДАЕМ ТАБЛИЦЫ
+        // СОЗДАЕМ ТАБЛИЦЫ В ПРАВИЛЬНОМ ПОРЯДКЕ
+        // 1. Сначала users
         await pool.query(`
             CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
@@ -49,6 +61,7 @@ async function initDatabase() {
             )
         `);
 
+        // 2. Потом все, кто ссылается на users
         await pool.query(`
             CREATE TABLE profiles (
                 user_id INTEGER PRIMARY KEY,
@@ -139,6 +152,7 @@ async function initDatabase() {
 
         console.log('✅ Все таблицы созданы!');
         console.log('📊 База данных PostgreSQL готова!');
+        console.log('🔢 SERIAL будет давать уникальные ID: 1, 2, 3...');
     } catch (err) {
         console.error('❌ Ошибка создания таблиц:', err);
     }
@@ -225,35 +239,22 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ============================================
-// API ВЫХОДА
+// ОСТАЛЬНЫЕ API
 // ============================================
 
 app.post('/api/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// ============================================
-// API ПОЛЬЗОВАТЕЛЯ
-// ============================================
-
 app.get('/api/user/:id', async (req, res) => {
     const userId = req.params.id;
-    
     try {
         const userResult = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [userId]);
         if (userResult.rows.length === 0) {
             return res.status(404).json({ error: 'Пользователь не найден' });
         }
-        
         const user = userResult.rows[0];
-        const result = { 
-            id: user.id, 
-            email: user.email, 
-            name: user.name, 
-            favorites: [], 
-            achievements: [], 
-            activeTitle: null
-        };
+        const result = { id: user.id, email: user.email, name: user.name, favorites: [], achievements: [], activeTitle: null };
         
         const favs = await pool.query('SELECT anime FROM favorites WHERE user_id = $1', [userId]);
         result.favorites = favs.rows.map(f => f.anime);
@@ -273,130 +274,77 @@ app.get('/api/user/:id', async (req, res) => {
 
 app.post('/api/update-name', async (req, res) => {
     const { userId, newName } = req.body;
-    
-    if (!userId || !newName) {
-        return res.status(400).json({ error: 'ID пользователя и новое имя обязательны' });
-    }
-    
+    if (!userId || !newName) return res.status(400).json({ error: 'ID и имя обязательны' });
     try {
         const existing = await pool.query('SELECT id FROM users WHERE name = $1 AND id != $2', [newName, userId]);
-        if (existing.rows.length > 0) {
-            return res.status(400).json({ error: 'Это имя уже занято' });
-        }
-        
+        if (existing.rows.length > 0) return res.status(400).json({ error: 'Имя уже занято' });
         await pool.query('UPDATE users SET name = $1 WHERE id = $2', [newName, userId]);
         res.json({ success: true, name: newName });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
-
-// ============================================
-// API ИЗБРАННОГО
-// ============================================
 
 app.post('/api/favorites', async (req, res) => {
     const { userId, favorites } = req.body;
-    
-    if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
-    
+    if (!userId) return res.status(400).json({ error: 'ID обязателен' });
     try {
         await pool.query('DELETE FROM favorites WHERE user_id = $1', [userId]);
-        
         if (favorites && favorites.length > 0) {
             for (const anime of favorites) {
-                await pool.query(
-                    'INSERT INTO favorites (user_id, anime) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                    [userId, anime]
-                );
+                await pool.query('INSERT INTO favorites (user_id, anime) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, anime]);
             }
         }
         res.json({ success: true });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// ============================================
-// API ДОСТИЖЕНИЙ
-// ============================================
-
 app.post('/api/achievements', async (req, res) => {
     const { userId, achievements } = req.body;
-    
-    if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
-    
+    if (!userId) return res.status(400).json({ error: 'ID обязателен' });
     try {
         await pool.query('DELETE FROM achievements WHERE user_id = $1', [userId]);
-        
         if (achievements && achievements.length > 0) {
             for (const achId of achievements) {
-                await pool.query(
-                    'INSERT INTO achievements (user_id, achievement_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                    [userId, achId]
-                );
+                await pool.query('INSERT INTO achievements (user_id, achievement_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, achId]);
             }
         }
         res.json({ success: true });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.post('/api/active-title', async (req, res) => {
     const { userId, titleId } = req.body;
-    
-    if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
-    
+    if (!userId) return res.status(400).json({ error: 'ID обязателен' });
     try {
-        await pool.query(
-            `INSERT INTO active_titles (user_id, title_id) VALUES ($1, $2) 
-             ON CONFLICT (user_id) DO UPDATE SET title_id = $2`,
-            [userId, titleId]
-        );
+        await pool.query('INSERT INTO active_titles (user_id, title_id) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET title_id = $2', [userId, titleId]);
         res.json({ success: true });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// ============================================
-// API УДАЛЕНИЯ АККАУНТА
-// ============================================
-
 app.post('/api/delete-account', async (req, res) => {
     const { userId } = req.body;
-    
-    if (!userId) return res.status(400).json({ error: 'ID пользователя обязателен' });
-    
+    if (!userId) return res.status(400).json({ error: 'ID обязателен' });
     try {
         await pool.query('DELETE FROM users WHERE id = $1', [userId]);
         res.json({ success: true });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// ============================================
-// API КОММЕНТАРИЕВ
-// ============================================
-
+// ===== КОММЕНТАРИИ =====
 app.get('/api/comments/:anime', async (req, res) => {
-    const anime = req.params.anime;
-    
     try {
-        const result = await pool.query(
-            'SELECT * FROM comments WHERE anime = $1 ORDER BY created_at DESC',
-            [anime]
-        );
+        const result = await pool.query('SELECT * FROM comments WHERE anime = $1 ORDER BY created_at DESC', [req.params.anime]);
         res.json(result.rows || []);
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
@@ -406,103 +354,51 @@ app.get('/api/comments/all', async (req, res) => {
         const result = await pool.query('SELECT * FROM comments ORDER BY created_at DESC');
         res.json(result.rows || []);
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.post('/api/comments', async (req, res) => {
     const { anime, user_name, text } = req.body;
-    
-    if (!anime || !user_name || !text) {
-        return res.status(400).json({ error: 'Все поля обязательны' });
-    }
-    
+    if (!anime || !user_name || !text) return res.status(400).json({ error: 'Все поля обязательны' });
     const date = new Date().toISOString().slice(0, 16).replace('T', ' ');
-    
     try {
-        const result = await pool.query(
-            'INSERT INTO comments (anime, user_name, text, date) VALUES ($1, $2, $3, $4) RETURNING id',
-            [anime, user_name, text, date]
-        );
-        res.json({ 
-            success: true, 
-            comment: { 
-                id: result.rows[0].id, 
-                anime, 
-                user_name, 
-                text, 
-                date 
-            } 
-        });
+        const result = await pool.query('INSERT INTO comments (anime, user_name, text, date) VALUES ($1, $2, $3, $4) RETURNING id', [anime, user_name, text, date]);
+        res.json({ success: true, comment: { id: result.rows[0].id, anime, user_name, text, date } });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.delete('/api/comments/:id', async (req, res) => {
-    const id = req.params.id;
     const { user_name } = req.body;
-    
-    if (!user_name) {
-        return res.status(400).json({ error: 'Имя пользователя обязательно' });
-    }
-    
+    if (!user_name) return res.status(400).json({ error: 'Имя обязательно' });
     try {
-        const comment = await pool.query('SELECT * FROM comments WHERE id = $1', [id]);
-        if (comment.rows.length === 0) {
-            return res.status(404).json({ error: 'Комментарий не найден' });
-        }
-        if (comment.rows[0].user_name !== user_name) {
-            return res.status(403).json({ error: 'Вы не можете удалить этот комментарий' });
-        }
-        
-        await pool.query('DELETE FROM comments WHERE id = $1', [id]);
+        await pool.query('DELETE FROM comments WHERE id = $1 AND user_name = $2', [req.params.id, user_name]);
         res.json({ success: true });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// ============================================
-// API ДРУЗЕЙ
-// ============================================
-
+// ===== ДРУЗЬЯ =====
 app.get('/api/users/search', async (req, res) => {
     const { q } = req.query;
-    
-    if (!q || q.length < 1) {
-        return res.json([]);
-    }
-    
+    if (!q || q.length < 1) return res.json([]);
     try {
-        const result = await pool.query(
-            `SELECT id, name, email FROM users WHERE id::text LIKE $1 OR name LIKE $2 LIMIT 20`,
-            ['%' + q + '%', '%' + q + '%']
-        );
+        const result = await pool.query('SELECT id, name, email FROM users WHERE id::text LIKE $1 OR name LIKE $2 LIMIT 20', ['%' + q + '%', '%' + q + '%']);
         res.json(result.rows || []);
     } catch (err) {
-        console.error('Ошибка поиска:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.get('/api/users/:id', async (req, res) => {
-    const userId = req.params.id;
-    
     try {
-        const result = await pool.query(
-            'SELECT id, name, email, created_at FROM users WHERE id = $1',
-            [userId]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Пользователь не найден' });
-        }
+        const result = await pool.query('SELECT id, name, email, created_at FROM users WHERE id = $1', [req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Не найден' });
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
@@ -510,16 +406,9 @@ app.get('/api/users/:id', async (req, res) => {
 app.get('/api/users/:id/profile', async (req, res) => {
     const userId = req.params.id;
     const currentUserId = req.query.currentUserId;
-    
     try {
-        const userResult = await pool.query(
-            'SELECT id, name, email, created_at FROM users WHERE id = $1',
-            [userId]
-        );
-        if (userResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Пользователь не найден' });
-        }
-        
+        const userResult = await pool.query('SELECT id, name, email, created_at FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0) return res.status(404).json({ error: 'Не найден' });
         const user = userResult.rows[0];
         user.favorites = [];
         user.comments = [];
@@ -530,178 +419,93 @@ app.get('/api/users/:id/profile', async (req, res) => {
         const favs = await pool.query('SELECT anime FROM favorites WHERE user_id = $1', [userId]);
         user.favorites = favs.rows.map(f => f.anime);
         
-        const comments = await pool.query(
-            'SELECT * FROM comments WHERE user_name = $1 ORDER BY created_at DESC LIMIT 50',
-            [user.name]
-        );
+        const comments = await pool.query('SELECT * FROM comments WHERE user_name = $1 ORDER BY created_at DESC LIMIT 50', [user.name]);
         user.comments = comments.rows || [];
         
         const ach = await pool.query('SELECT achievement_id FROM achievements WHERE user_id = $1', [userId]);
         user.achievements = ach.rows.map(a => a.achievement_id);
         
-        const history = await pool.query(
-            'SELECT anime, episode, updated_at FROM continue_watching WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 20',
-            [userId]
-        );
+        const history = await pool.query('SELECT anime, episode, updated_at FROM continue_watching WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 20', [userId]);
         user.history = history.rows || [];
         
         if (currentUserId) {
-            const friend = await pool.query(
-                `SELECT status FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
-                [currentUserId, userId]
-            );
-            if (friend.rows.length > 0) {
-                user.friendStatus = friend.rows[0].status;
-            }
+            const friend = await pool.query('SELECT status FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)', [currentUserId, userId]);
+            if (friend.rows.length > 0) user.friendStatus = friend.rows[0].status;
         }
-        
         res.json(user);
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.post('/api/friends/request', async (req, res) => {
     const { userId, friendId } = req.body;
-    
-    if (!userId || !friendId) {
-        return res.status(400).json({ error: 'ID пользователей обязательны' });
-    }
-    if (parseInt(userId) === parseInt(friendId)) {
-        return res.status(400).json({ error: 'Нельзя добавить себя в друзья' });
-    }
-    
+    if (!userId || !friendId) return res.status(400).json({ error: 'ID обязательны' });
+    if (parseInt(userId) === parseInt(friendId)) return res.status(400).json({ error: 'Нельзя себя' });
     try {
         const user = await pool.query('SELECT id FROM users WHERE id = $1', [friendId]);
-        if (user.rows.length === 0) {
-            return res.status(404).json({ error: 'Пользователь не найден' });
-        }
-        
-        const existing = await pool.query(
-            `SELECT * FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
-            [userId, friendId]
-        );
-        if (existing.rows.length > 0) {
-            return res.status(400).json({ error: 'Заявка уже существует' });
-        }
-        
-        await pool.query(
-            'INSERT INTO friends (user_id, friend_id, status) VALUES ($1, $2, $3)',
-            [userId, friendId, 'pending']
-        );
+        if (user.rows.length === 0) return res.status(404).json({ error: 'Пользователь не найден' });
+        const existing = await pool.query('SELECT * FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)', [userId, friendId]);
+        if (existing.rows.length > 0) return res.status(400).json({ error: 'Заявка уже существует' });
+        await pool.query('INSERT INTO friends (user_id, friend_id, status) VALUES ($1, $2, $3)', [userId, friendId, 'pending']);
         res.json({ success: true, message: 'Заявка отправлена' });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.post('/api/friends/respond', async (req, res) => {
     const { userId, friendId, action } = req.body;
-    
-    if (!userId || !friendId || !action) {
-        return res.status(400).json({ error: 'Все поля обязательны' });
-    }
-    
+    if (!userId || !friendId || !action) return res.status(400).json({ error: 'Все поля обязательны' });
     try {
         if (action === 'accept') {
-            const result = await pool.query(
-                `UPDATE friends SET status = 'accepted' WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
-                [friendId, userId]
-            );
-            if (result.rowCount === 0) {
-                return res.status(404).json({ error: 'Заявка не найдена' });
-            }
+            const result = await pool.query('UPDATE friends SET status = $1 WHERE user_id = $2 AND friend_id = $3 AND status = $4', ['accepted', friendId, userId, 'pending']);
+            if (result.rowCount === 0) return res.status(404).json({ error: 'Заявка не найдена' });
             res.json({ success: true, message: 'Друг добавлен' });
         } else {
-            await pool.query(
-                `DELETE FROM friends WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
-                [friendId, userId]
-            );
+            await pool.query('DELETE FROM friends WHERE user_id = $1 AND friend_id = $2 AND status = $3', [friendId, userId, 'pending']);
             res.json({ success: true, message: 'Заявка отклонена' });
         }
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.get('/api/friends/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    
     try {
-        const result = await pool.query(
-            `SELECT u.id, u.name, u.email, f.status, f.created_at as friend_since 
-             FROM friends f 
-             JOIN users u ON (u.id = f.friend_id OR u.id = f.user_id) 
-             WHERE (f.user_id = $1 OR f.friend_id = $1) 
-             AND f.status = 'accepted' 
-             AND u.id != $1`,
-            [userId]
-        );
+        const result = await pool.query('SELECT u.id, u.name, u.email FROM friends f JOIN users u ON u.id = f.friend_id WHERE f.user_id = $1 AND f.status = $2', [req.params.userId, 'accepted']);
         res.json(result.rows || []);
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.get('/api/friends/requests/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    
     try {
-        const result = await pool.query(
-            `SELECT u.id, u.name, u.email, f.created_at 
-             FROM friends f 
-             JOIN users u ON u.id = f.user_id 
-             WHERE f.friend_id = $1 AND f.status = 'pending'`,
-            [userId]
-        );
+        const result = await pool.query('SELECT u.id, u.name, u.email FROM friends f JOIN users u ON u.id = f.user_id WHERE f.friend_id = $1 AND f.status = $2', [req.params.userId, 'pending']);
         res.json(result.rows || []);
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.delete('/api/friends/:userId/:friendId', async (req, res) => {
-    const { userId, friendId } = req.params;
-    
     try {
-        await pool.query(
-            `DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
-            [userId, friendId]
-        );
+        await pool.query('DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)', [req.params.userId, req.params.friendId]);
         res.json({ success: true });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// ============================================
-// API ЧАТА
-// ============================================
-
+// ===== ЧАТ =====
 app.post('/api/messages', async (req, res) => {
     const { fromUserId, toUserId, message } = req.body;
-    
-    if (!fromUserId || !toUserId || !message) {
-        return res.status(400).json({ error: 'Все поля обязательны' });
-    }
-    if (message.length > 2000) {
-        return res.status(400).json({ error: 'Сообщение слишком длинное' });
-    }
-    
+    if (!fromUserId || !toUserId || !message) return res.status(400).json({ error: 'Все поля обязательны' });
     try {
-        const result = await pool.query(
-            'INSERT INTO messages (from_user_id, to_user_id, message) VALUES ($1, $2, $3) RETURNING id',
-            [fromUserId, toUserId, message]
-        );
+        const result = await pool.query('INSERT INTO messages (from_user_id, to_user_id, message) VALUES ($1, $2, $3) RETURNING id', [fromUserId, toUserId, message]);
         res.json({ success: true, id: result.rows[0].id });
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
@@ -709,40 +513,20 @@ app.post('/api/messages', async (req, res) => {
 app.get('/api/messages/:userId/:friendId', async (req, res) => {
     const { userId, friendId } = req.params;
     const limit = parseInt(req.query.limit) || 50;
-    const offset = parseInt(req.query.offset) || 0;
-    
     try {
-        const result = await pool.query(
-            `SELECT * FROM messages 
-             WHERE (from_user_id = $1 AND to_user_id = $2) 
-             OR (from_user_id = $2 AND to_user_id = $1) 
-             ORDER BY created_at DESC LIMIT $3 OFFSET $4`,
-            [userId, friendId, limit, offset]
-        );
-        
-        await pool.query(
-            'UPDATE messages SET is_read = 1 WHERE from_user_id = $1 AND to_user_id = $2',
-            [friendId, userId]
-        );
-        
+        const result = await pool.query('SELECT * FROM messages WHERE (from_user_id = $1 AND to_user_id = $2) OR (from_user_id = $2 AND to_user_id = $1) ORDER BY created_at DESC LIMIT $3', [userId, friendId, limit]);
+        await pool.query('UPDATE messages SET is_read = 1 WHERE from_user_id = $1 AND to_user_id = $2', [friendId, userId]);
         res.json(result.rows || []);
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 app.get('/api/messages/unread/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    
     try {
-        const result = await pool.query(
-            'SELECT from_user_id, COUNT(*) as count FROM messages WHERE to_user_id = $1 AND is_read = 0 GROUP BY from_user_id',
-            [userId]
-        );
+        const result = await pool.query('SELECT from_user_id, COUNT(*) as count FROM messages WHERE to_user_id = $1 AND is_read = 0 GROUP BY from_user_id', [req.params.userId]);
         res.json(result.rows || []);
     } catch (err) {
-        console.error('Ошибка:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
@@ -754,4 +538,5 @@ app.get('/api/messages/unread/:userId', async (req, res) => {
 app.listen(PORT, () => {
     console.log('🚀 OnikaAnime сервер запущен!');
     console.log(`📡 http://localhost:${PORT}`);
+    console.log(`🔢 ID будут создаваться автоматически: 1, 2, 3...`);
 });
