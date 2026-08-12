@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С ПЛЕЕРОМ ANILIBRIA)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С SHIKIMORI ПЛЕЕРОМ)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -462,7 +462,7 @@ function setGenre(genreId, btn) {
 }
 
 // ============================================
-// ДЕТАЛЬНАЯ СТРАНИЦА С ПЛЕЕРОМ
+// ДЕТАЛЬНАЯ СТРАНИЦА С SHIKIMORI ПЛЕЕРОМ
 // ============================================
 
 async function openDetail(id) {
@@ -478,9 +478,8 @@ async function openDetail(id) {
     
     if (allData[id]) {
         showDetail(allData[id]);
-        // Автоматически загружаем плеер через 1 секунду
         setTimeout(() => {
-            playWithAnilibria(id, 1);
+            playWithShikimori(id, 1);
         }, 1000);
         return;
     }
@@ -494,9 +493,8 @@ async function openDetail(id) {
                 allData[id] = data;
             }
             showDetail(allData[id]);
-            // Автоматически загружаем плеер через 1 секунду
             setTimeout(() => {
-                playWithAnilibria(id, 1);
+                playWithShikimori(id, 1);
             }, 1000);
         } else {
             showToast('❌ Не удалось загрузить данные', 'error');
@@ -611,10 +609,10 @@ function showDetail(anime) {
 }
 
 // ============================================
-// ПЛЕЕР ANILIBRIA (ОСНОВНАЯ ФУНКЦИЯ)
+// ПЛЕЕР SHIKIMORI (ОСНОВНАЯ ФУНКЦИЯ)
 // ============================================
 
-async function playWithAnilibria(animeId, episode = 1) {
+async function playWithShikimori(animeId, episode = 1) {
     const wrapper = document.getElementById('playerWrapper');
     if (!wrapper) {
         console.error('❌ playerWrapper не найден');
@@ -627,24 +625,24 @@ async function playWithAnilibria(animeId, episode = 1) {
     // Сохраняем ID аниме
     currentAnimeId = animeId;
     
-    // Получаем название аниме
+    // Получаем данные из каталога
     const anime = allData[animeId];
     const title = anime ? getRussianTitle(anime) : 'Аниме';
     const totalEp = parseInt(anime?.episodes) || 0;
     
     // Создаём плеер
     try {
-        currentPlayer = new AniLibriaPlayer(wrapper, {
-            title: title,
+        currentPlayer = new ShikimoriPlayer(wrapper, {
+            animeId: animeId,
             episode: episode,
+            title: title,
             totalEpisodes: totalEp,
             volume: 0.8,
             speed: 1,
-            animeId: animeId,
             onEpisodeEnd: function() {
                 const nextEp = episode + 1;
                 if (totalEp === 0 || nextEp <= totalEp) {
-                    playWithAnilibria(animeId, nextEp);
+                    playWithShikimori(animeId, nextEp);
                     showToast('▶️ Следующая серия', 'info');
                 } else {
                     showToast('🎬 Все серии просмотрены!', 'success');
@@ -653,48 +651,70 @@ async function playWithAnilibria(animeId, episode = 1) {
         });
     } catch (error) {
         console.error('❌ Ошибка создания плеера:', error);
-        wrapper.innerHTML = `
-            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
-                <span style="font-size:48px;">⚠️</span>
-                <span style="font-size:16px;color:#aaa;">Ошибка загрузки плеера</span>
-                <button onclick="playWithAnilibria(${animeId}, ${episode})" 
-                        style="padding:10px 24px;border-radius:20px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.05);color:#fff;cursor:pointer;font-size:14px;">
-                    🔄 Попробовать снова
-                </button>
-            </div>
-        `;
+        showErrorInPlayer('Ошибка создания плеера');
         return;
     }
     
-    // Загружаем видео - пробуем разные версии API
+    // Загружаем видео через Shikimori
     try {
-        console.log('📡 Загрузка аниме ID:', animeId, 'Серия:', episode);
-        
-        // Сначала пробуем v3
-        await currentPlayer.loadFromAnilibriaV3(animeId, episode);
-    } catch (e) {
-        console.log('🔄 V3 не работает, пробуем V2...');
-        try {
-            await currentPlayer.loadFromAnilibria(animeId, episode);
-        } catch (e2) {
-            console.log('🔄 V2 не работает, пробуем альтернативный источник...');
-            try {
-                await currentPlayer.loadFromAlternative(animeId, episode);
-            } catch (e3) {
-                console.error('❌ Все источники не работают:', e3);
-                currentPlayer.showError('Не удалось загрузить видео. Попробуйте позже или другую серию.');
-            }
-        }
+        console.log('📡 Загрузка через Shikimori, ID:', animeId, 'Серия:', episode);
+        await currentPlayer.loadFromShikimori(animeId, episode);
+    } catch (error) {
+        console.error('❌ Ошибка загрузки:', error);
+        showManualVideoButton(wrapper, title, episode, animeId);
     }
     
     // Обновляем кнопки серий
     updateEpisodeButtons(animeId, episode);
 }
 
-// ============================================
-// ОБНОВЛЕНИЕ КНОПОК СЕРИЙ
-// ============================================
+// ===== ПОКАЗ КНОПКИ ДЛЯ РУЧНОГО ВВОДА =====
+function showManualVideoButton(wrapper, title, episode, animeId) {
+    wrapper.innerHTML = `
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+            <span style="font-size:48px;">🔍</span>
+            <span style="font-size:16px;color:#aaa;">Не удалось найти видео</span>
+            <span style="font-size:13px;color:#666;">Для "${title}" серия ${episode}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+                <button onclick="showManualVideoInput('${title}')" 
+                        style="padding:10px 24px;border-radius:20px;border:1px solid rgba(255,215,0,0.2);background:rgba(255,215,0,0.05);color:#f1c40f;cursor:pointer;font-size:14px;">
+                    📎 Вставить ссылку вручную
+                </button>
+                <button onclick="playWithShikimori(${animeId}, ${episode})" 
+                        style="padding:10px 24px;border-radius:20px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.05);color:#888;cursor:pointer;font-size:14px;">
+                    🔄 Попробовать снова
+                </button>
+                <button onclick="window.open('https://shikimori.one/animes/${animeId}', '_blank')" 
+                        style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;">
+                    🌐 Открыть на Shikimori
+                </button>
+            </div>
+        </div>
+    `;
+}
 
+// ===== РУЧНОЙ ВВОД ССЫЛКИ =====
+function showManualVideoInput(animeTitle) {
+    const url = prompt('Вставьте ссылку на видео (YouTube, VK, etc.) для "' + animeTitle + '":');
+    if (url && url.startsWith('http')) {
+        const wrapper = document.getElementById('playerWrapper');
+        if (wrapper) {
+            wrapper.innerHTML = `
+                <iframe src="${url}" 
+                        allowfullscreen 
+                        allow="autoplay; encrypted-media" 
+                        style="width:100%;height:100%;border:none;"
+                        frameborder="0">
+                </iframe>
+            `;
+            showToast('✅ Видео загружено!', 'success');
+        }
+    } else if (url) {
+        showToast('❌ Неверная ссылка', 'error');
+    }
+}
+
+// ===== ОБНОВЛЕНИЕ КНОПОК СЕРИЙ =====
 function updateEpisodeButtons(animeId, currentEpisode) {
     const container = document.getElementById('episodeBtns');
     if (!container) return;
@@ -707,7 +727,7 @@ function updateEpisodeButtons(animeId, currentEpisode) {
     
     for (let i = 1; i <= maxShow; i++) {
         const active = i === currentEpisode ? 'active' : '';
-        html += `<button class="ep-btn ${active}" onclick="playWithAnilibria(${animeId}, ${i})">${i}</button>`;
+        html += `<button class="ep-btn ${active}" onclick="playWithShikimori(${animeId}, ${i})">${i}</button>`;
     }
     
     if (totalEp > 24) {
@@ -717,10 +737,7 @@ function updateEpisodeButtons(animeId, currentEpisode) {
     container.innerHTML = html;
 }
 
-// ============================================
-// КОММЕНТАРИИ
-// ============================================
-
+// ===== КОММЕНТАРИИ =====
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
     if (!container) return;
@@ -1941,7 +1958,7 @@ console.log('💡 Используйте refreshStats() для обновлен�
 // ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ
 // ============================================
 
-window.playWithAnilibria = playWithAnilibria;
-window.selectEpisode = selectEpisode;
+window.playWithShikimori = playWithShikimori;
 window.currentPlayer = currentPlayer;
 window.allData = allData;
+window.showManualVideoInput = showManualVideoInput;
