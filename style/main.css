@@ -4236,3 +4236,76 @@ h3 {
 .random-btn:hover svg {
     transform: rotate(180deg);
 }
+
+/* ============================================
+   ПЛЕЕР И СЕРИИ
+   ============================================ */
+
+.player-wrapper {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    border-radius: var(--radius);
+    background: rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    border: 1px solid rgba(108, 92, 231, 0.05);
+    min-height: 200px;
+}
+
+.player-wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.ep-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(108, 92, 231, 0.1);
+    background: rgba(108, 92, 231, 0.03);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-width: 44px;
+}
+
+ep-btn:hover {
+    background: rgba(108, 92, 231, 0.08);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+}
+
+.ep-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.2);
+}
+
+.ep-btn.playing {
+    background: rgba(46, 204, 113, 0.1);
+    border-color: rgba(46, 204, 113, 0.3);
+    color: #2ecc71;
+}
+
+#episodeBtns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+#episodeBtns span {
+    font-size: 13px;
+    color: var(--text-muted);
+}
