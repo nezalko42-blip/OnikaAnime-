@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ПОЛНОСТЬЮ РАБОЧИЙ)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С ПЛЕЕРОМ ANILIBRIA)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -12,6 +12,8 @@ let currentAnime = null;
 let totalPages = 1;
 let onlineTimer = null;
 let startTime = Date.now();
+let currentPlayer = null;
+let currentAnimeId = null;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -460,7 +462,7 @@ function setGenre(genreId, btn) {
 }
 
 // ============================================
-// ДЕТАЛЬНАЯ СТРАНИЦА
+// ДЕТАЛЬНАЯ СТРАНИЦА С ПЛЕЕРОМ
 // ============================================
 
 async function openDetail(id) {
@@ -476,6 +478,10 @@ async function openDetail(id) {
     
     if (allData[id]) {
         showDetail(allData[id]);
+        // Автоматически загружаем плеер
+        setTimeout(() => {
+            playWithAnilibria(id, 1);
+        }, 500);
         return;
     }
     
@@ -488,6 +494,10 @@ async function openDetail(id) {
                 allData[id] = data;
             }
             showDetail(allData[id]);
+            // Автоматически загружаем плеер
+            setTimeout(() => {
+                playWithAnilibria(id, 1);
+            }, 500);
         } else {
             showToast('❌ Не удалось загрузить данные', 'error');
         }
@@ -596,176 +606,70 @@ function showDetail(anime) {
         btn.style.display = 'inline-block';
     }
     
-    // ВИДЕО И СЕРИИ
-    const videos = DB.get('videos', {});
-    const eps = videos[title] || [];
-    const epContainer = document.getElementById('episodeBtns');
-    if (epContainer) {
-        let epHtml = '';
-        
-        if (eps.length > 0) {
-            eps.forEach(function(ep) {
-                epHtml += `<button class="ep-btn" onclick="playEpisode('${title}', ${ep.ep})">${ep.ep}</button>`;
-            });
-        } else if (anime.episodes && anime.episodes > 0 && anime.episodes !== '?') {
-            const totalEp = parseInt(anime.episodes);
-            if (totalEp > 0) {
-                const showEp = Math.min(totalEp, 12);
-                for (let i = 1; i <= showEp; i++) {
-                    epHtml += `<button class="ep-btn" onclick="playEpisode('${title}', ${i})">${i}</button>`;
-                }
-                if (totalEp > 12) {
-                    epHtml += `<button class="ep-btn" onclick="showToast('📺 Всего ${totalEp} серий', 'info')">...</button>`;
-                }
-            } else {
-                epHtml = '<span style="color:#888;">📺 Нет видео</span>';
-            }
-        } else {
-            epHtml = `
-                <span style="color:#888;">📺 Нет видео</span>
-                <button class="ep-btn" onclick="playVideoWithKodik('${title}', 1)" style="background:rgba(46,204,113,0.1);color:#2ecc71;border-color:rgba(46,204,113,0.2);">
-                    🔍 Найти видео
-                </button>
-            `;
-        }
-        
-        epContainer.innerHTML = epHtml;
-    }
-    
     renderComments(title);
     checkAchievements(title);
 }
 
 // ============================================
-// ВОСПРОИЗВЕДЕНИЕ ВИДЕО (С ИСПОЛЬЗОВАНИЕМ API)
+// ПЛЕЕР ANILIBRIA
 // ============================================
 
-async function playVideoWithKodik(animeTitle, episodeNumber = 1) {
+async function playWithAnilibria(animeId, episode = 1) {
     const wrapper = document.getElementById('playerWrapper');
     if (!wrapper) return;
     
-    wrapper.innerHTML = `
-        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888;flex-direction:column;gap:12px;">
-            <div class="loader" style="width:40px;height:40px;border:3px solid rgba(108,92,231,0.1);border-top-color:#6c5ce7;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-            <div>🔍 Поиск видео...</div>
-            <div style="font-size:12px;color:#555;">${animeTitle}</div>
-        </div>
-    `;
+    // Очищаем контейнер
+    wrapper.innerHTML = '';
     
-    showToast('⏳ Поиск видео...', 'info');
+    // Сохраняем ID аниме
+    currentAnimeId = animeId;
     
-    try {
-        const url = await API.searchKodik(animeTitle, episodeNumber);
-        
-        wrapper.innerHTML = `
-            <iframe src="${url}" 
-                    allowfullscreen 
-                    allow="autoplay; encrypted-media" 
-                    style="width:100%;height:100%;border:none;"
-                    frameborder="0">
-            </iframe>
-        `;
-        
-        showToast('▶️ Воспроизведение: ' + animeTitle, 'success');
-        
-        const user = DB.get('currentUser');
-        if (user) {
-            const history = DB.getUserData(user.name, 'history', []);
-            if (history.indexOf(animeTitle) === -1) {
-                history.push(animeTitle);
-                DB.setUserData(user.name, 'history', history);
-            }
-            
-            const continueData = DB.getUserData(user.name, 'continueWatching', {});
-            if (!continueData[animeTitle]) continueData[animeTitle] = {};
-            continueData[animeTitle].ep = (continueData[animeTitle].ep || 0) + 1;
-            continueData[animeTitle].time = Date.now();
-            DB.setUserData(user.name, 'continueWatching', continueData);
-            
-            checkAchievements(animeTitle);
+    // Создаём плеер
+    currentPlayer = new AniLibriaPlayer(wrapper, {
+        title: document.getElementById('detailTitle')?.textContent || 'Аниме',
+        episode: episode,
+        volume: 0.8,
+        speed: 1,
+        onEpisodeEnd: function() {
+            const nextEp = episode + 1;
+            playWithAnilibria(animeId, nextEp);
+            showToast('▶️ Следующая серия', 'info');
         }
-    } catch (error) {
-        console.error('Kodik ошибка:', error);
-        wrapper.innerHTML = `
-            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;">
-                <div style="font-size:48px;">📺</div>
-                <div style="font-size:16px;font-weight:600;">Видео не найдено</div>
-                <div style="font-size:13px;color:#555;text-align:center;max-width:300px;">
-                    Не удалось найти "${animeTitle}" в Kodik
-                </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
-                    <button onclick="playVideoWithKodik('${animeTitle}', ${episodeNumber})" 
-                            style="padding:8px 18px;border-radius:20px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.05);color:#888;cursor:pointer;font-size:12px;">
-                        🔄 Повторить
-                    </button>
-                    <button onclick="showManualVideoInput('${animeTitle}')" 
-                            style="padding:8px 18px;border-radius:20px;border:1px solid rgba(255,215,0,0.2);background:rgba(255,215,0,0.05);color:#f1c40f;cursor:pointer;font-size:12px;">
-                        📎 Вставить ссылку
-                    </button>
-                </div>
-            </div>
-        `;
-        showToast('❌ Видео не найдено в Kodik', 'error');
-    }
+    });
+    
+    // Загружаем видео
+    await currentPlayer.loadFromAnilibria(animeId, episode);
+    
+    // Обновляем кнопки серий
+    updateEpisodeButtons(animeId, episode);
 }
 
-// ============================================
-// РУЧНОЙ ВВОД ССЫЛКИ НА ВИДЕО
-// ============================================
-
-function showManualVideoInput(animeTitle) {
-    const url = prompt('Вставьте ссылку на видео (YouTube, VK, etc.) для "' + animeTitle + '":');
-    if (url && url.startsWith('http')) {
-        const wrapper = document.getElementById('playerWrapper');
-        if (wrapper) {
-            wrapper.innerHTML = `
-                <iframe src="${url}" 
-                        allowfullscreen 
-                        allow="autoplay; encrypted-media" 
-                        style="width:100%;height:100%;border:none;"
-                        frameborder="0">
-                </iframe>
-            `;
-            showToast('✅ Видео загружено!', 'success');
-        }
-    } else if (url) {
-        showToast('❌ Неверная ссылка', 'error');
-    }
-}
-
-// ============================================
-// ВОСПРОИЗВЕДЕНИЕ КОНКРЕТНОЙ СЕРИИ
-// ============================================
-
-function playEpisode(animeTitle, episodeNumber) {
-    playVideoWithKodik(animeTitle, episodeNumber);
-}
-
-function playVideo(name, url) {
-    if (url && url.startsWith('http')) {
-        const wrapper = document.getElementById('playerWrapper');
-        if (!wrapper) return;
-        wrapper.innerHTML = `<iframe src="${url}" allowfullscreen allow="autoplay" style="width:100%;height:100%;border:none;"></iframe>`;
-        showToast('▶️ Воспроизведение: ' + name, 'success');
-        
-        const user = DB.get('currentUser');
-        if (user) {
-            const history = DB.getUserData(user.name, 'history', []);
-            if (history.indexOf(name) === -1) {
-                history.push(name);
-                DB.setUserData(user.name, 'history', history);
-            }
-            const continueData = DB.getUserData(user.name, 'continueWatching', {});
-            if (!continueData[name]) continueData[name] = {};
-            continueData[name].ep = (continueData[name].ep || 0) + 1;
-            continueData[name].time = Date.now();
-            DB.setUserData(user.name, 'continueWatching', continueData);
-            checkAchievements(name);
-        }
-        return;
+// Обновление кнопок серий
+function updateEpisodeButtons(animeId, currentEpisode) {
+    const container = document.getElementById('episodeBtns');
+    if (!container) return;
+    
+    const anime = allData[animeId];
+    const totalEp = anime?.episodes || 12;
+    
+    let html = '';
+    const maxShow = Math.min(totalEp, 24);
+    
+    for (let i = 1; i <= maxShow; i++) {
+        const active = i === currentEpisode ? 'active' : '';
+        html += `<button class="ep-btn ${active}" onclick="playWithAnilibria(${animeId}, ${i})">${i}</button>`;
     }
     
-    playVideoWithKodik(name, 1);
+    if (totalEp > 24) {
+        html += `<button class="ep-btn" onclick="showToast('📺 Всего ${totalEp} серий', 'info')">...</button>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Функция для ручного выбора серии
+function selectEpisode(animeId, episode) {
+    playWithAnilibria(animeId, episode);
 }
 
 // ============================================
@@ -1981,25 +1885,14 @@ document.addEventListener('DOMContentLoaded', function() {
         startOnlineTracking();
     }
     
-    // Загружаем видео
-    const videos = DB.get('videos', {});
-    if (Object.keys(videos).length === 0) {
-        const defaultVideos = {
-            'Атака Титанов': [
-                { ep: 1, url: 'https://www.youtube.com/embed/1IOcJ33PjWM' },
-                { ep: 2, url: 'https://www.youtube.com/embed/UK_t6Y-q_mk' }
-            ],
-            'Наруто': [
-                { ep: 1, url: 'https://www.youtube.com/embed/5M_FsMBMbeQ' },
-                { ep: 2, url: 'https://www.youtube.com/embed/wZWr8dj84So' }
-            ]
-        };
-        DB.set('videos', defaultVideos);
-    }
-    
     console.log('✅ OnikaAnime готов!');
 });
 
 console.log('🌟 OnikaAnime загружен!');
 console.log('💡 Используйте restoreAllData() для восстановления данных');
 console.log('💡 Используйте refreshStats() для обновления статистики соцсетей');
+
+// Экспортируем функции для глобального доступа
+window.playWithAnilibria = playWithAnilibria;
+window.selectEpisode = selectEpisode;
+window.currentPlayer = currentPlayer;
