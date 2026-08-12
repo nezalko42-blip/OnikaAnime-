@@ -164,7 +164,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ
+// КАТАЛОГ (Jikan API + ЗАПАСНОЙ ANILIST)
 // ============================================
 
 function loadCatalog() {
@@ -173,14 +173,25 @@ function loadCatalog() {
     
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
     
-    var url = 'https://aniliberty.top/api/v1/anime/catalog/releases';
-    var body = { page: page, limit: 12, f: { sorting: 'FRESH_AT_DESC' } };
-    if (genre) body.f.genres = [parseInt(genre)];
-    if (query) body.f.search = query;
+    // ===== ОСНОВНОЙ: JIKAN API =====
+    var url = '';
+    var isSearch = query && query.length > 1;
+    
+    if (isSearch) {
+        url = 'https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(query) + '&limit=12';
+        if (genre) {
+            url += '&genres=' + genre;
+        }
+    } else if (genre) {
+        url = 'https://api.jikan.moe/v4/anime?genres=' + genre + '&limit=12';
+    } else {
+        url = 'https://api.jikan.moe/v4/top/anime?limit=12';
+    }
+    
+    url += '&page=' + page;
     
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
-    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.open('GET', url);
     xhr.timeout = 15000;
     
     xhr.onload = function() {
@@ -188,48 +199,121 @@ function loadCatalog() {
             if (xhr.status === 200) {
                 var data = JSON.parse(xhr.responseText);
                 if (data && data.data && data.data.length > 0) {
-                    totalPages = data.meta?.pagination?.total_pages || 1;
+                    totalPages = Math.ceil((data.pagination?.items?.total || 12) / 12);
+                    if (totalPages < 1) totalPages = 1;
+                    
                     data.data.forEach(function(a) {
-                        allData[a.id] = a;
+                        allData[a.mal_id] = a;
                     });
                     renderCatalog(data.data);
                     renderPagination();
                     return;
                 }
             }
-            showDemoCatalog();
+            loadCatalogAnilist();
         } catch(e) {
-            showDemoCatalog();
+            loadCatalogAnilist();
         }
     };
     
-    xhr.onerror = function() { showDemoCatalog(); };
-    xhr.ontimeout = function() { showDemoCatalog(); };
-    xhr.send(JSON.stringify(body));
+    xhr.onerror = function() { loadCatalogAnilist(); };
+    xhr.ontimeout = function() { loadCatalogAnilist(); };
+    xhr.send();
 }
 
-function showDemoCatalog() {
-    var demoAnime = [
-        { id: 1, name: { main: 'Атака Титанов' }, year: 2020, episodes_total: 25, poster: null },
-        { id: 2, name: { main: 'Наруто' }, year: 2002, episodes_total: 220, poster: null },
-        { id: 3, name: { main: 'Ван Пис' }, year: 1999, episodes_total: 1000, poster: null },
-        { id: 4, name: { main: 'Моя геройская академия' }, year: 2016, episodes_total: 113, poster: null },
-        { id: 5, name: { main: 'Магическая битва' }, year: 2020, episodes_total: 24, poster: null },
-        { id: 6, name: { main: 'Клинок, рассекающий демонов' }, year: 2019, episodes_total: 26, poster: null },
-        { id: 7, name: { main: 'Токийский гуль' }, year: 2014, episodes_total: 12, poster: null },
-        { id: 8, name: { main: 'Стальной алхимик' }, year: 2009, episodes_total: 64, poster: null },
-        { id: 9, name: { main: 'Хантер х Хантер' }, year: 2011, episodes_total: 148, poster: null },
-        { id: 10, name: { main: 'Блич' }, year: 2004, episodes_total: 366, poster: null },
-        { id: 11, name: { main: 'Джоджо' }, year: 2012, episodes_total: 152, poster: null },
-        { id: 12, name: { main: 'Евангелион' }, year: 1995, episodes_total: 26, poster: null }
-    ];
-    totalPages = 1;
-    demoAnime.forEach(function(a) {
-        allData[a.id] = a;
-    });
-    renderCatalog(demoAnime);
-    renderPagination();
+// ===== ЗАПАСНОЙ: ANILIST API (GraphQL) =====
+function loadCatalogAnilist() {
+    console.log('🔄 Запасной AniList API...');
+    var grid = document.getElementById('grid');
+    if (!grid) return;
+    
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка из AniList...</div>';
+    
+    var graphqlQuery = `
+        query ($page: Int, $search: String, $genre: String) {
+            Page(page: $page, perPage: 12) {
+                pageInfo { total }
+                media(type: ANIME, search: $search, genre: $genre, sort: POPULARITY_DESC) {
+                    id
+                    title { romaji english }
+                    episodes
+                    seasonYear
+                    coverImage { large }
+                    genres
+                    description
+                    averageScore
+                    rating: meanScore
+                }
+            }
+        }
+    `;
+    
+    var variables = {
+        page: page,
+        search: (query && query.length > 1) ? query : undefined,
+        genre: genre || undefined
+    };
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://graphql.anilist.co');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 15000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.data && data.data.Page && data.data.Page.media) {
+                    var media = data.data.Page.media;
+                    totalPages = Math.ceil((data.data.Page.pageInfo?.total || 12) / 12);
+                    if (totalPages < 1) totalPages = 1;
+                    
+                    // Конвертируем AniList в формат Jikan для совместимости
+                    var converted = media.map(function(item) {
+                        return {
+                            mal_id: item.id,
+                            title: item.title?.english || item.title?.romaji || 'Без названия',
+                            year: item.seasonYear || '--',
+                            episodes: item.episodes || '?',
+                            images: { jpg: { image_url: item.coverImage?.large || '' } },
+                            synopsis: item.description || 'Описание отсутствует',
+                            genres: item.genres || [],
+                            score: item.averageScore || 0,
+                            rating: item.rating || 0
+                        };
+                    });
+                    
+                    converted.forEach(function(a) {
+                        allData[a.mal_id] = a;
+                    });
+                    renderCatalog(converted);
+                    renderPagination();
+                    return;
+                }
+            }
+            // Если AniList тоже не работает
+            showToast('⚠️ Не удалось загрузить данные. Попробуйте позже.', 'error');
+            grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">🔍 Ошибка загрузки</div>';
+        } catch(e) {
+            console.error('❌ Ошибка AniList:', e);
+            grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">🔍 Ошибка загрузки</div>';
+        }
+    };
+    
+    xhr.onerror = function() {
+        grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">🔍 Ошибка сети</div>';
+    };
+    
+    xhr.ontimeout = function() {
+        grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏱️ Превышено время ожидания</div>';
+    };
+    
+    xhr.send(JSON.stringify({ query: graphqlQuery, variables: variables }));
 }
+
+// ============================================
+// РЕНДЕРИНГ КАТАЛОГА
+// ============================================
 
 function renderCatalog(list) {
     var grid = document.getElementById('grid');
@@ -240,7 +324,11 @@ function renderCatalog(list) {
     
     list.forEach(function(a, index) {
         var img = '';
-        if (a.poster) {
+        if (a.images?.jpg?.image_url) {
+            img = a.images.jpg.image_url;
+        } else if (a.coverImage?.large) {
+            img = a.coverImage.large;
+        } else if (a.poster) {
             var p = a.poster.optimized || a.poster;
             if (typeof p === 'string') {
                 img = p;
@@ -252,13 +340,14 @@ function renderCatalog(list) {
             }
         }
         
-        var title = a.name?.main || a.name?.english || a.name?.original || 'Без названия';
-        var episodes = a.episodes_total || 'Онгоинг';
-        var year = a.year || '';
+        var title = a.title?.english || a.title?.romaji || a.title?.main || a.title || 'Без названия';
+        var episodes = a.episodes || a.episodes_total || 'Онгоинг';
+        var year = a.year || a.seasonYear || '';
         var color = colors[index % colors.length];
+        var id = a.mal_id || a.id;
         
         html += `
-            <div class="card" onclick="openDetail('${a.id}')">
+            <div class="card" onclick="openDetail('${id}')">
                 <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:48px;' : ''}">
                     ${img ? '<img src="' + img + '" loading="lazy" onerror="this.style.display=\'none\'">' : '🎬'}
                     ${year ? '<span class="card-year">' + year + '</span>' : ''}
@@ -273,6 +362,10 @@ function renderCatalog(list) {
     
     grid.innerHTML = html || '<div style="text-align:center;padding:40px;color:#888;">🔍 Ничего не найдено</div>';
 }
+
+// ============================================
+// ПАГИНАЦИЯ
+// ============================================
 
 function renderPagination() {
     var container = document.getElementById('pagination');
@@ -363,7 +456,7 @@ if (genresNav) {
 }
 
 // ============================================
-// ДЕТАЛЬНАЯ СТРАНИЦА
+// ДЕТАЛЬНАЯ СТРАНИЦА (Jikan API + AniList)
 // ============================================
 
 function openDetail(id) {
@@ -382,7 +475,8 @@ function openDetail(id) {
         return;
     }
     
-    var url = 'https://aniliberty.top/api/v1/app/title/' + id;
+    // ===== ОСНОВНОЙ: JIKAN API =====
+    var url = 'https://api.jikan.moe/v4/anime/' + id + '/full';
     
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url);
@@ -392,67 +486,148 @@ function openDetail(id) {
         try {
             if (xhr.status === 200) {
                 var data = JSON.parse(xhr.responseText);
-                if (data && data.name) {
-                    allData[id] = data;
-                    showDetail(data);
+                if (data && data.data) {
+                    allData[id] = data.data;
+                    showDetail(data.data);
                     return;
                 }
             }
-            showToast('Ошибка загрузки данных', 'error');
+            openDetailAnilist(id);
         } catch(e) {
-            showToast('Ошибка: ' + e.message, 'error');
+            openDetailAnilist(id);
+        }
+    };
+    
+    xhr.onerror = function() { openDetailAnilist(id); };
+    xhr.ontimeout = function() { openDetailAnilist(id); };
+    xhr.send();
+}
+
+// ===== ЗАПАСНОЙ: ANILIST API =====
+function openDetailAnilist(id) {
+    console.log('🔄 Запасной AniList детали...');
+    
+    var graphqlQuery = `
+        query ($id: Int) {
+            Media (id: $id, type: ANIME) {
+                id
+                title { romaji english }
+                description
+                episodes
+                seasonYear
+                coverImage { large }
+                bannerImage
+                genres
+                averageScore
+                meanScore
+                rating: meanScore
+                startDate { year month day }
+                endDate { year month day }
+                status
+                format
+                duration
+                source
+                synonyms
+                isAdult
+            }
+        }
+    `;
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://graphql.anilist.co');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 15000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.data && data.data.Media) {
+                    var item = data.data.Media;
+                    
+                    // Конвертируем в формат Jikan
+                    var converted = {
+                        mal_id: item.id,
+                        title: item.title?.english || item.title?.romaji || 'Без названия',
+                        title_english: item.title?.english || '',
+                        title_japanese: item.title?.romaji || '',
+                        episodes: item.episodes || '?',
+                        year: item.seasonYear || '--',
+                        images: { jpg: { image_url: item.coverImage?.large || '' } },
+                        bannerImage: item.bannerImage || '',
+                        synopsis: item.description || 'Описание отсутствует',
+                        genres: item.genres || [],
+                        score: item.averageScore || item.meanScore || 0,
+                        rating: item.rating || 0,
+                        status: item.status || '',
+                        format: item.format || '',
+                        duration: item.duration || '',
+                        source: item.source || '',
+                        synonyms: item.synonyms || [],
+                        isAdult: item.isAdult || false,
+                        startDate: item.startDate || {},
+                        endDate: item.endDate || {}
+                    };
+                    
+                    allData[id] = converted;
+                    showDetail(converted);
+                    return;
+                }
+            }
+            showToast('❌ Не удалось загрузить данные', 'error');
+        } catch(e) {
+            console.error('❌ Ошибка AniList детали:', e);
+            showToast('❌ Ошибка загрузки', 'error');
         }
     };
     
     xhr.onerror = function() {
-        showToast('Ошибка сети', 'error');
+        showToast('❌ Ошибка сети', 'error');
     };
     
     xhr.ontimeout = function() {
-        showToast('Превышено время ожидания', 'error');
+        showToast('⏱️ Превышено время ожидания', 'error');
     };
     
-    xhr.send();
+    xhr.send(JSON.stringify({ query: graphqlQuery, variables: { id: parseInt(id) } }));
 }
 
+// ============================================
+// ОТОБРАЖЕНИЕ ДЕТАЛЕЙ
+// ============================================
+
 function showDetail(anime) {
-    var img = '';
-    if (anime.poster) {
-        var p = anime.poster.optimized || anime.poster;
-        if (typeof p === 'string') {
-            img = p;
-        } else {
-            img = p.preview || p.src || '';
-        }
-        if (img && img[0] === '/') {
-            img = 'https://anilibria.top' + img;
-        }
-    }
+    // Изображение
+    var img = anime.images?.jpg?.image_url || anime.coverImage?.large || '';
     
     var posterEl = document.getElementById('detailPoster');
     if (posterEl) {
         posterEl.src = img || '';
-        posterEl.alt = anime.name?.main || 'Постер';
+        posterEl.alt = anime.title || 'Постер';
         posterEl.style.display = img ? 'block' : 'none';
     }
     
-    var title = anime.name?.main || anime.name?.english || anime.name?.original || 'Без названия';
+    // Название
+    var title = anime.title_english || anime.title?.english || anime.title?.romaji || anime.title || 'Без названия';
     var titleEl = document.getElementById('detailTitle');
     if (titleEl) titleEl.textContent = title;
     
+    // Английское название
     var engEl = document.getElementById('detailEng');
-    if (engEl) engEl.textContent = anime.name?.english || '';
+    if (engEl) engEl.textContent = anime.title_english || anime.title?.english || '';
     
+    // Мета
     var metaEl = document.getElementById('detailMeta');
     if (metaEl) {
-        var year = anime.year || '--';
-        var episodes = anime.episodes_total || '?';
+        var year = anime.year || anime.seasonYear || '--';
+        var episodes = anime.episodes || '?';
         metaEl.textContent = year + ' | ' + episodes + ' эп.';
     }
     
+    // Описание
     var descEl = document.getElementById('detailDesc');
     if (descEl) {
-        var descText = anime.description || 'Описание отсутствует';
+        var descText = anime.synopsis || anime.description || 'Описание отсутствует';
         var tempDiv = document.createElement('div');
         tempDiv.innerHTML = descText;
         descText = tempDiv.textContent || descText;
@@ -470,30 +645,41 @@ function showDetail(anime) {
         }
     }
     
+    // Возрастной рейтинг
     var ageEl = document.getElementById('detailAgeRestriction');
     if (ageEl) {
         var age = 0;
-        if (anime.age_rating) {
-            if (typeof anime.age_rating === 'object') {
-                age = parseInt(anime.age_rating.value) || 0;
-            } else {
-                age = parseInt(anime.age_rating) || 0;
-            }
+        if (anime.isAdult) {
+            age = 18;
+        } else if (anime.rating) {
+            var ratingMap = {
+                'G': 0,
+                'PG': 6,
+                'PG-13': 12,
+                'R': 16,
+                'R+': 16,
+                'Rx': 18
+            };
+            age = ratingMap[anime.rating] || 0;
         }
         ageEl.innerHTML = '<span class="age-badge age-' + age + '">' + age + '+</span>';
     }
     
+    // Жанры
     var tagColors = {
-        'Экшен': '#e74c3c',
-        'Драма': '#3498db',
-        'Комедия': '#f1c40f',
-        'Фэнтези': '#9b59b6',
-        'Романтика': '#e91e63',
-        'Приключения': '#2ecc71',
-        'Сёнен': '#e67e22',
-        'Триллер': '#2c3e50',
-        'Ужасы': '#c0392b',
-        'Научная фантастика': '#1abc9c'
+        'Action': '#e74c3c',
+        'Drama': '#3498db',
+        'Comedy': '#f1c40f',
+        'Fantasy': '#9b59b6',
+        'Romance': '#e91e63',
+        'Adventure': '#2ecc71',
+        'Shounen': '#e67e22',
+        'Thriller': '#2c3e50',
+        'Horror': '#c0392b',
+        'Sci-Fi': '#1abc9c',
+        'Slice of Life': '#f39c12',
+        'Mystery': '#8e44ad',
+        'Sports': '#27ae60'
     };
     
     var tagsHtml = '';
@@ -509,6 +695,7 @@ function showDetail(anime) {
     var tagsEl = document.getElementById('detailTags');
     if (tagsEl) tagsEl.innerHTML = tagsHtml || '<span class="detail-tag">🎬 Аниме</span>';
     
+    // Избранное
     var user = DB.get('currentUser');
     var favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
     var isFav = favs.indexOf(title) > -1;
@@ -520,6 +707,7 @@ function showDetail(anime) {
         btn.style.display = 'inline-block';
     }
     
+    // Видео
     var videos = DB.get('videos', {});
     var eps = videos[title] || [];
     var epContainer = document.getElementById('episodeBtns');
@@ -806,18 +994,9 @@ function renderFavorites() {
         
         for (var id in allData) {
             var a = allData[id];
-            if (a.name && a.name.main === name) {
-                if (a.poster) {
-                    var p = a.poster.optimized || a.poster;
-                    if (typeof p === 'string') {
-                        img = p;
-                    } else {
-                        img = p.preview || p.src || '';
-                    }
-                    if (img && img[0] === '/') {
-                        img = 'https://anilibria.top' + img;
-                    }
-                }
+            var title = a.title?.english || a.title?.romaji || a.title?.main || a.title;
+            if (title === name) {
+                img = a.images?.jpg?.image_url || a.coverImage?.large || '';
                 break;
             }
         }
