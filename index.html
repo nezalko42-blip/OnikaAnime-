@@ -104,6 +104,54 @@
                     <div class="grid" id="grid"></div>
                     <div class="pagination" id="pagination"></div>
 
+                    <!-- ===== РАСПИСАНИЕ ВЫХОДА ===== -->
+                    <section class="schedule-section">
+                        <div class="schedule-container">
+                            <h2>📅 Расписание выхода</h2>
+                            <div class="schedule-grid" id="scheduleGrid">
+                                <div class="schedule-loading">⏳ Загрузка...</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ===== СЛУЧАЙНОЕ АНИМЕ ===== -->
+                    <section class="random-section">
+                        <div class="random-container">
+                            <button class="random-btn" onclick="randomAnime()">
+                                🎲 Не знаю что посмотреть?
+                            </button>
+                            <div class="random-result" id="randomResult"></div>
+                        </div>
+                    </section>
+
+                    <!-- ===== СТАТИСТИКА САЙТА ===== -->
+                    <section class="stats-section">
+                        <div class="stats-container">
+                            <div class="stats-grid">
+                                <div class="stats-card">
+                                    <div class="stats-icon">🎬</div>
+                                    <div class="stats-number" id="statTotalAnime">0</div>
+                                    <div class="stats-label">Аниме в каталоге</div>
+                                </div>
+                                <div class="stats-card">
+                                    <div class="stats-icon">👥</div>
+                                    <div class="stats-number" id="statTotalUsers">0</div>
+                                    <div class="stats-label">Пользователей</div>
+                                </div>
+                                <div class="stats-card">
+                                    <div class="stats-icon">💬</div>
+                                    <div class="stats-number" id="statTotalComments">0</div>
+                                    <div class="stats-label">Комментариев</div>
+                                </div>
+                                <div class="stats-card">
+                                    <div class="stats-icon">⭐</div>
+                                    <div class="stats-number" id="statAvgRating">0</div>
+                                    <div class="stats-label">Средний рейтинг</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- ===== ПОДПИШИСЬ НА НАС ===== -->
                     <section class="social-section">
                         <div class="social-container">
