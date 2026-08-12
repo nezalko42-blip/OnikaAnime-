@@ -35,40 +35,21 @@ var ACHIEVEMENTS_LIST = [
 // ============================================
 
 function getRussianTitle(anime) {
-    // 1. Если есть поле title_russian
-    if (anime.title_russian) {
-        return anime.title_russian;
+    if (anime.russian) return anime.russian;
+    if (anime.title_russian) return anime.title_russian;
+    if (anime.title_ru) return anime.title_ru;
+    if (anime.russian_name) return anime.russian_name;
+    
+    if (anime.title && typeof anime.title === 'string' && /[а-яА-Я]/.test(anime.title)) {
+        return anime.title;
     }
     
-    // 2. Если есть title_ru
-    if (anime.title_ru) {
-        return anime.title_ru;
-    }
-    
-    // 3. Если есть title с русскими буквами
-    if (anime.title && typeof anime.title === 'string') {
-        if (/[а-яА-Я]/.test(anime.title)) {
-            return anime.title;
-        }
-    }
-    
-    // 4. Jikan: ищем в названиях
     if (anime.title && typeof anime.title === 'object') {
-        // Японское (часто содержит русские буквы)
-        if (anime.title.japanese && /[а-яА-Я]/.test(anime.title.japanese)) {
-            return anime.title.japanese;
-        }
-        // English
-        if (anime.title.english) {
-            return anime.title.english;
-        }
-        // Romaji
-        if (anime.title.romaji) {
-            return anime.title.romaji;
-        }
+        if (anime.title.russian) return anime.title.russian;
+        if (anime.title.english) return anime.title.english;
+        if (anime.title.romaji) return anime.title.romaji;
     }
     
-    // 5. Jikan: synonyms (может содержать русское название)
     if (anime.synonyms && anime.synonyms.length > 0) {
         for (var i = 0; i < anime.synonyms.length; i++) {
             if (/[а-яА-Я]/.test(anime.synonyms[i])) {
@@ -77,43 +58,13 @@ function getRussianTitle(anime) {
         }
     }
     
-    // 6. AniList: title
-    if (anime.title) {
-        if (anime.title.english) return anime.title.english;
-        if (anime.title.romaji) return anime.title.romaji;
-        if (typeof anime.title === 'string') return anime.title;
-    }
-    
-    // 7. Kitsu: canonicalTitle или titles
-    if (anime.canonicalTitle) return anime.canonicalTitle;
-    if (anime.titles) {
-        if (anime.titles.en) return anime.titles.en;
-        if (anime.titles.en_jp) return anime.titles.en_jp;
-        if (anime.titles.ja_jp) return anime.titles.ja_jp;
-    }
-    
-    // 8. Если ничего не нашли — берём что есть
     return anime.name || anime.title || 'Без названия';
 }
 
-// ============================================
-// ПОЛУЧЕНИЕ РУССКОГО ОПИСАНИЯ
-// ============================================
-
 function getRussianDescription(anime) {
-    if (anime.description_russian) {
-        return anime.description_russian;
-    }
-    if (anime.description_ru) {
-        return anime.description_ru;
-    }
-    if (anime.synonyms && anime.synonyms.length > 0) {
-        for (var i = 0; i < anime.synonyms.length; i++) {
-            if (/[а-яА-Я]/.test(anime.synonyms[i]) && anime.synonyms[i].length > 50) {
-                return anime.synonyms[i];
-            }
-        }
-    }
+    if (anime.description_russian) return anime.description_russian;
+    if (anime.description_ru) return anime.description_ru;
+    if (anime.russian_description) return anime.russian_description;
     return anime.synopsis || anime.description || 'Описание отсутствует';
 }
 
@@ -251,7 +202,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (Jikan + AniList + Kitsu)
+// КАТАЛОГ (Shikimori + Anime365 + Kodik + Anilibria)
 // ============================================
 
 function loadCatalog() {
@@ -259,152 +210,109 @@ function loadCatalog() {
     if (!grid) return;
     
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
-    loadCatalogJikan();
+    
+    // 1. Shikimori API (Русский)
+    loadCatalogShikimori();
 }
 
-// ===== 1. JIKAN API =====
-function loadCatalogJikan() {
-    console.log('📡 Jikan API...');
+// ===== 1. SHIKIMORI API (ОСНОВНОЙ) =====
+function loadCatalogShikimori() {
+    console.log('📡 Shikimori API...');
+    var grid = document.getElementById('grid');
+    if (!grid) return;
     
     var isSearch = query && query.length > 1;
-    var url = 'https://api.jikan.moe/v4/anime?limit=12';
+    var url = 'https://shikimori.one/api/animes?limit=12';
     
     if (isSearch) {
-        url += '&q=' + encodeURIComponent(query);
-        console.log('🔍 Поиск Jikan:', query);
+        url += '&search=' + encodeURIComponent(query);
+        console.log('🔍 Поиск Shikimori:', query);
     }
     if (genre && !isSearch) {
-        url += '&genres=' + genre;
-        console.log('🎭 Жанр Jikan:', genre);
+        var genreMap = { '1': 'action', '8': 'drama', '21': 'comedy', '10': 'fantasy', '22': 'romance' };
+        url += '&genre=' + (genreMap[genre] || '');
+        console.log('🎭 Жанр Shikimori:', genre);
     }
     if (!isSearch && !genre) {
-        url = 'https://api.jikan.moe/v4/top/anime?limit=12';
-        console.log('📊 Топ Jikan');
+        url = 'https://shikimori.one/api/animes?order=popularity&limit=12';
+        console.log('📊 Топ Shikimori');
     }
     url += '&page=' + page;
     
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
     xhr.timeout = 12000;
     
     xhr.onload = function() {
         try {
             if (xhr.status === 200) {
                 var data = JSON.parse(xhr.responseText);
-                if (data && data.data && data.data.length > 0) {
-                    totalPages = Math.ceil((data.pagination?.items?.total || 12) / 12);
+                if (data && data.length > 0) {
+                    totalPages = Math.ceil(data.length / 12) + 1;
                     if (totalPages < 1) totalPages = 1;
-                    data.data.forEach(function(a) { allData[a.mal_id] = a; });
-                    renderCatalog(data.data);
+                    
+                    var converted = data.map(function(item) {
+                        return {
+                            mal_id: item.id,
+                            title: item.russian || item.name || 'Без названия',
+                            title_russian: item.russian || '',
+                            title_english: item.name || '',
+                            year: item.aired_on ? item.aired_on.split('-')[0] : '--',
+                            episodes: item.episodes || '?',
+                            images: { jpg: { image_url: item.image?.original || '' } },
+                            synopsis: item.description || 'Описание отсутствует',
+                            genres: item.genres || [],
+                            score: item.score || 0,
+                            russian: item.russian || ''
+                        };
+                    });
+                    
+                    converted.forEach(function(a) { allData[a.mal_id] = a; });
+                    renderCatalog(converted);
                     renderPagination();
                     return;
                 }
             }
-            loadCatalogAnilist();
+            loadCatalogAnime365();
         } catch(e) {
-            loadCatalogAnilist();
+            loadCatalogAnime365();
         }
     };
-    xhr.onerror = function() { loadCatalogAnilist(); };
-    xhr.ontimeout = function() { loadCatalogAnilist(); };
+    xhr.onerror = function() { loadCatalogAnime365(); };
+    xhr.ontimeout = function() { loadCatalogAnime365(); };
     xhr.send();
 }
 
-// ===== 2. ANILIST API =====
-function loadCatalogAnilist() {
-    console.log('🔄 AniList API...');
-    
-    var isSearch = query && query.length > 1;
-    var graphqlQuery = `
-        query ($page: Int, $search: String, $genre: String) {
-            Page(page: $page, perPage: 12) {
-                pageInfo { total }
-                media(type: ANIME, search: $search, genre: $genre, sort: POPULARITY_DESC) {
-                    id
-                    title { romaji english }
-                    episodes
-                    seasonYear
-                    coverImage { large }
-                    genres
-                    description
-                    averageScore
-                }
-            }
-        }
-    `;
-    var variables = {
-        page: page,
-        search: isSearch ? query : undefined,
-        genre: genre || undefined
-    };
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://graphql.anilist.co');
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.timeout = 12000;
-    
-    xhr.onload = function() {
-        try {
-            if (xhr.status === 200) {
-                var data = JSON.parse(xhr.responseText);
-                if (data && data.data && data.data.Page && data.data.Page.media) {
-                    var media = data.data.Page.media;
-                    if (media.length > 0) {
-                        totalPages = Math.ceil((data.data.Page.pageInfo?.total || 12) / 12);
-                        if (totalPages < 1) totalPages = 1;
-                        var converted = media.map(function(item) {
-                            return {
-                                mal_id: item.id,
-                                title: item.title?.english || item.title?.romaji || 'Без названия',
-                                title_russian: item.title?.romaji || item.title?.english || '',
-                                year: item.seasonYear || '--',
-                                episodes: item.episodes || '?',
-                                images: { jpg: { image_url: item.coverImage?.large || '' } },
-                                synopsis: item.description || 'Описание отсутствует',
-                                genres: item.genres || [],
-                                score: item.averageScore || 0
-                            };
-                        });
-                        converted.forEach(function(a) { allData[a.mal_id] = a; });
-                        renderCatalog(converted);
-                        renderPagination();
-                        return;
-                    }
-                }
-            }
-            loadCatalogKitsu();
-        } catch(e) {
-            loadCatalogKitsu();
-        }
-    };
-    xhr.onerror = function() { loadCatalogKitsu(); };
-    xhr.ontimeout = function() { loadCatalogKitsu(); };
-    xhr.send(JSON.stringify({ query: graphqlQuery, variables: variables }));
-}
-
-// ===== 3. KITSU API =====
-function loadCatalogKitsu() {
-    console.log('🔄 Kitsu API...');
+// ===== 2. ANIME365 (ЗАПАСНОЙ) =====
+function loadCatalogAnime365() {
+    console.log('🔄 Anime365 API...');
     var grid = document.getElementById('grid');
+    if (!grid) return;
     
     var isSearch = query && query.length > 1;
-    var url = 'https://kitsu.io/api/edge/anime?page[limit]=12&page[offset]=' + ((page - 1) * 12);
+    var mirrors = [
+        'https://smotret-anime.online/api',
+        'https://smotret-anime.app/api',
+        'https://anime365.ru/api',
+        'https://anime-365.ru/api'
+    ];
+    
+    var url = mirrors[0] + '/series?limit=12';
     
     if (isSearch) {
-        url += '&filter[text]=' + encodeURIComponent(query);
-        console.log('🔍 Поиск Kitsu:', query);
-    }
-    if (genre && !isSearch) {
-        url += '&filter[categories]=' + genre;
-        console.log('🎭 Жанр Kitsu:', genre);
+        url += '&search=' + encodeURIComponent(query);
+        console.log('🔍 Поиск Anime365:', query);
     }
     if (!isSearch && !genre) {
-        url += '&sort=-averageRating';
-        console.log('📊 Топ Kitsu');
+        url += '&sort=-rating';
+        console.log('📊 Топ Anime365');
     }
+    url += '&page=' + page;
     
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
     xhr.timeout = 12000;
     
     xhr.onload = function() {
@@ -412,22 +320,191 @@ function loadCatalogKitsu() {
             if (xhr.status === 200) {
                 var data = JSON.parse(xhr.responseText);
                 if (data && data.data && data.data.length > 0) {
-                    totalPages = Math.ceil((data.meta?.count || 12) / 12);
+                    totalPages = Math.ceil((data.pagination?.total || 12) / 12);
                     if (totalPages < 1) totalPages = 1;
+                    
                     var converted = data.data.map(function(item) {
                         var attrs = item.attributes || {};
                         return {
                             mal_id: item.id,
-                            title: attrs.canonicalTitle || attrs.titles?.en || attrs.titles?.en_jp || 'Без названия',
-                            title_russian: attrs.titles?.en || attrs.titles?.en_jp || '',
-                            year: attrs.startDate ? attrs.startDate.split('-')[0] : '--',
-                            episodes: attrs.episodeCount || '?',
-                            images: { jpg: { image_url: attrs.posterImage?.original || '' } },
-                            synopsis: attrs.synopsis || 'Описание отсутствует',
-                            genres: attrs.categories || [],
-                            score: attrs.averageRating ? parseFloat(attrs.averageRating) / 10 : 0
+                            title: attrs.russian || attrs.name || 'Без названия',
+                            title_russian: attrs.russian || '',
+                            title_english: attrs.name || '',
+                            year: attrs.release_date ? attrs.release_date.split('-')[0] : '--',
+                            episodes: attrs.episodes_total || '?',
+                            images: { jpg: { image_url: attrs.poster?.original || '' } },
+                            synopsis: attrs.description || 'Описание отсутствует',
+                            genres: attrs.genres || [],
+                            score: attrs.rating || 0,
+                            russian: attrs.russian || ''
                         };
                     });
+                    
+                    converted.forEach(function(a) { allData[a.mal_id] = a; });
+                    renderCatalog(converted);
+                    renderPagination();
+                    return;
+                }
+            }
+            // Пробуем следующее зеркало
+            if (mirrors.length > 1) {
+                var currentMirror = mirrors.shift();
+                console.log('🔄 Смена зеркала Anime365...');
+                loadCatalogAnime365();
+                return;
+            }
+            loadCatalogKodik();
+        } catch(e) {
+            loadCatalogKodik();
+        }
+    };
+    xhr.onerror = function() { 
+        if (mirrors.length > 1) {
+            mirrors.shift();
+            console.log('🔄 Смена зеркала Anime365...');
+            loadCatalogAnime365();
+        } else {
+            loadCatalogKodik();
+        }
+    };
+    xhr.ontimeout = function() { 
+        if (mirrors.length > 1) {
+            mirrors.shift();
+            loadCatalogAnime365();
+        } else {
+            loadCatalogKodik();
+        }
+    };
+    xhr.send();
+}
+
+// ===== 3. KODIK API (ТРЕТИЙ ЗАПАСНОЙ) =====
+function loadCatalogKodik() {
+    console.log('🔄 Kodik API...');
+    var grid = document.getElementById('grid');
+    if (!grid) return;
+    
+    var isSearch = query && query.length > 1;
+    var url = 'https://kodikapi.com/search?limit=12&with_material_data=true&types=anime';
+    
+    if (isSearch) {
+        url += '&title=' + encodeURIComponent(query);
+        console.log('🔍 Поиск Kodik:', query);
+    }
+    if (genre && !isSearch) {
+        var genreMap = { '1': 'боевик', '8': 'драма', '21': 'комедия', '10': 'фэнтези', '22': 'романтика' };
+        url += '&genre=' + encodeURIComponent(genreMap[genre] || '');
+    }
+    url += '&page=' + page;
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+    xhr.timeout = 12000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.results && data.results.length > 0) {
+                    totalPages = Math.ceil((data.total || 12) / 12);
+                    if (totalPages < 1) totalPages = 1;
+                    
+                    var converted = data.results.map(function(item) {
+                        return {
+                            mal_id: item.id || item.material_data?.id,
+                            title: item.title || item.material_data?.title || 'Без названия',
+                            title_russian: item.title || '',
+                            title_english: item.title_orig || '',
+                            year: item.year || '--',
+                            episodes: item.episodes_total || item.episodes || '?',
+                            images: { jpg: { image_url: item.poster_url || '' } },
+                            synopsis: item.material_data?.description || 'Описание отсутствует',
+                            genres: item.material_data?.genres || [],
+                            score: item.rating || item.material_data?.rating || 0,
+                            russian: item.title || ''
+                        };
+                    });
+                    
+                    converted.forEach(function(a) { allData[a.mal_id] = a; });
+                    renderCatalog(converted);
+                    renderPagination();
+                    return;
+                }
+            }
+            loadCatalogAnilibria();
+        } catch(e) {
+            loadCatalogAnilibria();
+        }
+    };
+    xhr.onerror = function() { loadCatalogAnilibria(); };
+    xhr.ontimeout = function() { loadCatalogAnilibria(); };
+    xhr.send();
+}
+
+// ===== 4. ANILIBRIA (ЧЕТВЕРТЫЙ ЗАПАСНОЙ) =====
+function loadCatalogAnilibria() {
+    console.log('🔄 Anilibria API...');
+    var grid = document.getElementById('grid');
+    if (!grid) return;
+    
+    var isSearch = query && query.length > 1;
+    var url = 'https://anilibria.top/api/v1/anime/catalog/releases';
+    var body = { page: page, limit: 12, f: { sorting: 'FRESH_AT_DESC' } };
+    
+    if (isSearch) {
+        body.f.search = query;
+        console.log('🔍 Поиск Anilibria:', query);
+    }
+    if (genre && !isSearch) {
+        body.f.genres = [parseInt(genre)];
+    }
+    if (!isSearch && !genre) {
+        body.f.sorting = 'FRESH_AT_DESC';
+    }
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+    xhr.timeout = 12000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.data && data.data.length > 0) {
+                    totalPages = data.meta?.pagination?.total_pages || 1;
+                    if (totalPages < 1) totalPages = 1;
+                    
+                    var converted = data.data.map(function(item) {
+                        var img = '';
+                        if (item.poster) {
+                            var p = item.poster.optimized || item.poster;
+                            if (typeof p === 'string') {
+                                img = p;
+                            } else {
+                                img = p.preview || p.src || '';
+                            }
+                            if (img && img[0] === '/') {
+                                img = 'https://anilibria.top' + img;
+                            }
+                        }
+                        return {
+                            mal_id: item.id,
+                            title: item.name?.main || item.name?.english || item.name?.original || 'Без названия',
+                            title_russian: item.name?.main || '',
+                            title_english: item.name?.english || '',
+                            year: item.year || '--',
+                            episodes: item.episodes_total || '?',
+                            images: { jpg: { image_url: img || '' } },
+                            synopsis: item.description || 'Описание отсутствует',
+                            genres: item.genres || [],
+                            score: item.rating || 0,
+                            russian: item.name?.main || ''
+                        };
+                    });
+                    
                     converted.forEach(function(a) { allData[a.mal_id] = a; });
                     renderCatalog(converted);
                     renderPagination();
@@ -441,7 +518,7 @@ function loadCatalogKitsu() {
     };
     xhr.onerror = function() { showError('🌐 Ошибка сети'); };
     xhr.ontimeout = function() { showError('⏱️ Превышено время'); };
-    xhr.send();
+    xhr.send(JSON.stringify(body));
 }
 
 function showError(msg) {
@@ -452,7 +529,7 @@ function showError(msg) {
 }
 
 // ============================================
-// РЕНДЕРИНГ КАТАЛОГА (С РУССКИМИ НАЗВАНИЯМИ)
+// РЕНДЕРИНГ КАТАЛОГА
 // ============================================
 
 function renderCatalog(list) {
@@ -468,23 +545,7 @@ function renderCatalog(list) {
     var colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
     
     list.forEach(function(a, index) {
-        var img = '';
-        if (a.images?.jpg?.image_url) {
-            img = a.images.jpg.image_url;
-        } else if (a.coverImage?.large) {
-            img = a.coverImage.large;
-        } else if (a.poster) {
-            var p = a.poster.optimized || a.poster;
-            if (typeof p === 'string') {
-                img = p;
-            } else {
-                img = p.preview || p.src || '';
-            }
-            if (img && img[0] === '/') {
-                img = 'https://anilibria.top' + img;
-            }
-        }
-        
+        var img = a.images?.jpg?.image_url || '';
         var title = getRussianTitle(a);
         var episodes = a.episodes || a.episodes_total || 'Онгоинг';
         var year = a.year || a.seasonYear || '';
@@ -601,7 +662,7 @@ if (genresNav) {
 }
 
 // ============================================
-// ДЕТАЛЬНАЯ СТРАНИЦА (Jikan + AniList + Kitsu)
+// ДЕТАЛЬНАЯ СТРАНИЦА
 // ============================================
 
 function openDetail(id) {
@@ -620,114 +681,67 @@ function openDetail(id) {
         return;
     }
     
-    openDetailJikan(id);
+    openDetailShikimori(id);
 }
 
-// ===== 1. JIKAN DETAIL =====
-function openDetailJikan(id) {
-    var url = 'https://api.jikan.moe/v4/anime/' + id + '/full';
+// ===== 1. SHIKIMORI DETAIL =====
+function openDetailShikimori(id) {
+    var url = 'https://shikimori.one/api/animes/' + id;
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
     xhr.timeout = 12000;
     
     xhr.onload = function() {
         try {
             if (xhr.status === 200) {
                 var data = JSON.parse(xhr.responseText);
-                if (data && data.data) {
-                    allData[id] = data.data;
-                    showDetail(data.data);
-                    return;
-                }
-            }
-            openDetailAnilist(id);
-        } catch(e) {
-            openDetailAnilist(id);
-        }
-    };
-    xhr.onerror = function() { openDetailAnilist(id); };
-    xhr.ontimeout = function() { openDetailAnilist(id); };
-    xhr.send();
-}
-
-// ===== 2. ANILIST DETAIL =====
-function openDetailAnilist(id) {
-    console.log('🔄 AniList детали...');
-    var graphqlQuery = `
-        query ($id: Int) {
-            Media (id: $id, type: ANIME) {
-                id
-                title { romaji english }
-                description
-                episodes
-                seasonYear
-                coverImage { large }
-                bannerImage
-                genres
-                averageScore
-                meanScore
-                status
-                format
-                duration
-                source
-                isAdult
-                startDate { year month day }
-                endDate { year month day }
-            }
-        }
-    `;
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://graphql.anilist.co');
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.timeout = 12000;
-    
-    xhr.onload = function() {
-        try {
-            if (xhr.status === 200) {
-                var data = JSON.parse(xhr.responseText);
-                if (data && data.data && data.data.Media) {
-                    var item = data.data.Media;
+                if (data && data.id) {
                     var converted = {
-                        mal_id: item.id,
-                        title: item.title?.english || item.title?.romaji || 'Без названия',
-                        title_russian: item.title?.romaji || item.title?.english || '',
-                        title_english: item.title?.english || '',
-                        episodes: item.episodes || '?',
-                        year: item.seasonYear || '--',
-                        images: { jpg: { image_url: item.coverImage?.large || '' } },
-                        bannerImage: item.bannerImage || '',
-                        synopsis: item.description || 'Описание отсутствует',
-                        genres: item.genres || [],
-                        score: item.averageScore || item.meanScore || 0,
-                        status: item.status || '',
-                        format: item.format || '',
-                        duration: item.duration || '',
-                        source: item.source || '',
-                        isAdult: item.isAdult || false,
-                        startDate: item.startDate || {},
-                        endDate: item.endDate || {}
+                        mal_id: data.id,
+                        title: data.russian || data.name || 'Без названия',
+                        title_russian: data.russian || '',
+                        title_english: data.name || '',
+                        year: data.aired_on ? data.aired_on.split('-')[0] : '--',
+                        episodes: data.episodes || '?',
+                        images: { jpg: { image_url: data.image?.original || '' } },
+                        synopsis: data.description || 'Описание отсутствует',
+                        genres: data.genres || [],
+                        score: data.score || 0,
+                        russian: data.russian || '',
+                        rating: data.rating || '',
+                        status: data.status || '',
+                        duration: data.duration || '',
+                        aired_on: data.aired_on || '',
+                        released_on: data.released_on || ''
                     };
                     allData[id] = converted;
                     showDetail(converted);
                     return;
                 }
             }
-            openDetailKitsu(id);
+            openDetailAnime365(id);
         } catch(e) {
-            openDetailKitsu(id);
+            openDetailAnime365(id);
         }
     };
-    xhr.onerror = function() { openDetailKitsu(id); };
-    xhr.ontimeout = function() { openDetailKitsu(id); };
-    xhr.send(JSON.stringify({ query: graphqlQuery, variables: { id: parseInt(id) } }));
+    xhr.onerror = function() { openDetailAnime365(id); };
+    xhr.ontimeout = function() { openDetailAnime365(id); };
+    xhr.send();
 }
 
-// ===== 3. KITSU DETAIL =====
-function openDetailKitsu(id) {
-    console.log('🔄 Kitsu детали...');
-    var url = 'https://kitsu.io/api/edge/anime/' + id;
+// ===== 2. ANIME365 DETAIL =====
+function openDetailAnime365(id) {
+    var mirrors = [
+        'https://smotret-anime.online/api',
+        'https://smotret-anime.app/api',
+        'https://anime365.ru/api'
+    ];
+    
+    var url = mirrors[0] + '/series/' + id;
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
     xhr.timeout = 12000;
     
     xhr.onload = function() {
@@ -738,22 +752,124 @@ function openDetailKitsu(id) {
                     var attrs = data.data.attributes || {};
                     var converted = {
                         mal_id: data.data.id,
-                        title: attrs.canonicalTitle || attrs.titles?.en || attrs.titles?.en_jp || 'Без названия',
-                        title_russian: attrs.titles?.en || attrs.titles?.en_jp || '',
-                        title_english: attrs.titles?.en || '',
-                        episodes: attrs.episodeCount || '?',
-                        year: attrs.startDate ? attrs.startDate.split('-')[0] : '--',
-                        images: { jpg: { image_url: attrs.posterImage?.original || '' } },
-                        bannerImage: attrs.coverImage?.original || '',
-                        synopsis: attrs.synopsis || 'Описание отсутствует',
-                        genres: attrs.categories || [],
-                        score: attrs.averageRating ? parseFloat(attrs.averageRating) / 10 : 0,
+                        title: attrs.russian || attrs.name || 'Без названия',
+                        title_russian: attrs.russian || '',
+                        title_english: attrs.name || '',
+                        year: attrs.release_date ? attrs.release_date.split('-')[0] : '--',
+                        episodes: attrs.episodes_total || '?',
+                        images: { jpg: { image_url: attrs.poster?.original || '' } },
+                        synopsis: attrs.description || 'Описание отсутствует',
+                        genres: attrs.genres || [],
+                        score: attrs.rating || 0,
+                        russian: attrs.russian || '',
+                        rating: attrs.age_rating || '',
                         status: attrs.status || '',
-                        format: attrs.showType || '',
-                        duration: attrs.episodeLength || '',
-                        isAdult: attrs.ageRating === 'R18' || false,
-                        startDate: attrs.startDate ? { year: parseInt(attrs.startDate.split('-')[0]) } : {},
-                        endDate: attrs.endDate ? { year: parseInt(attrs.endDate.split('-')[0]) } : {}
+                        duration: attrs.duration || '',
+                        aired_on: attrs.release_date || '',
+                        released_on: attrs.release_date || ''
+                    };
+                    allData[id] = converted;
+                    showDetail(converted);
+                    return;
+                }
+            }
+            openDetailKodik(id);
+        } catch(e) {
+            openDetailKodik(id);
+        }
+    };
+    xhr.onerror = function() { openDetailKodik(id); };
+    xhr.ontimeout = function() { openDetailKodik(id); };
+    xhr.send();
+}
+
+// ===== 3. KODIK DETAIL =====
+function openDetailKodik(id) {
+    var url = 'https://kodikapi.com/search?with_material_data=true&types=anime&id=' + id;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+    xhr.timeout = 12000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.results && data.results.length > 0) {
+                    var item = data.results[0];
+                    var converted = {
+                        mal_id: item.id || item.material_data?.id,
+                        title: item.title || item.material_data?.title || 'Без названия',
+                        title_russian: item.title || '',
+                        title_english: item.title_orig || '',
+                        year: item.year || '--',
+                        episodes: item.episodes_total || item.episodes || '?',
+                        images: { jpg: { image_url: item.poster_url || '' } },
+                        synopsis: item.material_data?.description || 'Описание отсутствует',
+                        genres: item.material_data?.genres || [],
+                        score: item.rating || item.material_data?.rating || 0,
+                        russian: item.title || '',
+                        rating: item.material_data?.rating || '',
+                        status: item.material_data?.status || '',
+                        duration: item.material_data?.duration || '',
+                        aired_on: item.material_data?.year || ''
+                    };
+                    allData[id] = converted;
+                    showDetail(converted);
+                    return;
+                }
+            }
+            openDetailAnilibria(id);
+        } catch(e) {
+            openDetailAnilibria(id);
+        }
+    };
+    xhr.onerror = function() { openDetailAnilibria(id); };
+    xhr.ontimeout = function() { openDetailAnilibria(id); };
+    xhr.send();
+}
+
+// ===== 4. ANILIBRIA DETAIL =====
+function openDetailAnilibria(id) {
+    var url = 'https://anilibria.top/api/v1/app/title/' + id;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+    xhr.timeout = 12000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.name) {
+                    var img = '';
+                    if (data.poster) {
+                        var p = data.poster.optimized || data.poster;
+                        if (typeof p === 'string') {
+                            img = p;
+                        } else {
+                            img = p.preview || p.src || '';
+                        }
+                        if (img && img[0] === '/') {
+                            img = 'https://anilibria.top' + img;
+                        }
+                    }
+                    var converted = {
+                        mal_id: data.id,
+                        title: data.name?.main || data.name?.english || data.name?.original || 'Без названия',
+                        title_russian: data.name?.main || '',
+                        title_english: data.name?.english || '',
+                        year: data.year || '--',
+                        episodes: data.episodes_total || '?',
+                        images: { jpg: { image_url: img || '' } },
+                        synopsis: data.description || 'Описание отсутствует',
+                        genres: data.genres || [],
+                        score: data.rating || 0,
+                        russian: data.name?.main || '',
+                        rating: data.age_rating || '',
+                        status: data.status || '',
+                        duration: data.duration || '',
+                        aired_on: data.year || ''
                     };
                     allData[id] = converted;
                     showDetail(converted);
@@ -771,11 +887,11 @@ function openDetailKitsu(id) {
 }
 
 // ============================================
-// ОТОБРАЖЕНИЕ ДЕТАЛЕЙ (С РУССКИМИ НАЗВАНИЯМИ)
+// ОТОБРАЖЕНИЕ ДЕТАЛЕЙ
 // ============================================
 
 function showDetail(anime) {
-    var img = anime.images?.jpg?.image_url || anime.coverImage?.large || '';
+    var img = anime.images?.jpg?.image_url || '';
     
     var posterEl = document.getElementById('detailPoster');
     if (posterEl) {
@@ -784,27 +900,23 @@ function showDetail(anime) {
         posterEl.style.display = img ? 'block' : 'none';
     }
     
-    // ===== РУССКОЕ НАЗВАНИЕ =====
     var title = getRussianTitle(anime);
     var titleEl = document.getElementById('detailTitle');
     if (titleEl) titleEl.textContent = title;
     
-    // ===== АНГЛИЙСКОЕ НАЗВАНИЕ =====
     var engEl = document.getElementById('detailEng');
     if (engEl) {
-        var engTitle = anime.title_english || anime.title?.english || anime.title?.romaji || '';
+        var engTitle = anime.title_english || '';
         engEl.textContent = engTitle;
     }
     
-    // ===== МЕТА =====
     var metaEl = document.getElementById('detailMeta');
     if (metaEl) {
-        var year = anime.year || anime.seasonYear || '--';
+        var year = anime.year || '--';
         var episodes = anime.episodes || '?';
         metaEl.textContent = year + ' | ' + episodes + ' эп.';
     }
     
-    // ===== РУССКОЕ ОПИСАНИЕ =====
     var descEl = document.getElementById('detailDesc');
     if (descEl) {
         var descText = getRussianDescription(anime);
@@ -825,23 +937,19 @@ function showDetail(anime) {
         }
     }
     
-    // ===== ВОЗРАСТ =====
     var ageEl = document.getElementById('detailAgeRestriction');
     if (ageEl) {
         var age = 0;
-        if (anime.isAdult) {
-            age = 18;
-        } else if (anime.rating) {
+        if (anime.rating) {
             var ratingMap = {
                 'G': 0, 'PG': 6, 'PG-13': 12, 'R': 16, 'R+': 16, 'Rx': 18,
-                'R18': 18, 'R18+': 18
+                'R18': 18, 'R18+': 18, '18+': 18, '16+': 16, '12+': 12, '6+': 6, '0+': 0
             };
             age = ratingMap[anime.rating] || 0;
         }
         ageEl.innerHTML = '<span class="age-badge age-' + age + '">' + age + '+</span>';
     }
     
-    // ===== ЖАНРЫ =====
     var tagColors = {
         'Action': '#e74c3c', 'Drama': '#3498db', 'Comedy': '#f1c40f',
         'Fantasy': '#9b59b6', 'Romance': '#e91e63', 'Adventure': '#2ecc71',
@@ -866,7 +974,6 @@ function showDetail(anime) {
     var tagsEl = document.getElementById('detailTags');
     if (tagsEl) tagsEl.innerHTML = tagsHtml || '<span class="detail-tag">🎬 Аниме</span>';
     
-    // ===== ИЗБРАННОЕ =====
     var user = DB.get('currentUser');
     var favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
     var isFav = favs.indexOf(title) > -1;
@@ -878,7 +985,6 @@ function showDetail(anime) {
         btn.style.display = 'inline-block';
     }
     
-    // ===== ВИДЕО =====
     var videos = DB.get('videos', {});
     var eps = videos[title] || [];
     var epContainer = document.getElementById('episodeBtns');
@@ -1167,7 +1273,7 @@ function renderFavorites() {
             var a = allData[id];
             var title = getRussianTitle(a);
             if (title === name) {
-                img = a.images?.jpg?.image_url || a.coverImage?.large || '';
+                img = a.images?.jpg?.image_url || '';
                 break;
             }
         }
