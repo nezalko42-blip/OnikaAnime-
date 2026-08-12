@@ -67,15 +67,21 @@
 
     <header class="header">
         <div class="header-left">
-            <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+            <button class="menu-toggle" onclick="toggleMenu()">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-menu"/></svg>
+            </button>
         </div>
         <div class="header-center">
             <div class="search-wrapper">
-                <input type="text" id="searchInput" placeholder="🔭 Поиск аниме..." autocomplete="off" spellcheck="false">
+                <svg class="search-icon" width="18" height="18"><use href="icons/icons.svg#icon-search"/></svg>
+                <input type="text" id="searchInput" placeholder="Поиск аниме..." autocomplete="off" spellcheck="false">
             </div>
         </div>
         <div class="header-right">
-            <span class="site-title">OnikaAnime</span>
+            <span class="site-title">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-logo"/></svg>
+                OnikaAnime
+            </span>
         </div>
     </header>
 
@@ -108,7 +114,10 @@
                     <section class="schedule-section">
                         <div class="schedule-container">
                             <div class="schedule-header">
-                                <h2>📅 Расписание выхода</h2>
+                                <h2>
+                                    <svg width="24" height="24" style="display:inline-block;vertical-align:middle;margin-right:8px;"><use href="icons/icons.svg#icon-calendar"/></svg>
+                                    Расписание выхода
+                                </h2>
                                 <span class="schedule-week">Неделя</span>
                             </div>
                             <div class="schedule-grid" id="scheduleGrid">
@@ -121,7 +130,8 @@
                     <section class="random-section">
                         <div class="random-container">
                             <button class="random-btn" onclick="randomAnime()">
-                                🎲 Не знаю что посмотреть?
+                                <svg width="20" height="20" style="display:inline-block;vertical-align:middle;margin-right:8px;"><use href="icons/icons.svg#icon-random"/></svg>
+                                Не знаю что посмотреть?
                             </button>
                             <div class="random-result" id="randomResult"></div>
                         </div>
@@ -137,7 +147,9 @@
 
                             <div class="social-grid-3">
                                 <div class="social-card telegram-card">
-                                    <div class="social-card-icon">📱</div>
+                                    <div class="social-card-icon">
+                                        <svg width="48" height="48"><use href="icons/icons.svg#icon-telegram"/></svg>
+                                    </div>
                                     <h3>Telegram</h3>
                                     <p>Новости, розыгрыши, общение</p>
                                     <div class="social-features">
@@ -146,7 +158,8 @@
                                         <span>📢 Новости первыми</span>
                                     </div>
                                     <a href="https://t.me/onikaanime" target="_blank" class="social-btn telegram-btn">
-                                        ✈️ Подписаться
+                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;"><use href="icons/icons.svg#icon-telegram"/></svg>
+                                        Подписаться
                                     </a>
                                     <div class="social-stats">
                                         <span id="tgStats">👥 0 подписчиков</span>
@@ -154,7 +167,9 @@
                                 </div>
 
                                 <div class="social-card vk-card">
-                                    <div class="social-card-icon">💙</div>
+                                    <div class="social-card-icon">
+                                        <svg width="48" height="48"><use href="icons/icons.svg#icon-vk"/></svg>
+                                    </div>
                                     <h3>VKontakte</h3>
                                     <p>Сообщество, обсуждения, опросы</p>
                                     <div class="social-features">
@@ -163,7 +178,8 @@
                                         <span>📸 Арты и мемы</span>
                                     </div>
                                     <a href="https://vk.com/onikaanime" target="_blank" class="social-btn vk-btn">
-                                        💙 Подписаться
+                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;"><use href="icons/icons.svg#icon-vk"/></svg>
+                                        Подписаться
                                     </a>
                                     <div class="social-stats">
                                         <span id="vkStats">👥 0 подписчиков</span>
@@ -171,7 +187,9 @@
                                 </div>
 
                                 <div class="social-card tiktok-card">
-                                    <div class="social-card-icon">🎵</div>
+                                    <div class="social-card-icon">
+                                        <svg width="48" height="48"><use href="icons/icons.svg#icon-tiktok"/></svg>
+                                    </div>
                                     <h3>TikTok</h3>
                                     <p>Клипы, тренды, моменты</p>
                                     <div class="social-features">
@@ -180,7 +198,8 @@
                                         <span>⭐ Лучшие сцены</span>
                                     </div>
                                     <a href="https://tiktok.com/@onikaanime" target="_blank" class="social-btn tiktok-btn">
-                                        🎵 Подписаться
+                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;"><use href="icons/icons.svg#icon-tiktok"/></svg>
+                                        Подписаться
                                     </a>
                                     <div class="social-stats">
                                         <span id="ttStats">👥 0 подписчиков</span>
@@ -217,7 +236,10 @@
 
                 <!-- ===== ДЕТАЛЬНАЯ ===== -->
                 <div id="page-detail" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">← Назад</span>
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
                     <div class="detail-content">
                         <div class="detail-left">
                             <img class="detail-poster" id="detailPoster" src="" alt="Постер">
@@ -232,9 +254,14 @@
                             <div class="detail-tags" id="detailTags"></div>
                             <div class="detail-desc-wrapper">
                                 <div class="detail-desc" id="detailDesc"></div>
-                                <button class="desc-toggle" id="descToggle" onclick="toggleDescription()">📖 Читать полностью <span class="arrow">▼</span></button>
+                                <button class="desc-toggle" id="descToggle" onclick="toggleDescription()">
+                                    📖 Читать полностью <span class="arrow">▼</span>
+                                </button>
                             </div>
-                            <button class="fav-btn" id="favBtn" onclick="toggleFav()">🤍 В избранное</button>
+                            <button class="fav-btn" id="favBtn" onclick="toggleFav()">
+                                <svg width="20" height="20"><use href="icons/icons.svg#icon-heart-empty"/></svg>
+                                В избранное
+                            </button>
                         </div>
                     </div>
                     
@@ -255,7 +282,10 @@
                         <h3>💬 Комментарии</h3>
                         <div class="comment-form">
                             <input type="text" id="commentInput" placeholder="Напишите что-нибудь...">
-                            <button onclick="addComment()">🚀 Отпр</button>
+                            <button onclick="addComment()">
+                                <svg width="18" height="18"><use href="icons/icons.svg#icon-comment"/></svg>
+                                Отпр
+                            </button>
                         </div>
                         <div id="commentsList"></div>
                     </div>
@@ -263,9 +293,14 @@
 
                 <!-- ===== ИЗБРАННОЕ ===== -->
                 <div id="page-favorites" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">← Назад</span>
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
                     <div class="list-page-header">
-                        <span class="icon">❤️</span>
+                        <span class="icon">
+                            <svg width="40" height="40"><use href="icons/icons.svg#icon-favorites"/></svg>
+                        </span>
                         <h2>Избранное</h2>
                         <div class="count" id="favCount">0 аниме</div>
                     </div>
@@ -274,7 +309,10 @@
 
                 <!-- ===== ДОСТИЖЕНИЯ ===== -->
                 <div id="page-achievements" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">← Назад</span>
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
                     <div class="achievements-container">
                         <div class="achievements-header">
                             <div class="achievements-stats">
@@ -301,9 +339,14 @@
 
                 <!-- ===== МОИ КОММЕНТАРИИ ===== -->
                 <div id="page-mycomments" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">← Назад</span>
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
                     <div class="list-page-header">
-                        <span class="icon">💬</span>
+                        <span class="icon">
+                            <svg width="40" height="40"><use href="icons/icons.svg#icon-comment"/></svg>
+                        </span>
                         <h2>Мои комментарии</h2>
                         <div class="count" id="myCommentsCount">0</div>
                     </div>
@@ -312,9 +355,14 @@
 
                 <!-- ===== РЕКОМЕНДАЦИИ ===== -->
                 <div id="page-recommendations" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">← Назад</span>
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
                     <div class="list-page-header">
-                        <span class="icon">🎯</span>
+                        <span class="icon">
+                            <svg width="40" height="40"><use href="icons/icons.svg#icon-star"/></svg>
+                        </span>
                         <h2>Персональные рекомендации</h2>
                         <div class="count" id="recCount">0 рекомендаций</div>
                     </div>
@@ -338,7 +386,9 @@
                                     <img id="avatarImg" src="" style="display:none;">
                                     <span id="avatarLetter">?</span>
                                     <div class="avatar-overlay">
-                                        <span class="avatar-edit-icon">📷</span>
+                                        <span class="avatar-edit-icon">
+                                            <svg width="24" height="24"><use href="icons/icons.svg#icon-profile"/></svg>
+                                        </span>
                                         <span class="avatar-edit-text">Сменить</span>
                                     </div>
                                 </div>
@@ -348,7 +398,9 @@
                                 <div class="profile-name-row">
                                     <h1 id="profileName">--</h1>
                                     <span class="title-badge" id="profileTitle"></span>
-                                    <button class="profile-edit-btn" onclick="editProfile('name')" title="Редактировать никнейм">✏️</button>
+                                    <button class="profile-edit-btn" onclick="editProfile('name')" title="Редактировать никнейм">
+                                        <svg width="16" height="16"><use href="icons/icons.svg#icon-settings"/></svg>
+                                    </button>
                                 </div>
                                 <div class="profile-id" id="profileId" style="color:var(--accent-glow);font-size:13px;font-weight:600;margin-top:2px;padding:4px 12px;background:rgba(108,92,231,0.05);border-radius:12px;display:inline-block;border:1px solid rgba(108,92,231,0.05);">🆔 ID: --</div>
                                 <div class="profile-email" id="profileEmail" style="color:var(--text-secondary);font-size:13px;margin-top:2px;">📧 --</div>
@@ -365,17 +417,23 @@
                         
                         <div class="stats-cards">
                             <a class="stat-card" onclick="navigate('favorites')">
-                                <div class="stat-icon">❤️</div>
+                                <div class="stat-icon">
+                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-favorites"/></svg>
+                                </div>
                                 <div class="num" id="statFav">0</div>
                                 <div class="lbl">В избранном</div>
                             </a>
                             <a class="stat-card" onclick="navigate('mycomments')">
-                                <div class="stat-icon">💬</div>
+                                <div class="stat-icon">
+                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-comment"/></svg>
+                                </div>
                                 <div class="num" id="statComments">0</div>
                                 <div class="lbl">Комментариев</div>
                             </a>
                             <a class="stat-card" onclick="navigate('achievements')">
-                                <div class="stat-icon">🏆</div>
+                                <div class="stat-icon">
+                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-achievements"/></svg>
+                                </div>
                                 <div class="num" id="statAchievements">0</div>
                                 <div class="lbl">Достижений</div>
                             </a>
@@ -397,8 +455,14 @@
 
                 <!-- ===== НАСТРОЙКИ ===== -->
                 <div id="page-settings" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">← Назад</span>
-                    <h2>⚙️ Настройки</h2>
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
+                    <h2>
+                        <svg width="24" height="24" style="display:inline-block;vertical-align:middle;margin-right:8px;"><use href="icons/icons.svg#icon-settings"/></svg>
+                        Настройки
+                    </h2>
                     
                     <div class="settings-group">
                         <h3>👤 Аккаунт</h3>
@@ -458,12 +522,16 @@
     </div>
 
     <!-- ===== КНОПКА ВВЕРХ ===== -->
-    <button class="scroll-top" id="scrollTopBtn" onclick="scrollToTop()">↑</button>
+    <button class="scroll-top" id="scrollTopBtn" onclick="scrollToTop()">
+        <svg width="24" height="24"><use href="icons/icons.svg#icon-arrow-up"/></svg>
+    </button>
 
     <!-- ===== ПОПАП ДОСТИЖЕНИЙ ===== -->
     <div class="achievement-popup" id="achievementPopup">
         <div class="popup-inner">
-            <button class="popup-close" onclick="hidePopup()">✕</button>
+            <button class="popup-close" onclick="hidePopup()">
+                <svg width="20" height="20"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
             <span class="popup-icon" id="popupIcon">🏆</span>
             <div class="popup-label">Новое достижение!</div>
             <div class="popup-name" id="popupName"></div>
@@ -478,7 +546,9 @@
     <!-- Вход/Регистрация -->
     <div class="modal" id="loginModal">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeLoginModal()">✕</button>
+            <button class="modal-close" onclick="closeLoginModal()">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
             <div class="modal-tabs">
                 <button class="modal-tab active" onclick="switchAuthTab('login', this)">🚀 Вход</button>
                 <button class="modal-tab" onclick="switchAuthTab('register', this)">✨ Регистрация</button>
@@ -500,7 +570,9 @@
     <!-- Редактирование -->
     <div class="modal" id="editModal">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+            <button class="modal-close" onclick="closeModal('editModal')">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
             <h2 id="editTitle">Изменить</h2>
             <input type="text" id="editInput" placeholder="Введите значение...">
             <textarea id="editTextarea" style="display:none;width:100%;padding:12px;border-radius:10px;border:1px solid rgba(108,92,231,0.1);background:rgba(255,255,255,0.02);color:#fff;font-size:14px;margin-bottom:12px;resize:vertical;min-height:70px;" placeholder="Введите описание..."></textarea>
@@ -514,7 +586,9 @@
     <!-- Подтверждение -->
     <div class="modal" id="confirmModal">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeModal('confirmModal')">✕</button>
+            <button class="modal-close" onclick="closeModal('confirmModal')">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
             <div class="modal-icon" id="confirmIcon">⚠️</div>
             <h2 id="confirmTitle">Подтверждение</h2>
             <p id="confirmText"></p>
@@ -528,7 +602,9 @@
     <!-- Удаление аккаунта -->
     <div class="modal" id="deleteAccountModal">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeModal('deleteAccountModal')">✕</button>
+            <button class="modal-close" onclick="closeModal('deleteAccountModal')">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
             <div class="modal-icon">💀</div>
             <h2>⚠️ Удаление аккаунта</h2>
             <p>Это действие <strong>нельзя отменить</strong>. Все ваши данные будут удалены навсегда.</p>
@@ -551,9 +627,15 @@
                 <h4>🌟 OnikaAnime</h4>
                 <p>Твой космический портал в мир аниме. Смотри, общайся и развивайся вместе с нами!</p>
                 <div class="footer-social">
-                    <a href="https://t.me/onikaanime" target="_blank" title="Telegram">📱</a>
-                    <a href="https://vk.com/onikaanime" target="_blank" title="VK">💙</a>
-                    <a href="https://tiktok.com/@onikaanime" target="_blank" title="TikTok">🎵</a>
+                    <a href="https://t.me/onikaanime" target="_blank" title="Telegram">
+                        <svg width="24" height="24"><use href="icons/icons.svg#icon-telegram"/></svg>
+                    </a>
+                    <a href="https://vk.com/onikaanime" target="_blank" title="VK">
+                        <svg width="24" height="24"><use href="icons/icons.svg#icon-vk"/></svg>
+                    </a>
+                    <a href="https://tiktok.com/@onikaanime" target="_blank" title="TikTok">
+                        <svg width="24" height="24"><use href="icons/icons.svg#icon-tiktok"/></svg>
+                    </a>
                 </div>
             </div>
             
