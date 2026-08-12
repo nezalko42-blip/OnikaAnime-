@@ -31,6 +31,93 @@ var ACHIEVEMENTS_LIST = [
 ];
 
 // ============================================
+// ПОЛУЧЕНИЕ РУССКОГО НАЗВАНИЯ
+// ============================================
+
+function getRussianTitle(anime) {
+    // 1. Если есть поле title_russian
+    if (anime.title_russian) {
+        return anime.title_russian;
+    }
+    
+    // 2. Если есть title_ru
+    if (anime.title_ru) {
+        return anime.title_ru;
+    }
+    
+    // 3. Если есть title с русскими буквами
+    if (anime.title && typeof anime.title === 'string') {
+        if (/[а-яА-Я]/.test(anime.title)) {
+            return anime.title;
+        }
+    }
+    
+    // 4. Jikan: ищем в названиях
+    if (anime.title && typeof anime.title === 'object') {
+        // Японское (часто содержит русские буквы)
+        if (anime.title.japanese && /[а-яА-Я]/.test(anime.title.japanese)) {
+            return anime.title.japanese;
+        }
+        // English
+        if (anime.title.english) {
+            return anime.title.english;
+        }
+        // Romaji
+        if (anime.title.romaji) {
+            return anime.title.romaji;
+        }
+    }
+    
+    // 5. Jikan: synonyms (может содержать русское название)
+    if (anime.synonyms && anime.synonyms.length > 0) {
+        for (var i = 0; i < anime.synonyms.length; i++) {
+            if (/[а-яА-Я]/.test(anime.synonyms[i])) {
+                return anime.synonyms[i];
+            }
+        }
+    }
+    
+    // 6. AniList: title
+    if (anime.title) {
+        if (anime.title.english) return anime.title.english;
+        if (anime.title.romaji) return anime.title.romaji;
+        if (typeof anime.title === 'string') return anime.title;
+    }
+    
+    // 7. Kitsu: canonicalTitle или titles
+    if (anime.canonicalTitle) return anime.canonicalTitle;
+    if (anime.titles) {
+        if (anime.titles.en) return anime.titles.en;
+        if (anime.titles.en_jp) return anime.titles.en_jp;
+        if (anime.titles.ja_jp) return anime.titles.ja_jp;
+    }
+    
+    // 8. Если ничего не нашли — берём что есть
+    return anime.name || anime.title || 'Без названия';
+}
+
+// ============================================
+// ПОЛУЧЕНИЕ РУССКОГО ОПИСАНИЯ
+// ============================================
+
+function getRussianDescription(anime) {
+    if (anime.description_russian) {
+        return anime.description_russian;
+    }
+    if (anime.description_ru) {
+        return anime.description_ru;
+    }
+    if (anime.synonyms && anime.synonyms.length > 0) {
+        for (var i = 0; i < anime.synonyms.length; i++) {
+            if (/[а-яА-Я]/.test(anime.synonyms[i]) && anime.synonyms[i].length > 50) {
+                return anime.synonyms[i];
+            }
+        }
+    }
+    return anime.synopsis || anime.description || 'Описание отсутствует';
+}
+
+// ============================================
 // НАВИГАЦИЯ
 // ============================================
 
@@ -269,6 +356,7 @@ function loadCatalogAnilist() {
                             return {
                                 mal_id: item.id,
                                 title: item.title?.english || item.title?.romaji || 'Без названия',
+                                title_russian: item.title?.romaji || item.title?.english || '',
                                 year: item.seasonYear || '--',
                                 episodes: item.episodes || '?',
                                 images: { jpg: { image_url: item.coverImage?.large || '' } },
@@ -331,6 +419,7 @@ function loadCatalogKitsu() {
                         return {
                             mal_id: item.id,
                             title: attrs.canonicalTitle || attrs.titles?.en || attrs.titles?.en_jp || 'Без названия',
+                            title_russian: attrs.titles?.en || attrs.titles?.en_jp || '',
                             year: attrs.startDate ? attrs.startDate.split('-')[0] : '--',
                             episodes: attrs.episodeCount || '?',
                             images: { jpg: { image_url: attrs.posterImage?.original || '' } },
@@ -363,7 +452,7 @@ function showError(msg) {
 }
 
 // ============================================
-// РЕНДЕРИНГ КАТАЛОГА
+// РЕНДЕРИНГ КАТАЛОГА (С РУССКИМИ НАЗВАНИЯМИ)
 // ============================================
 
 function renderCatalog(list) {
@@ -396,7 +485,7 @@ function renderCatalog(list) {
             }
         }
         
-        var title = a.title?.english || a.title?.romaji || a.title?.main || a.title || 'Без названия';
+        var title = getRussianTitle(a);
         var episodes = a.episodes || a.episodes_total || 'Онгоинг';
         var year = a.year || a.seasonYear || '';
         var color = colors[index % colors.length];
@@ -601,6 +690,7 @@ function openDetailAnilist(id) {
                     var converted = {
                         mal_id: item.id,
                         title: item.title?.english || item.title?.romaji || 'Без названия',
+                        title_russian: item.title?.romaji || item.title?.english || '',
                         title_english: item.title?.english || '',
                         episodes: item.episodes || '?',
                         year: item.seasonYear || '--',
@@ -649,6 +739,7 @@ function openDetailKitsu(id) {
                     var converted = {
                         mal_id: data.data.id,
                         title: attrs.canonicalTitle || attrs.titles?.en || attrs.titles?.en_jp || 'Без названия',
+                        title_russian: attrs.titles?.en || attrs.titles?.en_jp || '',
                         title_english: attrs.titles?.en || '',
                         episodes: attrs.episodeCount || '?',
                         year: attrs.startDate ? attrs.startDate.split('-')[0] : '--',
@@ -680,7 +771,7 @@ function openDetailKitsu(id) {
 }
 
 // ============================================
-// ОТОБРАЖЕНИЕ ДЕТАЛЕЙ
+// ОТОБРАЖЕНИЕ ДЕТАЛЕЙ (С РУССКИМИ НАЗВАНИЯМИ)
 // ============================================
 
 function showDetail(anime) {
@@ -693,13 +784,19 @@ function showDetail(anime) {
         posterEl.style.display = img ? 'block' : 'none';
     }
     
-    var title = anime.title_english || anime.title?.english || anime.title?.romaji || anime.title || 'Без названия';
+    // ===== РУССКОЕ НАЗВАНИЕ =====
+    var title = getRussianTitle(anime);
     var titleEl = document.getElementById('detailTitle');
     if (titleEl) titleEl.textContent = title;
     
+    // ===== АНГЛИЙСКОЕ НАЗВАНИЕ =====
     var engEl = document.getElementById('detailEng');
-    if (engEl) engEl.textContent = anime.title_english || anime.title?.english || '';
+    if (engEl) {
+        var engTitle = anime.title_english || anime.title?.english || anime.title?.romaji || '';
+        engEl.textContent = engTitle;
+    }
     
+    // ===== МЕТА =====
     var metaEl = document.getElementById('detailMeta');
     if (metaEl) {
         var year = anime.year || anime.seasonYear || '--';
@@ -707,9 +804,10 @@ function showDetail(anime) {
         metaEl.textContent = year + ' | ' + episodes + ' эп.';
     }
     
+    // ===== РУССКОЕ ОПИСАНИЕ =====
     var descEl = document.getElementById('detailDesc');
     if (descEl) {
-        var descText = anime.synopsis || anime.description || 'Описание отсутствует';
+        var descText = getRussianDescription(anime);
         var tempDiv = document.createElement('div');
         tempDiv.innerHTML = descText;
         descText = tempDiv.textContent || descText;
@@ -727,6 +825,7 @@ function showDetail(anime) {
         }
     }
     
+    // ===== ВОЗРАСТ =====
     var ageEl = document.getElementById('detailAgeRestriction');
     if (ageEl) {
         var age = 0;
@@ -742,12 +841,16 @@ function showDetail(anime) {
         ageEl.innerHTML = '<span class="age-badge age-' + age + '">' + age + '+</span>';
     }
     
+    // ===== ЖАНРЫ =====
     var tagColors = {
         'Action': '#e74c3c', 'Drama': '#3498db', 'Comedy': '#f1c40f',
         'Fantasy': '#9b59b6', 'Romance': '#e91e63', 'Adventure': '#2ecc71',
         'Shounen': '#e67e22', 'Thriller': '#2c3e50', 'Horror': '#c0392b',
         'Sci-Fi': '#1abc9c', 'Slice of Life': '#f39c12', 'Mystery': '#8e44ad',
-        'Sports': '#27ae60'
+        'Sports': '#27ae60', 'Экшен': '#e74c3c', 'Драма': '#3498db',
+        'Комедия': '#f1c40f', 'Фэнтези': '#9b59b6', 'Романтика': '#e91e63',
+        'Приключения': '#2ecc71', 'Сёнен': '#e67e22', 'Триллер': '#2c3e50',
+        'Ужасы': '#c0392b', 'Научная фантастика': '#1abc9c'
     };
     
     var tagsHtml = '';
@@ -763,6 +866,7 @@ function showDetail(anime) {
     var tagsEl = document.getElementById('detailTags');
     if (tagsEl) tagsEl.innerHTML = tagsHtml || '<span class="detail-tag">🎬 Аниме</span>';
     
+    // ===== ИЗБРАННОЕ =====
     var user = DB.get('currentUser');
     var favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
     var isFav = favs.indexOf(title) > -1;
@@ -774,6 +878,7 @@ function showDetail(anime) {
         btn.style.display = 'inline-block';
     }
     
+    // ===== ВИДЕО =====
     var videos = DB.get('videos', {});
     var eps = videos[title] || [];
     var epContainer = document.getElementById('episodeBtns');
@@ -1060,7 +1165,7 @@ function renderFavorites() {
         
         for (var id in allData) {
             var a = allData[id];
-            var title = a.title?.english || a.title?.romaji || a.title?.main || a.title;
+            var title = getRussianTitle(a);
             if (title === name) {
                 img = a.images?.jpg?.image_url || a.coverImage?.large || '';
                 break;
