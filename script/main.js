@@ -211,7 +211,6 @@ function loadCatalog() {
     
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
     
-    // Запускаем все API параллельно
     var startTime = Date.now();
     
     var promises = [
@@ -221,7 +220,6 @@ function loadCatalog() {
         fetchAnilibria()
     ];
     
-    // Кто первый ответит — того и используем
     Promise.race(promises)
         .then(function(result) {
             var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -230,6 +228,8 @@ function loadCatalog() {
             if (result.data && result.data.length > 0) {
                 renderCatalog(result.data);
                 renderPagination();
+                updateStats();
+                loadSchedule();
             } else {
                 showError('🔍 Ничего не найдено');
             }
@@ -507,24 +507,32 @@ function loadCatalogSequential() {
         .then(function(result) {
             renderCatalog(result.data);
             renderPagination();
+            updateStats();
+            loadSchedule();
         })
         .catch(function() {
             fetchAnime365()
                 .then(function(result) {
                     renderCatalog(result.data);
                     renderPagination();
+                    updateStats();
+                    loadSchedule();
                 })
                 .catch(function() {
                     fetchKodik()
                         .then(function(result) {
                             renderCatalog(result.data);
                             renderPagination();
+                            updateStats();
+                            loadSchedule();
                         })
                         .catch(function() {
                             fetchAnilibria()
                                 .then(function(result) {
                                     renderCatalog(result.data);
                                     renderPagination();
+                                    updateStats();
+                                    loadSchedule();
                                 })
                                 .catch(function() {
                                     showError('⚠️ Не удалось загрузить данные');
@@ -672,6 +680,145 @@ if (genresNav) {
         if (titleEl) titleEl.textContent = genre ? a.textContent : '✨ Популярное аниме';
         loadCatalog();
     };
+}
+
+// ============================================
+// РАСПИСАНИЕ ВЫХОДА
+// ============================================
+
+function loadSchedule() {
+    var container = document.getElementById('scheduleGrid');
+    if (!container) return;
+    
+    var days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+    var today = new Date().getDay();
+    var currentDayIndex = today === 0 ? 6 : today - 1;
+    
+    var animeList = Object.values(allData);
+    var schedule = [];
+    
+    if (animeList.length > 0) {
+        var shuffled = animeList.sort(function() { return Math.random() - 0.5; });
+        shuffled.slice(0, 7).forEach(function(a, index) {
+            var dayIndex = (currentDayIndex + index) % 7;
+            var title = getRussianTitle(a);
+            var id = a.mal_id || a.id;
+            schedule.push({
+                id: id,
+                title: title,
+                day: days[dayIndex],
+                dayIndex: dayIndex,
+                time: '20:00',
+                isToday: dayIndex === currentDayIndex
+            });
+        });
+    } else {
+        var demoAnime = [
+            { title: 'Атака Титанов' },
+            { title: 'Наруто' },
+            { title: 'Ван Пис' },
+            { title: 'Магическая битва' },
+            { title: 'Клинок, рассекающий демонов' },
+            { title: 'Моя геройская академия' },
+            { title: 'Токийский гуль' }
+        ];
+        demoAnime.forEach(function(a, index) {
+            var dayIndex = (currentDayIndex + index) % 7;
+            schedule.push({
+                id: null,
+                title: a.title,
+                day: days[dayIndex],
+                dayIndex: dayIndex,
+                time: '20:00',
+                isToday: dayIndex === currentDayIndex
+            });
+        });
+    }
+    
+    schedule.sort(function(a, b) { return a.dayIndex - b.dayIndex; });
+    
+    var html = '';
+    schedule.forEach(function(item) {
+        var todayClass = item.isToday ? ' style="border-left-color: #ffd700;"' : '';
+        html += `
+            <div class="schedule-item" onclick="${item.id ? 'openDetail(\'' + item.id + '\')' : 'showToast(\'📺 ' + item.title + '\', \'info\')'}"${todayClass}>
+                <div class="s-title">${item.title}</div>
+                <div class="s-day">${item.day}</div>
+                <div class="s-time">🕐 ${item.time}</div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// ============================================
+// СЛУЧАЙНОЕ АНИМЕ
+// ============================================
+
+function randomAnime() {
+    var resultContainer = document.getElementById('randomResult');
+    if (!resultContainer) return;
+    
+    var animeList = Object.values(allData);
+    
+    if (animeList.length === 0) {
+        showToast('📚 Сначала загрузите каталог!', 'warning');
+        return;
+    }
+    
+    var random = animeList[Math.floor(Math.random() * animeList.length)];
+    var title = getRussianTitle(random);
+    var id = random.mal_id || random.id;
+    
+    var img = random.images?.jpg?.image_url || '';
+    var year = random.year || random.seasonYear || '';
+    var episodes = random.episodes || random.episodes_total || '?';
+    
+    resultContainer.innerHTML = `
+        <div class="random-result-card" onclick="openDetail('${id}')">
+            <div class="random-result-img">
+                ${img ? '<img src="' + img + '" alt="' + title + '">' : '<div class="random-no-img">🎬</div>'}
+            </div>
+            <div class="random-result-info">
+                <div class="random-result-title">🎯 ${title}</div>
+                <div class="random-result-meta">${year} • ${episodes} эп.</div>
+                <div class="random-result-hint">👆 Нажмите, чтобы открыть</div>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================
+// СТАТИСТИКА САЙТА
+// ============================================
+
+function updateStats() {
+    var totalAnime = Object.keys(allData).length;
+    var animeEl = document.getElementById('statTotalAnime');
+    if (animeEl) animeEl.textContent = totalAnime || 0;
+    
+    var users = DB.get('users', {});
+    var usersCount = Object.keys(users).length;
+    var usersEl = document.getElementById('statTotalUsers');
+    if (usersEl) usersEl.textContent = usersCount || 0;
+    
+    var comments = DB.get('comments', {});
+    var commentsCount = 0;
+    for (var k in comments) {
+        commentsCount += comments[k].length;
+    }
+    var commentsEl = document.getElementById('statTotalComments');
+    if (commentsEl) commentsEl.textContent = commentsCount || 0;
+    
+    var ratings = Object.values(allData).filter(function(a) { return a.score && a.score > 0; });
+    var avgRating = 0;
+    if (ratings.length > 0) {
+        var sum = ratings.reduce(function(s, a) { return s + a.score; }, 0);
+        avgRating = (sum / ratings.length).toFixed(1);
+    }
+    var ratingEl = document.getElementById('statAvgRating');
+    if (ratingEl) ratingEl.textContent = avgRating || '0';
 }
 
 // ============================================
