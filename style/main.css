@@ -4082,3 +4082,157 @@ h3 {
         border-radius: var(--radius);
     }
 }
+
+/* ============================================
+   SVG ИКОНКИ
+   ============================================ */
+
+/* Базовые размеры */
+.icon-svg {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.icon-svg-sm { width: 16px; height: 16px; }
+.icon-svg-md { width: 24px; height: 24px; }
+.icon-svg-lg { width: 32px; height: 32px; }
+.icon-svg-xl { width: 48px; height: 48px; }
+
+/* Цвета */
+.icon-primary { color: var(--accent); }
+.icon-success { color: #2ecc71; }
+.icon-danger { color: #e74c3c; }
+.icon-warning { color: #f1c40f; }
+.icon-info { color: #3498db; }
+.icon-white { color: #fff; }
+
+/* Анимация при наведении */
+.icon-hover {
+    transition: transform 0.3s ease;
+}
+.icon-hover:hover {
+    transform: scale(1.1);
+}
+
+/* Иконки в кнопках */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-icon svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* Иконки в меню */
+.sidebar-nav a .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    font-size: 0;
+}
+
+.sidebar-nav a .icon svg {
+    width: 20px;
+    height: 20px;
+    color: currentColor;
+}
+
+/* Поиск */
+.search-wrapper {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.search-wrapper input {
+    padding-left: 40px !important;
+}
+
+/* Кнопка "Назад" */
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.back-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Социальные иконки в футере */
+.footer-social a svg {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease;
+}
+
+.footer-social a:hover svg {
+    transform: scale(1.15);
+}
+
+/* Кнопка вверх */
+.scroll-top svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Закрыть в модалках */
+.modal-close svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Fav button */
+.fav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fav-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.fav-btn.active svg {
+    color: #e74c3c;
+    fill: #e74c3c;
+}
+
+/* Комментарии */
+.comment-form button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.comment-form button svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Бонус: анимация вращения для случайного */
+.random-btn svg {
+    transition: transform 0.5s ease;
+}
+
+.random-btn:hover svg {
+    transform: rotate(180deg);
+}
