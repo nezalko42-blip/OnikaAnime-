@@ -36,7 +36,7 @@ var ACHIEVEMENTS_LIST = [
 
 function navigate(page) {
     currentPage = page;
-    var pages = ['catalog', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings', 'friends'];
+    var pages = ['catalog', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings'];
     pages.forEach(function(p) {
         var el = document.getElementById('page-' + p);
         if (el) el.style.display = p === page ? 'block' : 'none';
@@ -46,7 +46,6 @@ function navigate(page) {
     if (page === 'profile') renderProfile();
     if (page === 'achievements') renderAchievements();
     if (page === 'mycomments') renderMyComments();
-    if (page === 'friends') renderFriendsPage();
     closeMenu();
 }
 
@@ -79,9 +78,6 @@ function updateUI() {
             </a>
             <a data-page="profile" onclick="navigate('profile'); closeMenu();">
                 <span class="icon">👤</span> Профиль
-            </a>
-            <a data-page="friends" onclick="navigate('friends'); closeMenu();">
-                <span class="icon">👥</span> Друзья
             </a>
             <a data-page="settings" onclick="navigate('settings'); closeMenu();">
                 <span class="icon">⚙️</span> Настройки
@@ -1800,6 +1796,14 @@ function refreshStats() {
     updateSocialStats();
     showToast('📊 Статистика обновлена!', 'success');
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updateSocialStats, 1000);
+    setInterval(updateSocialStats, 30000);
+});
+
+console.log('📊 Система живой статистики запущена!');
+console.log('💡 Используйте refreshStats() для ручного обновления');
 
 // ============================================
 // ЗАПУСК
