@@ -4324,3 +4324,300 @@ h3 {
     font-size: 13px;
     color: var(--text-muted);
 }
+
+/* ============================================
+   ONIKA PLAYER - КАСТОМНЫЙ ПЛЕЕР
+   ============================================ */
+
+.onika-player-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #0a0a1a;
+    border: 1px solid rgba(108,92,231,0.15);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+.onika-player {
+    position: relative;
+    background: #000;
+}
+
+.onika-player-video-wrapper {
+    position: relative;
+    padding-bottom: 56.25%;
+    background: #000;
+}
+
+.onika-player-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+.onika-player-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.7);
+    color: #888;
+    gap: 12px;
+    z-index: 10;
+}
+
+.onika-player-loading.active {
+    display: flex;
+}
+
+.onika-loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(108,92,231,0.1);
+    border-top-color: #6c5ce7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.onika-player-error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.85);
+    color: #888;
+    gap: 12px;
+    z-index: 10;
+}
+
+.onika-player-error.active {
+    display: flex;
+}
+
+.onika-error-icon { 
+    font-size: 48px; 
+    opacity: 0.5;
+}
+.onika-error-text { 
+    font-size: 16px; 
+    color: #aaa; 
+}
+.onika-error-retry {
+    padding: 10px 24px;
+    border-radius: 20px;
+    border: 1px solid rgba(108,92,231,0.2);
+    background: rgba(108,92,231,0.05);
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.onika-error-retry:hover {
+    background: rgba(108,92,231,0.1);
+    border-color: var(--accent);
+}
+
+.onika-player-controls {
+    background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.7));
+    padding: 12px 16px 14px;
+    position: relative;
+}
+
+.onika-player-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.onika-player-progress-bar {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.1);
+    cursor: pointer;
+    position: relative;
+    transition: height 0.2s ease;
+}
+
+.onika-player-progress-bar:hover {
+    height: 6px;
+}
+
+.onika-player-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(135deg, #6c5ce7, #fd79a8);
+    width: 0%;
+    position: relative;
+    transition: width 0.1s linear;
+}
+
+.onika-player-progress-buffer {
+    height: 100%;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.15);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+}
+
+.onika-player-progress-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #6c5ce7;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    box-shadow: 0 0 20px rgba(108,92,231,0.3);
+}
+
+.onika-player-progress-bar:hover .onika-player-progress-thumb {
+    opacity: 1;
+}
+
+.onika-player-time-current,
+.onika-player-time-total {
+    font-size: 12px;
+    color: #aaa;
+    min-width: 40px;
+    font-variant-numeric: tabular-nums;
+}
+
+.onika-player-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.onika-player-btn {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+}
+
+.onika-player-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+}
+
+.onika-player-btn-play {
+    background: rgba(108,92,231,0.15);
+    border-radius: 50%;
+    min-width: 36px;
+    height: 36px;
+}
+
+.onika-player-btn-play:hover {
+    background: rgba(108,92,231,0.25);
+}
+
+.onika-player-episode-info {
+    flex: 1;
+    font-size: 13px;
+    color: #aaa;
+    margin: 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.onika-player-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.onika-player-btn-speed,
+.onika-player-btn-quality {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.onika-player-btn-speed:hover,
+.onika-player-btn-quality:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+}
+
+/* Мобильная адаптация */
+@media (max-width: 600px) {
+    .onika-player-buttons {
+        gap: 4px;
+    }
+    
+    .onika-player-btn {
+        min-width: 28px;
+        height: 28px;
+        padding: 4px;
+    }
+    
+    .onika-player-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .onika-player-episode-info {
+        font-size: 11px;
+        margin: 0 4px;
+    }
+    
+    .onika-player-btn-speed,
+    .onika-player-btn-quality {
+        font-size: 10px;
+        padding: 2px 8px;
+    }
+    
+    .onika-player-btn-play {
+        min-width: 32px;
+        height: 32px;
+    }
+    
+    .onika-player-time-current,
+    .onika-player-time-total {
+        font-size: 10px;
+        min-width: 30px;
+    }
+    
+    .onika-player-progress {
+        gap: 6px;
+    }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
