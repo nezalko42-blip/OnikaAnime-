@@ -265,8 +265,9 @@
                         <div class="similar-scroll" id="similarScroll"></div>
                     </div>
                     
+                    <!-- ===== ПЛЕЕР ===== -->
                     <div class="player-section">
-                        <h3>▶️ Плеер</h3>
+                        <h3>▶️ Плеер AniLibria</h3>
                         <div class="player-wrapper" id="playerWrapper">
                             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:8px;">
                                 <span style="font-size:48px;">🎬</span>
@@ -276,6 +277,7 @@
                         <div id="episodeBtns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;"></div>
                     </div>
                     
+                    <!-- ===== КОММЕНТАРИИ ===== -->
                     <div class="comments-section">
                         <h3>💬 Комментарии</h3>
                         <div class="comment-form">
@@ -658,6 +660,7 @@
     <script src="script/api.js"></script>
     <script src="script/utils.js"></script>
     <script src="script/auth.js"></script>
+    <script src="script/player.js"></script>
     <script src="script/main.js"></script>
 
     <script>
@@ -665,7 +668,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🌟 OnikaAnime загружается...');
             
-            // Скрываем прелоадер
             const preloader = document.getElementById('preloader');
             if (preloader) {
                 setTimeout(function() {
@@ -676,37 +678,31 @@
                 }, 500);
             }
             
-            // Восстанавливаем данные
             if (typeof restoreAllData === 'function') {
                 restoreAllData();
             }
             
-            // Обновляем UI
             if (typeof updateUI === 'function') {
                 updateUI();
             }
             
-            // Загружаем каталог
             if (typeof loadCatalog === 'function') {
                 setTimeout(function() {
                     loadCatalog();
                 }, 200);
             }
             
-            // Загружаем расписание
             if (typeof loadSchedule === 'function') {
                 setTimeout(function() {
                     loadSchedule();
                 }, 300);
             }
             
-            // Запускаем отслеживание онлайн
             const user = DB.get('currentUser');
             if (user && typeof startOnlineTracking === 'function') {
                 startOnlineTracking();
             }
             
-            // Кнопка вверх
             window.addEventListener('scroll', function() {
                 const btn = document.getElementById('scrollTopBtn');
                 if (btn) {
@@ -759,13 +755,11 @@
         };
 
         window.setGenre = function(genreId, btn) {
-            // Обновляем активный жанр
             document.querySelectorAll('.genres a').forEach(function(el) {
                 el.classList.remove('active');
             });
             if (btn) btn.classList.add('active');
             
-            // Устанавливаем жанр и перезагружаем каталог
             window.genre = genreId;
             window.query = '';
             window.page = 1;
