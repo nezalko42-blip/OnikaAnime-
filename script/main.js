@@ -770,7 +770,7 @@ function openDetailShikimori(id) {
 }
 
 // ============================================
-// KODIK ПЛЕЕР - ПОЛУЧЕНИЕ ВИДЕО
+// KODIK ПЛЕЕР - РАСШИРЕННЫЙ ПОИСК
 // ============================================
 
 function getKodikPlayerUrl(animeTitle, episode) {
@@ -780,64 +780,119 @@ function getKodikPlayerUrl(animeTitle, episode) {
             return;
         }
         
-        var url = 'https://kodikapi.com/search?with_material_data=true&types=anime&title=' + encodeURIComponent(animeTitle) + '&limit=5';
+        // Варианты названий для поиска
+        var searchTitles = [];
         
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 10000;
+        // 1. Оригинальное название
+        searchTitles.push(animeTitle);
         
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.results && data.results.length > 0) {
-                        var found = null;
-                        for (var i = 0; i < data.results.length; i++) {
-                            var item = data.results[i];
-                            if (item.title && item.title.toLowerCase().trim() === animeTitle.toLowerCase().trim()) {
-                                found = item;
-                                break;
+        // 2. Поиск по всем данным в allData
+        for (var id in allData) {
+            var a = allData[id];
+            var title = getRussianTitle(a);
+            if (title && title.toLowerCase().trim() === animeTitle.toLowerCase().trim()) {
+                if (a.title_english && a.title_english !== title) {
+                    searchTitles.push(a.title_english);
+                }
+                if (a.title_original && a.title_original !== title) {
+                    searchTitles.push(a.title_original);
+                }
+                break;
+            }
+        }
+        
+        // 3. Варианты с удалением лишних слов
+        var words = animeTitle.split(' ');
+        if (words.length > 2) {
+            searchTitles.push(words.slice(0, 2).join(' '));
+            searchTitles.push(words[0]);
+        }
+        
+        // Убираем дубликаты
+        searchTitles = searchTitles.filter(function(v, i, a) { return a.indexOf(v) === i; });
+        
+        console.log('🔍 Поиск в Kodik по вариантам:', searchTitles);
+        
+        // Пробуем найти по каждому варианту
+        trySearchNext(0);
+        
+        function trySearchNext(index) {
+            if (index >= searchTitles.length) {
+                reject(new Error('Не найдено видео в Kodik'));
+                return;
+            }
+            
+            var title = searchTitles[index];
+            var url = 'https://kodikapi.com/search?with_material_data=true&types=anime&title=' + encodeURIComponent(title) + '&limit=5';
+            
+            console.log('🔍 Попытка ' + (index + 1) + ': ' + title);
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url);
+            xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+            xhr.timeout = 10000;
+            
+            xhr.onload = function() {
+                try {
+                    if (xhr.status === 200) {
+                        var data = JSON.parse(xhr.responseText);
+                        if (data && data.results && data.results.length > 0) {
+                            var found = null;
+                            for (var i = 0; i < data.results.length; i++) {
+                                var item = data.results[i];
+                                var itemTitle = item.title || '';
+                                var itemTitleOrig = item.title_orig || '';
+                                
+                                if (itemTitle.toLowerCase().trim() === animeTitle.toLowerCase().trim() ||
+                                    itemTitleOrig.toLowerCase().trim() === animeTitle.toLowerCase().trim()) {
+                                    found = item;
+                                    break;
+                                }
                             }
-                        }
-                        if (!found) {
-                            found = data.results[0];
-                        }
-                        
-                        if (found && found.link) {
-                            if (episode && found.seasons) {
-                                for (var s = 0; s < found.seasons.length; s++) {
-                                    var season = found.seasons[s];
-                                    if (season.episodes) {
-                                        for (var e = 0; e < season.episodes.length; e++) {
-                                            if (season.episodes[e].number === episode) {
-                                                resolve(season.episodes[e].link || found.link);
-                                                return;
+                            
+                            if (!found) {
+                                found = data.results[0];
+                            }
+                            
+                            if (found && found.link) {
+                                console.log('✅ Найдено в Kodik:', found.title);
+                                
+                                if (episode && found.seasons) {
+                                    for (var s = 0; s < found.seasons.length; s++) {
+                                        var season = found.seasons[s];
+                                        if (season.episodes) {
+                                            for (var e = 0; e < season.episodes.length; e++) {
+                                                if (season.episodes[e].number === episode) {
+                                                    resolve(season.episodes[e].link || found.link);
+                                                    return;
+                                                }
                                             }
                                         }
                                     }
                                 }
+                                resolve(found.link);
+                                return;
                             }
-                            resolve(found.link);
-                            return;
                         }
                     }
+                    console.log('❌ Не найдено по: ' + title);
+                    trySearchNext(index + 1);
+                } catch(e) {
+                    console.log('❌ Ошибка: ' + e.message);
+                    trySearchNext(index + 1);
                 }
-                reject(new Error('Не найдено видео в Kodik'));
-            } catch(e) {
-                reject(e);
-            }
-        };
-        
-        xhr.onerror = function() {
-            reject(new Error('Ошибка сети'));
-        };
-        
-        xhr.ontimeout = function() {
-            reject(new Error('Превышено время ожидания'));
-        };
-        
-        xhr.send();
+            };
+            
+            xhr.onerror = function() {
+                trySearchNext(index + 1);
+            };
+            
+            xhr.ontimeout = function() {
+                trySearchNext(index + 1);
+            };
+            
+            xhr.send();
+        }
     });
 }
 
@@ -851,8 +906,9 @@ function playVideoWithKodik(animeTitle, episodeNumber) {
     
     wrapper.innerHTML = `
         <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888;flex-direction:column;gap:12px;">
-            <div style="font-size:32px;">⏳</div>
-            <div>Загрузка видео...</div>
+            <div class="loader" style="width:40px;height:40px;border:3px solid rgba(108,92,231,0.1);border-top-color:#6c5ce7;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+            <div>🔍 Поиск видео...</div>
+            <div style="font-size:12px;color:#555;">${animeTitle}</div>
         </div>
     `;
     
@@ -892,15 +948,24 @@ function playVideoWithKodik(animeTitle, episodeNumber) {
             wrapper.innerHTML = `
                 <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;">
                     <div style="font-size:48px;">📺</div>
-                    <div>Видео не найдено</div>
-                    <div style="font-size:12px;color:#444;">${error.message || 'Попробуйте другое аниме'}</div>
-                    <button onclick="playVideoWithKodik('${animeTitle}', ${episodeNumber || 1})" 
-                            style="padding:8px 20px;border-radius:20px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.05);color:#888;cursor:pointer;font-size:12px;margin-top:8px;">
-                        🔄 Попробовать снова
-                    </button>
+                    <div style="font-size:16px;font-weight:600;">Видео не найдено</div>
+                    <div style="font-size:13px;color:#555;text-align:center;max-width:300px;">
+                        Не удалось найти "${animeTitle}" в Kodik
+                    </div>
+                    <div style="font-size:12px;color:#444;">Попробуйте:</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+                        <button onclick="playVideoWithKodik('${animeTitle}', ${episodeNumber || 1})" 
+                                style="padding:8px 18px;border-radius:20px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.05);color:#888;cursor:pointer;font-size:12px;">
+                            🔄 Повторить
+                        </button>
+                        <button onclick="showToast('💡 Попробуйте найти через поиск на сайте', 'info')" 
+                                style="padding:8px 18px;border-radius:20px;border:1px solid rgba(255,215,0,0.2);background:rgba(255,215,0,0.05);color:#f1c40f;cursor:pointer;font-size:12px;">
+                            🔍 Найти вручную
+                        </button>
+                    </div>
                 </div>
             `;
-            showToast('❌ Видео не найдено', 'error');
+            showToast('❌ Видео не найдено в Kodik', 'error');
         });
 }
 
@@ -1936,7 +2001,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// ВИДЕО ПЛЕЕР (ОБНОВЛЕН)
+// ВИДЕО ПЛЕЕР
 // ============================================
 
 function playVideo(name, url) {
