@@ -1,15 +1,19 @@
 // ============================================
-// ХРАНИЛИЩЕ ONIKAANIME
+// ХРАНИЛИЩЕ ONIKAANIME (КЛАССОВАЯ ВЕРСИЯ)
 // ============================================
 
-var DB = {
-    _data: null,
-    _initialized: false,
-    
-    init: function() {
+class Storage {
+    constructor() {
+        this._data = null;
+        this._initialized = false;
+        this._saveInterval = null;
+        this.init();
+    }
+
+    init() {
         console.log('🚀 Инициализация хранилища...');
         
-        var saved = localStorage.getItem('onika_data');
+        const saved = localStorage.getItem('onika_data');
         
         if (saved) {
             try {
@@ -24,7 +28,8 @@ var DB = {
             this._data = this._getDefaultData();
         }
         
-        var user = localStorage.getItem('onika_currentUser');
+        // Восстанавливаем пользователя
+        const user = localStorage.getItem('onika_currentUser');
         if (user) {
             try {
                 this._data.currentUser = JSON.parse(user);
@@ -36,19 +41,19 @@ var DB = {
         
         this._initialized = true;
         
+        // Загружаем данные с сервера
         if (this._data.currentUser) {
             this._loadUserDataFromServer(this._data.currentUser.id);
         }
         
-        if (window._saveInterval) clearInterval(window._saveInterval);
-        window._saveInterval = setInterval(function() {
-            DB._saveToLocal();
-        }, 5000);
+        // Автосохранение
+        if (this._saveInterval) clearInterval(this._saveInterval);
+        this._saveInterval = setInterval(() => this.save(), 5000);
         
         return this;
-    },
-    
-    _getDefaultData: function() {
+    }
+
+    _getDefaultData() {
         return {
             users: {},
             profiles: {},
@@ -64,13 +69,49 @@ var DB = {
             currentUser: null,
             settings: { "3d": true, "vibe": true }
         };
-    },
-    
-    _saveToLocal: function() {
+    }
+
+    save(cb) {
+        this._saveToLocal();
+        
+        const user = this._data.currentUser;
+        if (user && user.id) {
+            const userId = user.id;
+            const name = user.name;
+            
+            // Сохраняем избранное на сервер
+            const favs = this._getUserData(name, 'favorites', []);
+            fetch('/api/favorites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, favorites: favs })
+            }).catch(e => console.error('⚠️ Ошибка сохранения избранного:', e));
+            
+            // Сохраняем достижения на сервер
+            const ach = this._getUserData(name, 'achievements', []);
+            fetch('/api/achievements', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, achievements: ach })
+            }).catch(e => console.error('⚠️ Ошибка сохранения достижений:', e));
+            
+            // Сохраняем титул на сервер
+            const title = this._getUserData(name, 'activeTitle', null);
+            fetch('/api/active-title', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, titleId: title })
+            }).catch(e => console.error('⚠️ Ошибка сохранения титула:', e));
+        }
+        
+        if (cb) cb();
+    }
+
+    _saveToLocal() {
         if (!this._data) return;
         
         try {
-            var dataToSave = JSON.parse(JSON.stringify(this._data));
+            const dataToSave = JSON.parse(JSON.stringify(this._data));
             delete dataToSave.currentUser;
             localStorage.setItem('onika_data', JSON.stringify(dataToSave));
             
@@ -78,18 +119,11 @@ var DB = {
                 localStorage.setItem('onika_currentUser', JSON.stringify(this._data.currentUser));
             }
             
-            if (this._data.profiles) {
-                for (var name in this._data.profiles) {
-                    if (this._data.profiles[name] && this._data.profiles[name].avatar) {
-                        localStorage.setItem('avatar_' + name, this._data.profiles[name].avatar);
-                    }
-                }
-            }
-            
-            if (this._data.favorites && this._data.currentUser) {
-                var userName = this._data.currentUser.name;
-                if (this._data.favorites[userName]) {
-                    localStorage.setItem('favorites_' + userName, JSON.stringify(this._data.favorites[userName]));
+            // Сохраняем аватарки
+            const profiles = this._data.profiles || {};
+            for (const name in profiles) {
+                if (profiles[name] && profiles[name].avatar) {
+                    localStorage.setItem('avatar_' + name, profiles[name].avatar);
                 }
             }
             
@@ -97,204 +131,181 @@ var DB = {
         } catch(e) {
             console.error('❌ Ошибка сохранения:', e);
         }
-    },
-    
-    _loadUserDataFromServer: function(userId) {
-        var self = this;
-        var userName = this._data.currentUser ? this._data.currentUser.name : null;
-        
-        fetch('/api/user/' + userId)
-        .then(function(res) {
-            if (!res.ok) throw new Error('Ошибка сервера: ' + res.status);
-            return res.json();
-        })
-        .then(function(data) {
+    }
+
+    async _loadUserDataFromServer(userId) {
+        try {
+            const response = await fetch('/api/user/' + userId);
+            if (!response.ok) throw new Error('Ошибка сервера: ' + response.status);
+            
+            const data = await response.json();
             if (data && data.name) {
                 console.log('📡 Данные с сервера получены');
                 
-                var localFavs = self._data.favorites && self._data.favorites[data.name];
-                var localAch = self._data.achievements && self._data.achievements[data.name];
+                const name = data.name;
                 
-                if (!localFavs || localFavs.length === 0) {
-                    if (!self._data.favorites) self._data.favorites = {};
-                    self._data.favorites[data.name] = data.favorites || [];
-                    console.log('📚 Загружено избранное с сервера:', self._data.favorites[data.name].length);
+                // Загружаем избранное
+                if (data.favorites && data.favorites.length > 0) {
+                    const currentFavs = this._getUserData(name, 'favorites', []);
+                    if (currentFavs.length === 0) {
+                        this._setUserData(name, 'favorites', data.favorites);
+                        console.log('📚 Загружено избранное с сервера:', data.favorites.length);
+                    }
                 }
                 
-                if (!localAch || localAch.length === 0) {
-                    if (!self._data.achievements) self._data.achievements = {};
-                    self._data.achievements[data.name] = data.achievements || [];
-                    console.log('🏆 Загружены достижения с сервера:', self._data.achievements[data.name].length);
+                // Загружаем достижения
+                if (data.achievements && data.achievements.length > 0) {
+                    const currentAch = this._getUserData(name, 'achievements', []);
+                    if (currentAch.length === 0) {
+                        this._setUserData(name, 'achievements', data.achievements);
+                        console.log('🏆 Загружены достижения с сервера:', data.achievements.length);
+                    }
                 }
                 
-                if (!self._data.activeTitle) self._data.activeTitle = {};
-                if (!self._data.activeTitle[data.name]) {
-                    self._data.activeTitle[data.name] = data.activeTitle || null;
+                // Загружаем титул
+                if (data.activeTitle) {
+                    this._setUserData(name, 'activeTitle', data.activeTitle);
                 }
                 
-                self._saveToLocal();
+                this._saveToLocal();
                 console.log('✅ Данные синхронизированы с сервером');
             }
-        })
-        .catch(function(e) {
-            console.warn('⚠️ Не удалось синхронизироваться с сервером:', e);
-        });
-    },
-    
-    save: function(cb) {
-        this._saveToLocal();
-        
-        var user = this._data.currentUser;
-        if (user && user.id) {
-            var userId = user.id;
-            var name = user.name;
-            
-            var favs = (this._data.favorites && this._data.favorites[name]) || [];
-            fetch('/api/favorites', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: userId, favorites: favs })
-            }).catch(function(e) { console.error('⚠️ Ошибка сохранения избранного:', e); });
-            
-            var ach = (this._data.achievements && this._data.achievements[name]) || [];
-            fetch('/api/achievements', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: userId, achievements: ach })
-            }).catch(function(e) { console.error('⚠️ Ошибка сохранения достижений:', e); });
-            
-            var title = (this._data.activeTitle && this._data.activeTitle[name]) || null;
-            fetch('/api/active-title', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: userId, titleId: title })
-            }).catch(function(e) { console.error('⚠️ Ошибка сохранения титула:', e); });
+        } catch(e) {
+            console.warn('⚠️ Не удалось синхронизироваться с сервером:', e.message);
         }
-        
-        if (cb) cb();
-    },
-    
-    get: function(key, def) {
+    }
+
+    _getUserData(user, key, def) {
+        if (!this._data) return def;
+        if (!this._data[key]) this._data[key] = {};
+        return this._data[key][user] !== undefined ? this._data[key][user] : def;
+    }
+
+    _setUserData(user, key, val) {
+        if (!this._data) this._data = this._getDefaultData();
+        if (!this._data[key]) this._data[key] = {};
+        this._data[key][user] = val;
+    }
+
+    // Публичные методы
+    get(key, def) {
         if (!this._data) return def;
         return this._data[key] !== undefined ? this._data[key] : def;
-    },
-    
-    set: function(key, val, cb) {
+    }
+
+    set(key, val, cb) {
         if (!this._data) this._data = this._getDefaultData();
         this._data[key] = val;
         this.save(cb);
         return true;
-    },
-    
-    getUserData: function(user, key, def) {
-        if (!this._data) return def;
-        if (!this._data[key]) this._data[key] = {};
-        return this._data[key][user] !== undefined ? this._data[key][user] : def;
-    },
-    
-    setUserData: function(user, key, val, cb) {
-        if (!this._data) this._data = this._getDefaultData();
-        if (!this._data[key]) this._data[key] = {};
-        this._data[key][user] = val;
+    }
+
+    getUserData(user, key, def) {
+        return this._getUserData(user, key, def);
+    }
+
+    setUserData(user, key, val, cb) {
+        this._setUserData(user, key, val);
         this.save(cb);
         return true;
-    },
-    
-    getAchievements: function(user) {
-        if (!user || !this._data) return [];
-        if (!this._data.achievements) this._data.achievements = {};
-        if (!this._data.achievements[user]) this._data.achievements[user] = [];
-        return this._data.achievements[user];
-    },
-    
-    addAchievement: function(user, achId) {
+    }
+
+    getAchievements(user) {
+        return this._getUserData(user, 'achievements', []);
+    }
+
+    addAchievement(user, achId) {
         if (!user || !this._data) return false;
-        if (!this._data.achievements) this._data.achievements = {};
-        if (!this._data.achievements[user]) this._data.achievements[user] = [];
         
-        if (this._data.achievements[user].indexOf(achId) === -1) {
-            this._data.achievements[user].push(achId);
+        const achievements = this._getUserData(user, 'achievements', []);
+        
+        if (achievements.indexOf(achId) === -1) {
+            achievements.push(achId);
+            this._setUserData(user, 'achievements', achievements);
             this.save();
             return true;
         }
         return false;
-    },
-    
-    getActiveTitle: function(user) {
-        if (!user || !this._data) return null;
-        if (!this._data.activeTitle) this._data.activeTitle = {};
-        return this._data.activeTitle[user] || null;
-    },
-    
-    setActiveTitle: function(user, titleId) {
+    }
+
+    getActiveTitle(user) {
+        return this._getUserData(user, 'activeTitle', null);
+    }
+
+    setActiveTitle(user, titleId) {
         if (!user || !this._data) return false;
-        if (!this._data.activeTitle) this._data.activeTitle = {};
-        this._data.activeTitle[user] = titleId;
+        this._setUserData(user, 'activeTitle', titleId);
         this.save();
         return true;
-    },
-    
-    restoreData: function() {
-        var user = this._data.currentUser;
+    }
+
+    restoreData() {
+        const user = this._data?.currentUser;
         if (!user) return;
         
-        var name = user.name;
+        const name = user.name;
         
-        var backupFavs = localStorage.getItem('favorites_' + name);
+        // Восстанавливаем избранное
+        const backupFavs = localStorage.getItem('favorites_' + name);
         if (backupFavs) {
             try {
-                var parsed = JSON.parse(backupFavs);
-                if (!this._data.favorites) this._data.favorites = {};
-                if (!this._data.favorites[name] || this._data.favorites[name].length === 0) {
-                    this._data.favorites[name] = parsed;
+                const parsed = JSON.parse(backupFavs);
+                const currentFavs = this._getUserData(name, 'favorites', []);
+                if (currentFavs.length === 0 && parsed.length > 0) {
+                    this._setUserData(name, 'favorites', parsed);
                     console.log('🔄 Восстановлено избранное из бэкапа:', parsed.length);
                 }
             } catch(e) {}
         }
         
-        var backupAvatar = localStorage.getItem('avatar_' + name);
+        // Восстанавливаем аватар
+        const backupAvatar = localStorage.getItem('avatar_' + name);
         if (backupAvatar) {
-            if (!this._data.profiles) this._data.profiles = {};
-            if (!this._data.profiles[name]) this._data.profiles[name] = {};
-            if (!this._data.profiles[name].avatar) {
-                this._data.profiles[name].avatar = backupAvatar;
+            const profiles = this._data.profiles || {};
+            if (!profiles[name]) profiles[name] = {};
+            if (!profiles[name].avatar) {
+                profiles[name].avatar = backupAvatar;
+                this._data.profiles = profiles;
                 console.log('🔄 Восстановлена аватарка из бэкапа');
             }
         }
         
         this._saveToLocal();
     }
-};
+}
 
-DB.init();
+// Создаём глобальный экземпляр
+const DB = new Storage();
+
+// Восстанавливаем данные
 DB.restoreData();
 
-window.addEventListener('beforeunload', function() {
+// Сохраняем при закрытии
+window.addEventListener('beforeunload', () => {
     DB.save();
 });
 
-document.addEventListener('visibilitychange', function() {
+document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         DB.save();
     }
 });
 
-function saveDB() { DB.save(); }
-function saveAll() { DB.save(); }
-function $(id) { return document.getElementById(id); }
+// Утилиты для совместимости
+window.saveDB = () => DB.save();
+window.saveAll = () => DB.save();
 
 window.checkData = function() {
-    var user = DB._data ? DB._data.currentUser : null;
+    const user = DB._data ? DB._data.currentUser : null;
     console.log('📊 СТАТУС ХРАНИЛИЩА:');
     console.log('Инициализировано:', DB._initialized);
     console.log('Текущий пользователь:', user ? user.name : 'Нет');
     if (user) {
-        console.log('Избранное:', DB._data.favorites ? DB._data.favorites[user.name] : []);
+        console.log('Избранное:', DB._getUserData(user.name, 'favorites', []));
         console.log('Профиль:', DB._data.profiles ? DB._data.profiles[user.name] : null);
-        console.log('Достижения:', DB._data.achievements ? DB._data.achievements[user.name] : []);
-        console.log('Время онлайн:', DB._data.onlineTime ? DB._data.onlineTime[user.name] : 0);
+        console.log('Достижения:', DB.getAchievements(user.name));
+        console.log('Время онлайн:', DB._getUserData(user.name, 'onlineTime', 0));
     }
-    console.log('Все данные:', DB._data);
 };
 
 window.forceRestore = function() {
@@ -306,8 +317,6 @@ window.forceRestore = function() {
 };
 
 window.DB = DB;
-window.saveDB = saveDB;
-window.saveAll = saveAll;
 
 console.log('✅ Хранилище OnikaAnime инициализировано!');
 console.log('💡 Используйте checkData() для проверки данных');
