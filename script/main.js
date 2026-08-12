@@ -278,7 +278,6 @@ function loadCatalog() {
                     return;
                 }
             }
-            // Если Anilibria не ответил — пробуем Shikimori
             console.log('🔄 Anilibria не ответил, пробуем Shikimori...');
             loadCatalogShikimori();
         } catch(e) {
@@ -639,7 +638,6 @@ function openDetail(id) {
         return;
     }
     
-    // Пробуем Anilibria, потом Shikimori
     openDetailAnilibria(id);
 }
 
@@ -691,7 +689,6 @@ function openDetailAnilibria(id) {
                     return;
                 }
             }
-            // Если Anilibria не дал данные — пробуем Shikimori
             console.log('🔄 Anilibria не дал данные, пробуем Shikimori...');
             openDetailShikimori(id);
         } catch(e) {
@@ -742,19 +739,15 @@ function openDetailShikimori(id) {
                         source: 'Shikimori'
                     };
                     
-                    // Если уже есть данные от Anilibria — объединяем
                     if (allData[id]) {
                         console.log('🔀 Объединение данных Anilibria + Shikimori');
-                        // Берем русское название из Shikimori, если есть
                         if (converted.title_russian) {
                             allData[id].title_russian = converted.title_russian;
                             allData[id].russian = converted.russian;
                         }
-                        // Берем описание из Shikimori, если оно лучше
                         if (converted.synopsis && converted.synopsis.length > 50) {
                             allData[id].synopsis = converted.synopsis;
                         }
-                        // Берем жанры из Shikimori
                         if (converted.genres && converted.genres.length > 0) {
                             allData[id].genres = converted.genres;
                         }
@@ -777,38 +770,177 @@ function openDetailShikimori(id) {
 }
 
 // ============================================
-// ОБЪЕДИНЕНИЕ ДАННЫХ ИЗ ДВУХ API
+// KODIK ПЛЕЕР - ПОЛУЧЕНИЕ ВИДЕО
 // ============================================
 
-function mergeAnimeData(anilibriaData, shikimoriData) {
-    var merged = {};
+function getKodikPlayerUrl(animeTitle, episode) {
+    return new Promise(function(resolve, reject) {
+        if (!animeTitle) {
+            reject(new Error('Название аниме не указано'));
+            return;
+        }
+        
+        var url = 'https://kodikapi.com/search?with_material_data=true&types=anime&title=' + encodeURIComponent(animeTitle) + '&limit=5';
+        
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url);
+        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+        xhr.timeout = 10000;
+        
+        xhr.onload = function() {
+            try {
+                if (xhr.status === 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data && data.results && data.results.length > 0) {
+                        var found = null;
+                        for (var i = 0; i < data.results.length; i++) {
+                            var item = data.results[i];
+                            if (item.title && item.title.toLowerCase().trim() === animeTitle.toLowerCase().trim()) {
+                                found = item;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            found = data.results[0];
+                        }
+                        
+                        if (found && found.link) {
+                            if (episode && found.seasons) {
+                                for (var s = 0; s < found.seasons.length; s++) {
+                                    var season = found.seasons[s];
+                                    if (season.episodes) {
+                                        for (var e = 0; e < season.episodes.length; e++) {
+                                            if (season.episodes[e].number === episode) {
+                                                resolve(season.episodes[e].link || found.link);
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            resolve(found.link);
+                            return;
+                        }
+                    }
+                }
+                reject(new Error('Не найдено видео в Kodik'));
+            } catch(e) {
+                reject(e);
+            }
+        };
+        
+        xhr.onerror = function() {
+            reject(new Error('Ошибка сети'));
+        };
+        
+        xhr.ontimeout = function() {
+            reject(new Error('Превышено время ожидания'));
+        };
+        
+        xhr.send();
+    });
+}
+
+// ============================================
+// ВОСПРОИЗВЕДЕНИЕ ВИДЕО ЧЕРЕЗ KODIK
+// ============================================
+
+function playVideoWithKodik(animeTitle, episodeNumber) {
+    var wrapper = document.getElementById('playerWrapper');
+    if (!wrapper) return;
     
-    // Берем базовые данные из Anilibria
-    merged = JSON.parse(JSON.stringify(anilibriaData));
+    wrapper.innerHTML = `
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888;flex-direction:column;gap:12px;">
+            <div style="font-size:32px;">⏳</div>
+            <div>Загрузка видео...</div>
+        </div>
+    `;
     
-    // Дополняем из Shikimori
-    if (shikimoriData) {
-        if (shikimoriData.title_russian && !merged.title_russian) {
-            merged.title_russian = shikimoriData.title_russian;
+    showToast('⏳ Поиск видео...', 'info');
+    
+    getKodikPlayerUrl(animeTitle, episodeNumber)
+        .then(function(url) {
+            wrapper.innerHTML = `
+                <iframe src="${url}" 
+                        allowfullscreen 
+                        allow="autoplay; encrypted-media" 
+                        style="width:100%;height:100%;border:none;"
+                        frameborder="0">
+                </iframe>
+            `;
+            showToast('▶️ Воспроизведение: ' + animeTitle, 'success');
+            
+            var user = DB.get('currentUser');
+            if (user) {
+                var history = DB.getUserData(user.name, 'history', []);
+                if (history.indexOf(animeTitle) === -1) {
+                    history.push(animeTitle);
+                    DB.setUserData(user.name, 'history', history);
+                }
+                
+                var continueData = DB.getUserData(user.name, 'continueWatching', {});
+                if (!continueData[animeTitle]) continueData[animeTitle] = {};
+                continueData[animeTitle].ep = (continueData[animeTitle].ep || 0) + 1;
+                continueData[animeTitle].time = Date.now();
+                DB.setUserData(user.name, 'continueWatching', continueData);
+                
+                checkAchievements(animeTitle);
+            }
+        })
+        .catch(function(error) {
+            console.error('Kodik ошибка:', error);
+            wrapper.innerHTML = `
+                <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;">
+                    <div style="font-size:48px;">📺</div>
+                    <div>Видео не найдено</div>
+                    <div style="font-size:12px;color:#444;">${error.message || 'Попробуйте другое аниме'}</div>
+                    <button onclick="playVideoWithKodik('${animeTitle}', ${episodeNumber || 1})" 
+                            style="padding:8px 20px;border-radius:20px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.05);color:#888;cursor:pointer;font-size:12px;margin-top:8px;">
+                        🔄 Попробовать снова
+                    </button>
+                </div>
+            `;
+            showToast('❌ Видео не найдено', 'error');
+        });
+}
+
+// ============================================
+// ОБНОВЛЕННАЯ ФУНКЦИЯ PLAYVIDEO
+// ============================================
+
+function playVideo(name, url) {
+    if (url && url.startsWith('http')) {
+        var wrapper = document.getElementById('playerWrapper');
+        if (!wrapper) return;
+        wrapper.innerHTML = `<iframe src="${url}" allowfullscreen allow="autoplay" style="width:100%;height:100%;border:none;"></iframe>`;
+        showToast('▶️ Воспроизведение: ' + name, 'success');
+        
+        var user = DB.get('currentUser');
+        if (user) {
+            var history = DB.getUserData(user.name, 'history', []);
+            if (history.indexOf(name) === -1) {
+                history.push(name);
+                DB.setUserData(user.name, 'history', history);
+            }
+            var continueData = DB.getUserData(user.name, 'continueWatching', {});
+            if (!continueData[name]) continueData[name] = {};
+            continueData[name].ep = (continueData[name].ep || 0) + 1;
+            continueData[name].time = Date.now();
+            DB.setUserData(user.name, 'continueWatching', continueData);
+            checkAchievements(name);
         }
-        if (shikimoriData.russian && !merged.russian) {
-            merged.russian = shikimoriData.russian;
-        }
-        if (shikimoriData.synopsis && shikimoriData.synopsis.length > 50) {
-            merged.synopsis = shikimoriData.synopsis;
-        }
-        if (shikimoriData.genres && shikimoriData.genres.length > 0) {
-            merged.genres = shikimoriData.genres;
-        }
-        if (shikimoriData.score && shikimoriData.score > merged.score) {
-            merged.score = shikimoriData.score;
-        }
-        if (shikimoriData.images?.jpg?.image_url && !merged.images?.jpg?.image_url) {
-            merged.images = shikimoriData.images;
-        }
+        return;
     }
     
-    return merged;
+    playVideoWithKodik(name, 1);
+}
+
+// ============================================
+// ВОСПРОИЗВЕДЕНИЕ КОНКРЕТНОЙ СЕРИИ
+// ============================================
+
+function playEpisode(animeTitle, episodeNumber) {
+    playVideoWithKodik(animeTitle, episodeNumber);
 }
 
 // ============================================
@@ -910,18 +1042,39 @@ function showDetail(anime) {
         btn.style.display = 'inline-block';
     }
     
+    // ===== ВИДЕО И СЕРИИ =====
     var videos = DB.get('videos', {});
     var eps = videos[title] || [];
     var epContainer = document.getElementById('episodeBtns');
     if (epContainer) {
         var epHtml = '';
+        
         if (eps.length > 0) {
             eps.forEach(function(ep) {
-                epHtml += `<button class="ep-btn" onclick="playVideo('${title}', '${ep.url}')">Серия ${ep.ep}</button>`;
+                epHtml += `<button class="ep-btn" onclick="playEpisode('${title}', ${ep.ep})">${ep.ep}</button>`;
             });
+        } else if (anime.episodes && anime.episodes > 0 && anime.episodes !== '?') {
+            var totalEp = parseInt(anime.episodes);
+            if (totalEp > 0) {
+                var showEp = Math.min(totalEp, 12);
+                for (var i = 1; i <= showEp; i++) {
+                    epHtml += `<button class="ep-btn" onclick="playEpisode('${title}', ${i})">${i}</button>`;
+                }
+                if (totalEp > 12) {
+                    epHtml += `<button class="ep-btn" onclick="showToast('📺 Всего ${totalEp} серий', 'info')">...</button>`;
+                }
+            } else {
+                epHtml = '<span style="color:#888;">📺 Нет видео</span>';
+            }
         } else {
-            epHtml = '<span style="color:#888;">📺 Нет видео</span>';
+            epHtml = `
+                <span style="color:#888;">📺 Нет видео</span>
+                <button class="ep-btn" onclick="playVideoWithKodik('${title}', 1)" style="background:rgba(46,204,113,0.1);color:#2ecc71;border-color:rgba(46,204,113,0.2);">
+                    🔍 Найти видео
+                </button>
+            `;
         }
+        
         epContainer.innerHTML = epHtml;
     }
     
@@ -1415,7 +1568,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// ПРОФИЛЬ (сокращенный, без изменений)
+// ПРОФИЛЬ
 // ============================================
 
 function renderProfile() {
@@ -1725,7 +1878,8 @@ function renderTopUsers() {
 }
 
 // ============================================
-// АВАТАР// ============================================
+// АВАТАР
+// ============================================
 
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1782,31 +1936,34 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// ВИДЕО ПЛЕЕР
+// ВИДЕО ПЛЕЕР (ОБНОВЛЕН)
 // ============================================
 
 function playVideo(name, url) {
-    var wrapper = document.getElementById('playerWrapper');
-    if (!wrapper) return;
-    wrapper.innerHTML = `<iframe src="${url}" allowfullscreen allow="autoplay" style="width:100%;height:100%;border:none;"></iframe>`;
-    showToast('▶️ Воспроизведение: ' + name, 'success');
-    
-    var user = DB.get('currentUser');
-    if (user) {
-        var history = DB.getUserData(user.name, 'history', []);
-        if (history.indexOf(name) === -1) {
-            history.push(name);
-            DB.setUserData(user.name, 'history', history);
+    if (url && url.startsWith('http')) {
+        var wrapper = document.getElementById('playerWrapper');
+        if (!wrapper) return;
+        wrapper.innerHTML = `<iframe src="${url}" allowfullscreen allow="autoplay" style="width:100%;height:100%;border:none;"></iframe>`;
+        showToast('▶️ Воспроизведение: ' + name, 'success');
+        
+        var user = DB.get('currentUser');
+        if (user) {
+            var history = DB.getUserData(user.name, 'history', []);
+            if (history.indexOf(name) === -1) {
+                history.push(name);
+                DB.setUserData(user.name, 'history', history);
+            }
+            var continueData = DB.getUserData(user.name, 'continueWatching', {});
+            if (!continueData[name]) continueData[name] = {};
+            continueData[name].ep = (continueData[name].ep || 0) + 1;
+            continueData[name].time = Date.now();
+            DB.setUserData(user.name, 'continueWatching', continueData);
+            checkAchievements(name);
         }
-        
-        var continueData = DB.getUserData(user.name, 'continueWatching', {});
-        if (!continueData[name]) continueData[name] = {};
-        continueData[name].ep = (continueData[name].ep || 0) + 1;
-        continueData[name].time = Date.now();
-        DB.setUserData(user.name, 'continueWatching', continueData);
-        
-        checkAchievements(name);
+        return;
     }
+    
+    playVideoWithKodik(name, 1);
 }
 
 // ============================================
