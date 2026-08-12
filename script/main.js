@@ -168,7 +168,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (С ИСПОЛЬЗОВАНИЕМ API МОДУЛЯ)
+// КАТАЛОГ
 // ============================================
 
 async function loadCatalog() {
@@ -478,10 +478,10 @@ async function openDetail(id) {
     
     if (allData[id]) {
         showDetail(allData[id]);
-        // Автоматически загружаем плеер
+        // Автоматически загружаем плеер через 1 секунду
         setTimeout(() => {
             playWithAnilibria(id, 1);
-        }, 500);
+        }, 1000);
         return;
     }
     
@@ -494,10 +494,10 @@ async function openDetail(id) {
                 allData[id] = data;
             }
             showDetail(allData[id]);
-            // Автоматически загружаем плеер
+            // Автоматически загружаем плеер через 1 секунду
             setTimeout(() => {
                 playWithAnilibria(id, 1);
-            }, 500);
+            }, 1000);
         } else {
             showToast('❌ Не удалось загрузить данные', 'error');
         }
@@ -611,12 +611,15 @@ function showDetail(anime) {
 }
 
 // ============================================
-// ПЛЕЕР ANILIBRIA
+// ПЛЕЕР ANILIBRIA (ОСНОВНАЯ ФУНКЦИЯ)
 // ============================================
 
 async function playWithAnilibria(animeId, episode = 1) {
     const wrapper = document.getElementById('playerWrapper');
-    if (!wrapper) return;
+    if (!wrapper) {
+        console.error('❌ playerWrapper не найден');
+        return;
+    }
     
     // Очищаем контейнер
     wrapper.innerHTML = '';
@@ -624,33 +627,80 @@ async function playWithAnilibria(animeId, episode = 1) {
     // Сохраняем ID аниме
     currentAnimeId = animeId;
     
-    // Создаём плеер
-    currentPlayer = new AniLibriaPlayer(wrapper, {
-        title: document.getElementById('detailTitle')?.textContent || 'Аниме',
-        episode: episode,
-        volume: 0.8,
-        speed: 1,
-        onEpisodeEnd: function() {
-            const nextEp = episode + 1;
-            playWithAnilibria(animeId, nextEp);
-            showToast('▶️ Следующая серия', 'info');
-        }
-    });
+    // Получаем название аниме
+    const anime = allData[animeId];
+    const title = anime ? getRussianTitle(anime) : 'Аниме';
+    const totalEp = parseInt(anime?.episodes) || 0;
     
-    // Загружаем видео
-    await currentPlayer.loadFromAnilibria(animeId, episode);
+    // Создаём плеер
+    try {
+        currentPlayer = new AniLibriaPlayer(wrapper, {
+            title: title,
+            episode: episode,
+            totalEpisodes: totalEp,
+            volume: 0.8,
+            speed: 1,
+            animeId: animeId,
+            onEpisodeEnd: function() {
+                const nextEp = episode + 1;
+                if (totalEp === 0 || nextEp <= totalEp) {
+                    playWithAnilibria(animeId, nextEp);
+                    showToast('▶️ Следующая серия', 'info');
+                } else {
+                    showToast('🎬 Все серии просмотрены!', 'success');
+                }
+            }
+        });
+    } catch (error) {
+        console.error('❌ Ошибка создания плеера:', error);
+        wrapper.innerHTML = `
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+                <span style="font-size:48px;">⚠️</span>
+                <span style="font-size:16px;color:#aaa;">Ошибка загрузки плеера</span>
+                <button onclick="playWithAnilibria(${animeId}, ${episode})" 
+                        style="padding:10px 24px;border-radius:20px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.05);color:#fff;cursor:pointer;font-size:14px;">
+                    🔄 Попробовать снова
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    // Загружаем видео - пробуем разные версии API
+    try {
+        console.log('📡 Загрузка аниме ID:', animeId, 'Серия:', episode);
+        
+        // Сначала пробуем v3
+        await currentPlayer.loadFromAnilibriaV3(animeId, episode);
+    } catch (e) {
+        console.log('🔄 V3 не работает, пробуем V2...');
+        try {
+            await currentPlayer.loadFromAnilibria(animeId, episode);
+        } catch (e2) {
+            console.log('🔄 V2 не работает, пробуем альтернативный источник...');
+            try {
+                await currentPlayer.loadFromAlternative(animeId, episode);
+            } catch (e3) {
+                console.error('❌ Все источники не работают:', e3);
+                currentPlayer.showError('Не удалось загрузить видео. Попробуйте позже или другую серию.');
+            }
+        }
+    }
     
     // Обновляем кнопки серий
     updateEpisodeButtons(animeId, episode);
 }
 
-// Обновление кнопок серий
+// ============================================
+// ОБНОВЛЕНИЕ КНОПОК СЕРИЙ
+// ============================================
+
 function updateEpisodeButtons(animeId, currentEpisode) {
     const container = document.getElementById('episodeBtns');
     if (!container) return;
     
     const anime = allData[animeId];
-    const totalEp = anime?.episodes || 12;
+    const totalEp = parseInt(anime?.episodes) || 12;
     
     let html = '';
     const maxShow = Math.min(totalEp, 24);
@@ -665,11 +715,6 @@ function updateEpisodeButtons(animeId, currentEpisode) {
     }
     
     container.innerHTML = html;
-}
-
-// Функция для ручного выбора серии
-function selectEpisode(animeId, episode) {
-    playWithAnilibria(animeId, episode);
 }
 
 // ============================================
@@ -1892,7 +1937,11 @@ console.log('🌟 OnikaAnime загружен!');
 console.log('💡 Используйте restoreAllData() для восстановления данных');
 console.log('💡 Используйте refreshStats() для обновления статистики соцсетей');
 
-// Экспортируем функции для глобального доступа
+// ============================================
+// ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ
+// ============================================
+
 window.playWithAnilibria = playWithAnilibria;
 window.selectEpisode = selectEpisode;
 window.currentPlayer = currentPlayer;
+window.allData = allData;
