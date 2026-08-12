@@ -202,7 +202,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА)
+// КАТАЛОГ (Anilibria + Shikimori)
 // ============================================
 
 function loadCatalog() {
@@ -211,330 +211,161 @@ function loadCatalog() {
     
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
     
-    var startTime = Date.now();
+    var isSearch = query && query.length > 1;
+    var url = 'https://anilibria.top/api/v1/anime/catalog/releases';
+    var body = { page: page, limit: 12, f: { sorting: 'FRESH_AT_DESC' } };
     
-    var promises = [
-        fetchShikimori(),
-        fetchAnime365(),
-        fetchKodik(),
-        fetchAnilibria()
-    ];
+    if (isSearch) {
+        body.f.search = query;
+        console.log('🔍 Поиск Anilibria:', query);
+    }
+    if (genre && !isSearch) {
+        body.f.genres = [parseInt(genre)];
+        console.log('🎭 Жанр Anilibria:', genre);
+    }
+    if (!isSearch && !genre) {
+        body.f.sorting = 'FRESH_AT_DESC';
+        console.log('📊 Свежие релизы Anilibria');
+    }
     
-    Promise.race(promises)
-        .then(function(result) {
-            var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-            console.log('⚡ Загружено за ' + elapsed + ' сек через ' + result.source);
-            
-            if (result.data && result.data.length > 0) {
-                renderCatalog(result.data);
-                renderPagination();
-                loadSchedule();
-            } else {
-                showError('🔍 Ничего не найдено');
-            }
-        })
-        .catch(function() {
-            console.log('🔄 Параллельная загрузка не удалась, пробуем последовательно...');
-            loadCatalogSequential();
-        });
-}
-
-// ===== ЗАГРУЗКА ИЗ SHIKIMORI =====
-function fetchShikimori() {
-    return new Promise(function(resolve, reject) {
-        var isSearch = query && query.length > 1;
-        var url = 'https://shikimori.one/api/animes?limit=12';
-        
-        if (isSearch) {
-            url += '&search=' + encodeURIComponent(query);
-        }
-        if (genre && !isSearch) {
-            var genreMap = { '1': 'action', '8': 'drama', '21': 'comedy', '10': 'fantasy', '22': 'romance' };
-            url += '&genre=' + (genreMap[genre] || '');
-        }
-        if (!isSearch && !genre) {
-            url = 'https://shikimori.one/api/animes?order=popularity&limit=12';
-        }
-        url += '&page=' + page;
-        
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 5000;
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.length > 0) {
-                        totalPages = Math.ceil(data.length / 12) + 1;
-                        if (totalPages < 1) totalPages = 1;
-                        
-                        var converted = data.map(function(item) {
-                            return {
-                                mal_id: item.id,
-                                title: item.russian || item.name || 'Без названия',
-                                title_russian: item.russian || '',
-                                title_english: item.name || '',
-                                year: item.aired_on ? item.aired_on.split('-')[0] : '--',
-                                episodes: item.episodes || '?',
-                                images: { jpg: { image_url: item.image?.original || '' } },
-                                synopsis: item.description || 'Описание отсутствует',
-                                genres: item.genres || [],
-                                score: item.score || 0,
-                                russian: item.russian || '',
-                                source: 'Shikimori'
-                            };
-                        });
-                        
-                        resolve({ data: converted, source: 'Shikimori' });
-                        return;
-                    }
-                }
-                reject(new Error('Shikimori не ответил'));
-            } catch(e) {
-                reject(e);
-            }
-        };
-        xhr.onerror = function() { reject(new Error('Shikimori ошибка')); };
-        xhr.ontimeout = function() { reject(new Error('Shikimori таймаут')); };
-        xhr.send();
-    });
-}
-
-// ===== ЗАГРУЗКА ИЗ ANIME365 =====
-function fetchAnime365() {
-    return new Promise(function(resolve, reject) {
-        var isSearch = query && query.length > 1;
-        var url = 'https://smotret-anime.online/api/series?limit=12';
-        
-        if (isSearch) {
-            url += '&search=' + encodeURIComponent(query);
-        }
-        if (!isSearch && !genre) {
-            url += '&sort=-rating';
-        }
-        url += '&page=' + page;
-        
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 5000;
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.data && data.data.length > 0) {
-                        totalPages = Math.ceil((data.pagination?.total || 12) / 12);
-                        if (totalPages < 1) totalPages = 1;
-                        
-                        var converted = data.data.map(function(item) {
-                            var attrs = item.attributes || {};
-                            return {
-                                mal_id: item.id,
-                                title: attrs.russian || attrs.name || 'Без названия',
-                                title_russian: attrs.russian || '',
-                                title_english: attrs.name || '',
-                                year: attrs.release_date ? attrs.release_date.split('-')[0] : '--',
-                                episodes: attrs.episodes_total || '?',
-                                images: { jpg: { image_url: attrs.poster?.original || '' } },
-                                synopsis: attrs.description || 'Описание отсутствует',
-                                genres: attrs.genres || [],
-                                score: attrs.rating || 0,
-                                russian: attrs.russian || '',
-                                source: 'Anime365'
-                            };
-                        });
-                        
-                        resolve({ data: converted, source: 'Anime365' });
-                        return;
-                    }
-                }
-                reject(new Error('Anime365 не ответил'));
-            } catch(e) {
-                reject(e);
-            }
-        };
-        xhr.onerror = function() { reject(new Error('Anime365 ошибка')); };
-        xhr.ontimeout = function() { reject(new Error('Anime365 таймаут')); };
-        xhr.send();
-    });
-}
-
-// ===== ЗАГРУЗКА ИЗ KODIK =====
-function fetchKodik() {
-    return new Promise(function(resolve, reject) {
-        var isSearch = query && query.length > 1;
-        var url = 'https://kodikapi.com/search?limit=12&with_material_data=true&types=anime';
-        
-        if (isSearch) {
-            url += '&title=' + encodeURIComponent(query);
-        }
-        if (genre && !isSearch) {
-            var genreMap = { '1': 'боевик', '8': 'драма', '21': 'комедия', '10': 'фэнтези', '22': 'романтика' };
-            url += '&genre=' + encodeURIComponent(genreMap[genre] || '');
-        }
-        url += '&page=' + page;
-        
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 5000;
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.results && data.results.length > 0) {
-                        totalPages = Math.ceil((data.total || 12) / 12);
-                        if (totalPages < 1) totalPages = 1;
-                        
-                        var converted = data.results.map(function(item) {
-                            return {
-                                mal_id: item.id || item.material_data?.id,
-                                title: item.title || item.material_data?.title || 'Без названия',
-                                title_russian: item.title || '',
-                                title_english: item.title_orig || '',
-                                year: item.year || '--',
-                                episodes: item.episodes_total || item.episodes || '?',
-                                images: { jpg: { image_url: item.poster_url || '' } },
-                                synopsis: item.material_data?.description || 'Описание отсутствует',
-                                genres: item.material_data?.genres || [],
-                                score: item.rating || item.material_data?.rating || 0,
-                                russian: item.title || '',
-                                source: 'Kodik'
-                            };
-                        });
-                        
-                        resolve({ data: converted, source: 'Kodik' });
-                        return;
-                    }
-                }
-                reject(new Error('Kodik не ответил'));
-            } catch(e) {
-                reject(e);
-            }
-        };
-        xhr.onerror = function() { reject(new Error('Kodik ошибка')); };
-        xhr.ontimeout = function() { reject(new Error('Kodik таймаут')); };
-        xhr.send();
-    });
-}
-
-// ===== ЗАГРУЗКА ИЗ ANILIBRIA =====
-function fetchAnilibria() {
-    return new Promise(function(resolve, reject) {
-        var isSearch = query && query.length > 1;
-        var url = 'https://anilibria.top/api/v1/anime/catalog/releases';
-        var body = { page: page, limit: 12, f: { sorting: 'FRESH_AT_DESC' } };
-        
-        if (isSearch) {
-            body.f.search = query;
-        }
-        if (genre && !isSearch) {
-            body.f.genres = [parseInt(genre)];
-        }
-        
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', url);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 5000;
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.data && data.data.length > 0) {
-                        totalPages = data.meta?.pagination?.total_pages || 1;
-                        if (totalPages < 1) totalPages = 1;
-                        
-                        var converted = data.data.map(function(item) {
-                            var img = '';
-                            if (item.poster) {
-                                var p = item.poster.optimized || item.poster;
-                                if (typeof p === 'string') {
-                                    img = p;
-                                } else {
-                                    img = p.preview || p.src || '';
-                                }
-                                if (img && img[0] === '/') {
-                                    img = 'https://anilibria.top' + img;
-                                }
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+    xhr.timeout = 8000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.data && data.data.length > 0) {
+                    totalPages = data.meta?.pagination?.total_pages || 1;
+                    if (totalPages < 1) totalPages = 1;
+                    
+                    var converted = data.data.map(function(item) {
+                        var img = '';
+                        if (item.poster) {
+                            var p = item.poster.optimized || item.poster;
+                            if (typeof p === 'string') {
+                                img = p;
+                            } else {
+                                img = p.preview || p.src || '';
                             }
-                            return {
-                                mal_id: item.id,
-                                title: item.name?.main || item.name?.english || item.name?.original || 'Без названия',
-                                title_russian: item.name?.main || '',
-                                title_english: item.name?.english || '',
-                                year: item.year || '--',
-                                episodes: item.episodes_total || '?',
-                                images: { jpg: { image_url: img || '' } },
-                                synopsis: item.description || 'Описание отсутствует',
-                                genres: item.genres || [],
-                                score: item.rating || 0,
-                                russian: item.name?.main || '',
-                                source: 'Anilibria'
-                            };
-                        });
-                        
-                        resolve({ data: converted, source: 'Anilibria' });
-                        return;
-                    }
+                            if (img && img[0] === '/') {
+                                img = 'https://anilibria.top' + img;
+                            }
+                        }
+                        return {
+                            mal_id: item.id,
+                            title: item.name?.main || item.name?.english || item.name?.original || 'Без названия',
+                            title_russian: item.name?.main || '',
+                            title_english: item.name?.english || '',
+                            year: item.year || '--',
+                            episodes: item.episodes_total || '?',
+                            images: { jpg: { image_url: img || '' } },
+                            synopsis: item.description || 'Описание отсутствует',
+                            genres: item.genres || [],
+                            score: item.rating || 0,
+                            russian: item.name?.main || '',
+                            source: 'Anilibria'
+                        };
+                    });
+                    
+                    converted.forEach(function(a) { allData[a.mal_id] = a; });
+                    renderCatalog(converted);
+                    renderPagination();
+                    loadSchedule();
+                    return;
                 }
-                reject(new Error('Anilibria не ответил'));
-            } catch(e) {
-                reject(e);
             }
-        };
-        xhr.onerror = function() { reject(new Error('Anilibria ошибка')); };
-        xhr.ontimeout = function() { reject(new Error('Anilibria таймаут')); };
-        xhr.send(JSON.stringify(body));
-    });
+            // Если Anilibria не ответил — пробуем Shikimori
+            console.log('🔄 Anilibria не ответил, пробуем Shikimori...');
+            loadCatalogShikimori();
+        } catch(e) {
+            console.log('🔄 Ошибка Anilibria, пробуем Shikimori...');
+            loadCatalogShikimori();
+        }
+    };
+    xhr.onerror = function() { 
+        console.log('🔄 Anilibria ошибка, пробуем Shikimori...');
+        loadCatalogShikimori(); 
+    };
+    xhr.ontimeout = function() { 
+        console.log('🔄 Anilibria таймаут, пробуем Shikimori...');
+        loadCatalogShikimori(); 
+    };
+    xhr.send(JSON.stringify(body));
 }
 
-// ===== ПОСЛЕДОВАТЕЛЬНАЯ ЗАГРУЗКА =====
-function loadCatalogSequential() {
-    console.log('🔄 Последовательная загрузка...');
+// ===== SHIKIMORI (ЗАПАСНОЙ) =====
+function loadCatalogShikimori() {
+    console.log('📡 Shikimori API...');
     var grid = document.getElementById('grid');
     if (!grid) return;
     
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
+    var isSearch = query && query.length > 1;
+    var url = 'https://shikimori.one/api/animes?limit=12';
     
-    fetchShikimori()
-        .then(function(result) {
-            renderCatalog(result.data);
-            renderPagination();
-            loadSchedule();
-        })
-        .catch(function() {
-            fetchAnime365()
-                .then(function(result) {
-                    renderCatalog(result.data);
+    if (isSearch) {
+        url += '&search=' + encodeURIComponent(query);
+        console.log('🔍 Поиск Shikimori:', query);
+    }
+    if (genre && !isSearch) {
+        var genreMap = { '1': 'action', '8': 'drama', '21': 'comedy', '10': 'fantasy', '22': 'romance' };
+        url += '&genre=' + (genreMap[genre] || '');
+        console.log('🎭 Жанр Shikimori:', genre);
+    }
+    if (!isSearch && !genre) {
+        url = 'https://shikimori.one/api/animes?order=popularity&limit=12';
+        console.log('📊 Популярное Shikimori');
+    }
+    url += '&page=' + page;
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+    xhr.timeout = 8000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.length > 0) {
+                    totalPages = Math.ceil(data.length / 12) + 1;
+                    if (totalPages < 1) totalPages = 1;
+                    
+                    var converted = data.map(function(item) {
+                        return {
+                            mal_id: item.id,
+                            title: item.russian || item.name || 'Без названия',
+                            title_russian: item.russian || '',
+                            title_english: item.name || '',
+                            year: item.aired_on ? item.aired_on.split('-')[0] : '--',
+                            episodes: item.episodes || '?',
+                            images: { jpg: { image_url: item.image?.original || '' } },
+                            synopsis: item.description || 'Описание отсутствует',
+                            genres: item.genres || [],
+                            score: item.score || 0,
+                            russian: item.russian || '',
+                            source: 'Shikimori'
+                        };
+                    });
+                    
+                    converted.forEach(function(a) { allData[a.mal_id] = a; });
+                    renderCatalog(converted);
                     renderPagination();
                     loadSchedule();
-                })
-                .catch(function() {
-                    fetchKodik()
-                        .then(function(result) {
-                            renderCatalog(result.data);
-                            renderPagination();
-                            loadSchedule();
-                        })
-                        .catch(function() {
-                            fetchAnilibria()
-                                .then(function(result) {
-                                    renderCatalog(result.data);
-                                    renderPagination();
-                                    loadSchedule();
-                                })
-                                .catch(function() {
-                                    showError('⚠️ Не удалось загрузить данные');
-                                });
-                        });
-                });
-        });
+                    return;
+                }
+            }
+            showError('🔍 Ничего не найдено');
+        } catch(e) {
+            showError('⚠️ Ошибка загрузки');
+        }
+    };
+    xhr.onerror = function() { showError('🌐 Ошибка сети'); };
+    xhr.ontimeout = function() { showError('⏱️ Превышено время'); };
+    xhr.send();
 }
 
 function showError(msg) {
@@ -789,7 +620,7 @@ if (genresNav) {
 }
 
 // ============================================
-// ДЕТАЛЬНАЯ СТРАНИЦА
+// ДЕТАЛЬНАЯ СТРАНИЦА (Anilibria + Shikimori)
 // ============================================
 
 function openDetail(id) {
@@ -808,233 +639,176 @@ function openDetail(id) {
         return;
     }
     
-    // Пробуем все API по очереди
-    openDetailWithFallback(id, 0);
+    // Пробуем Anilibria, потом Shikimori
+    openDetailAnilibria(id);
 }
 
-function openDetailWithFallback(id, apiIndex) {
-    var apis = [
-        { name: 'Shikimori', fn: fetchDetailShikimori },
-        { name: 'Anime365', fn: fetchDetailAnime365 },
-        { name: 'Kodik', fn: fetchDetailKodik },
-        { name: 'Anilibria', fn: fetchDetailAnilibria }
-    ];
+// ===== ANILIBRIA DETAIL =====
+function openDetailAnilibria(id) {
+    console.log('📡 Anilibria детали...');
+    var url = 'https://anilibria.top/api/v1/app/title/' + id;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+    xhr.timeout = 8000;
     
-    if (apiIndex >= apis.length) {
-        showToast('❌ Не удалось загрузить данные', 'error');
-        return;
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.name) {
+                    var img = '';
+                    if (data.poster) {
+                        var p = data.poster.optimized || data.poster;
+                        if (typeof p === 'string') {
+                            img = p;
+                        } else {
+                            img = p.preview || p.src || '';
+                        }
+                        if (img && img[0] === '/') {
+                            img = 'https://anilibria.top' + img;
+                        }
+                    }
+                    var converted = {
+                        mal_id: data.id,
+                        title: data.name?.main || data.name?.english || data.name?.original || 'Без названия',
+                        title_russian: data.name?.main || '',
+                        title_english: data.name?.english || '',
+                        year: data.year || '--',
+                        episodes: data.episodes_total || '?',
+                        images: { jpg: { image_url: img || '' } },
+                        synopsis: data.description || 'Описание отсутствует',
+                        genres: data.genres || [],
+                        score: data.rating || 0,
+                        russian: data.name?.main || '',
+                        rating: data.age_rating || '',
+                        status: data.status || '',
+                        duration: data.duration || '',
+                        source: 'Anilibria'
+                    };
+                    allData[id] = converted;
+                    showDetail(converted);
+                    return;
+                }
+            }
+            // Если Anilibria не дал данные — пробуем Shikimori
+            console.log('🔄 Anilibria не дал данные, пробуем Shikimori...');
+            openDetailShikimori(id);
+        } catch(e) {
+            console.log('🔄 Ошибка Anilibria, пробуем Shikimori...');
+            openDetailShikimori(id);
+        }
+    };
+    xhr.onerror = function() { 
+        console.log('🔄 Anilibria ошибка, пробуем Shikimori...');
+        openDetailShikimori(id); 
+    };
+    xhr.ontimeout = function() { 
+        console.log('🔄 Anilibria таймаут, пробуем Shikimori...');
+        openDetailShikimori(id); 
+    };
+    xhr.send();
+}
+
+// ===== SHIKIMORI DETAIL (ЗАПАСНОЙ) =====
+function openDetailShikimori(id) {
+    console.log('📡 Shikimori детали...');
+    var url = 'https://shikimori.one/api/animes/' + id;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
+    xhr.timeout = 8000;
+    
+    xhr.onload = function() {
+        try {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                if (data && data.id) {
+                    var converted = {
+                        mal_id: data.id,
+                        title: data.russian || data.name || 'Без названия',
+                        title_russian: data.russian || '',
+                        title_english: data.name || '',
+                        year: data.aired_on ? data.aired_on.split('-')[0] : '--',
+                        episodes: data.episodes || '?',
+                        images: { jpg: { image_url: data.image?.original || '' } },
+                        synopsis: data.description || 'Описание отсутствует',
+                        genres: data.genres || [],
+                        score: data.score || 0,
+                        russian: data.russian || '',
+                        rating: data.rating || '',
+                        status: data.status || '',
+                        duration: data.duration || '',
+                        source: 'Shikimori'
+                    };
+                    
+                    // Если уже есть данные от Anilibria — объединяем
+                    if (allData[id]) {
+                        console.log('🔀 Объединение данных Anilibria + Shikimori');
+                        // Берем русское название из Shikimori, если есть
+                        if (converted.title_russian) {
+                            allData[id].title_russian = converted.title_russian;
+                            allData[id].russian = converted.russian;
+                        }
+                        // Берем описание из Shikimori, если оно лучше
+                        if (converted.synopsis && converted.synopsis.length > 50) {
+                            allData[id].synopsis = converted.synopsis;
+                        }
+                        // Берем жанры из Shikimori
+                        if (converted.genres && converted.genres.length > 0) {
+                            allData[id].genres = converted.genres;
+                        }
+                        showDetail(allData[id]);
+                    } else {
+                        allData[id] = converted;
+                        showDetail(converted);
+                    }
+                    return;
+                }
+            }
+            showToast('❌ Не удалось загрузить данные', 'error');
+        } catch(e) {
+            showToast('❌ Ошибка загрузки', 'error');
+        }
+    };
+    xhr.onerror = function() { showToast('🌐 Ошибка сети', 'error'); };
+    xhr.ontimeout = function() { showToast('⏱️ Превышено время', 'error'); };
+    xhr.send();
+}
+
+// ============================================
+// ОБЪЕДИНЕНИЕ ДАННЫХ ИЗ ДВУХ API
+// ============================================
+
+function mergeAnimeData(anilibriaData, shikimoriData) {
+    var merged = {};
+    
+    // Берем базовые данные из Anilibria
+    merged = JSON.parse(JSON.stringify(anilibriaData));
+    
+    // Дополняем из Shikimori
+    if (shikimoriData) {
+        if (shikimoriData.title_russian && !merged.title_russian) {
+            merged.title_russian = shikimoriData.title_russian;
+        }
+        if (shikimoriData.russian && !merged.russian) {
+            merged.russian = shikimoriData.russian;
+        }
+        if (shikimoriData.synopsis && shikimoriData.synopsis.length > 50) {
+            merged.synopsis = shikimoriData.synopsis;
+        }
+        if (shikimoriData.genres && shikimoriData.genres.length > 0) {
+            merged.genres = shikimoriData.genres;
+        }
+        if (shikimoriData.score && shikimoriData.score > merged.score) {
+            merged.score = shikimoriData.score;
+        }
+        if (shikimoriData.images?.jpg?.image_url && !merged.images?.jpg?.image_url) {
+            merged.images = shikimoriData.images;
+        }
     }
     
-    var api = apis[apiIndex];
-    console.log('🔄 Попытка загрузки через ' + api.name + '...');
-    
-    api.fn(id)
-        .then(function(data) {
-            if (data && data.id) {
-                console.log('✅ Загружено через ' + api.name);
-                allData[id] = data;
-                showDetail(data);
-            } else {
-                openDetailWithFallback(id, apiIndex + 1);
-            }
-        })
-        .catch(function() {
-            openDetailWithFallback(id, apiIndex + 1);
-        });
-}
-
-// ===== FETCH SHIKIMORI =====
-function fetchDetailShikimori(id) {
-    return new Promise(function(resolve, reject) {
-        var url = 'https://shikimori.one/api/animes/' + id;
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 5000;
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.id) {
-                        var converted = {
-                            mal_id: data.id,
-                            title: data.russian || data.name || 'Без названия',
-                            title_russian: data.russian || '',
-                            title_english: data.name || '',
-                            year: data.aired_on ? data.aired_on.split('-')[0] : '--',
-                            episodes: data.episodes || '?',
-                            images: { jpg: { image_url: data.image?.original || '' } },
-                            synopsis: data.description || 'Описание отсутствует',
-                            genres: data.genres || [],
-                            score: data.score || 0,
-                            russian: data.russian || '',
-                            rating: data.rating || '',
-                            status: data.status || '',
-                            duration: data.duration || ''
-                        };
-                        resolve(converted);
-                        return;
-                    }
-                }
-                reject(new Error('Shikimori не ответил'));
-            } catch(e) {
-                reject(e);
-            }
-        };
-        xhr.onerror = function() { reject(new Error('Shikimori ошибка')); };
-        xhr.ontimeout = function() { reject(new Error('Shikimori таймаут')); };
-        xhr.send();
-    });
-}
-
-// ===== FETCH ANIME365 =====
-function fetchDetailAnime365(id) {
-    return new Promise(function(resolve, reject) {
-        var url = 'https://smotret-anime.online/api/series/' + id;
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 5000;
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.data) {
-                        var attrs = data.data.attributes || {};
-                        var converted = {
-                            mal_id: data.data.id,
-                            title: attrs.russian || attrs.name || 'Без названия',
-                            title_russian: attrs.russian || '',
-                            title_english: attrs.name || '',
-                            year: attrs.release_date ? attrs.release_date.split('-')[0] : '--',
-                            episodes: attrs.episodes_total || '?',
-                            images: { jpg: { image_url: attrs.poster?.original || '' } },
-                            synopsis: attrs.description || 'Описание отсутствует',
-                            genres: attrs.genres || [],
-                            score: attrs.rating || 0,
-                            russian: attrs.russian || '',
-                            rating: attrs.age_rating || '',
-                            status: attrs.status || '',
-                            duration: attrs.duration || ''
-                        };
-                        resolve(converted);
-                        return;
-                    }
-                }
-                reject(new Error('Anime365 не ответил'));
-            } catch(e) {
-                reject(e);
-            }
-        };
-        xhr.onerror = function() { reject(new Error('Anime365 ошибка')); };
-        xhr.ontimeout = function() { reject(new Error('Anime365 таймаут')); };
-        xhr.send();
-    });
-}
-
-// ===== FETCH KODIK =====
-function fetchDetailKodik(id) {
-    return new Promise(function(resolve, reject) {
-        var url = 'https://kodikapi.com/search?with_material_data=true&types=anime&id=' + id;
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 5000;
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.results && data.results.length > 0) {
-                        var item = data.results[0];
-                        var converted = {
-                            mal_id: item.id || item.material_data?.id,
-                            title: item.title || item.material_data?.title || 'Без названия',
-                            title_russian: item.title || '',
-                            title_english: item.title_orig || '',
-                            year: item.year || '--',
-                            episodes: item.episodes_total || item.episodes || '?',
-                            images: { jpg: { image_url: item.poster_url || '' } },
-                            synopsis: item.material_data?.description || 'Описание отсутствует',
-                            genres: item.material_data?.genres || [],
-                            score: item.rating || item.material_data?.rating || 0,
-                            russian: item.title || '',
-                            rating: item.material_data?.rating || '',
-                            status: item.material_data?.status || '',
-                            duration: item.material_data?.duration || ''
-                        };
-                        resolve(converted);
-                        return;
-                    }
-                }
-                reject(new Error('Kodik не ответил'));
-            } catch(e) {
-                reject(e);
-            }
-        };
-        xhr.onerror = function() { reject(new Error('Kodik ошибка')); };
-        xhr.ontimeout = function() { reject(new Error('Kodik таймаут')); };
-        xhr.send();
-    });
-}
-
-// ===== FETCH ANILIBRIA =====
-function fetchDetailAnilibria(id) {
-    return new Promise(function(resolve, reject) {
-        var url = 'https://anilibria.top/api/v1/app/title/' + id;
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.setRequestHeader('User-Agent', 'OnikaAnime/1.0');
-        xhr.timeout = 5000;
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data && data.name) {
-                        var img = '';
-                        if (data.poster) {
-                            var p = data.poster.optimized || data.poster;
-                            if (typeof p === 'string') {
-                                img = p;
-                            } else {
-                                img = p.preview || p.src || '';
-                            }
-                            if (img && img[0] === '/') {
-                                img = 'https://anilibria.top' + img;
-                            }
-                        }
-                        var converted = {
-                            mal_id: data.id,
-                            title: data.name?.main || data.name?.english || data.name?.original || 'Без названия',
-                            title_russian: data.name?.main || '',
-                            title_english: data.name?.english || '',
-                            year: data.year || '--',
-                            episodes: data.episodes_total || '?',
-                            images: { jpg: { image_url: img || '' } },
-                            synopsis: data.description || 'Описание отсутствует',
-                            genres: data.genres || [],
-                            score: data.rating || 0,
-                            russian: data.name?.main || '',
-                            rating: data.age_rating || '',
-                            status: data.status || '',
-                            duration: data.duration || ''
-                        };
-                        resolve(converted);
-                        return;
-                    }
-                }
-                reject(new Error('Anilibria не ответил'));
-            } catch(e) {
-                reject(e);
-            }
-        };
-        xhr.onerror = function() { reject(new Error('Anilibria ошибка')); };
-        xhr.ontimeout = function() { reject(new Error('Anilibria таймаут')); };
-        xhr.send();
-    });
+    return merged;
 }
 
 // ============================================
@@ -1641,7 +1415,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// ПРОФИЛЬ
+// ПРОФИЛЬ (сокращенный, без изменений)
 // ============================================
 
 function renderProfile() {
@@ -1951,8 +1725,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// АВАТАР
-// ============================================
+// АВАТАР// ============================================
 
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
