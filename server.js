@@ -25,7 +25,7 @@ app.use(express.static(__dirname));
 // ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL (БЕЗ SSL) =====
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: false  // Отключаем SSL для RelaxDev
+    ssl: false
 });
 
 // ===== ПРОВЕРКА ПОДКЛЮЧЕНИЯ =====
@@ -115,7 +115,7 @@ async function initDatabase() {
             )
         `);
 
-        // Индексы
+        // Индексы для производительности
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_name ON users(name)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_anime ON comments(anime)`);
@@ -149,7 +149,10 @@ const schemas = {
     })
 };
 
-// ===== API РЕГИСТРАЦИИ =====
+// ============================================
+// API РЕГИСТРАЦИИ
+// ============================================
+
 app.post('/api/register', async (req, res, next) => {
     try {
         const { error, value } = schemas.register.validate(req.body);
@@ -189,7 +192,10 @@ app.post('/api/register', async (req, res, next) => {
     }
 });
 
-// ===== API ВХОДА =====
+// ============================================
+// API ВХОДА
+// ============================================
+
 app.post('/api/login', async (req, res, next) => {
     try {
         const { error, value } = schemas.login.validate(req.body);
@@ -217,7 +223,10 @@ app.post('/api/login', async (req, res, next) => {
     }
 });
 
-// ===== API ПОЛЬЗОВАТЕЛЯ =====
+// ============================================
+// API ПОЛЬЗОВАТЕЛЯ
+// ============================================
+
 app.get('/api/user/:id', async (req, res, next) => {
     try {
         const userId = parseInt(req.params.id);
@@ -274,7 +283,10 @@ app.post('/api/update-name', async (req, res, next) => {
     }
 });
 
-// ===== API ИЗБРАННОГО =====
+// ============================================
+// API ИЗБРАННОГО
+// ============================================
+
 app.post('/api/favorites', async (req, res, next) => {
     try {
         const { userId, favorites } = req.body;
@@ -299,7 +311,10 @@ app.post('/api/favorites', async (req, res, next) => {
     }
 });
 
-// ===== API ДОСТИЖЕНИЙ =====
+// ============================================
+// API ДОСТИЖЕНИЙ
+// ============================================
+
 app.post('/api/achievements', async (req, res, next) => {
     try {
         const { userId, achievements } = req.body;
@@ -343,7 +358,10 @@ app.post('/api/active-title', async (req, res, next) => {
     }
 });
 
-// ===== API КОММЕНТАРИЕВ =====
+// ============================================
+// API КОММЕНТАРИЕВ
+// ============================================
+
 app.get('/api/comments/:anime', async (req, res, next) => {
     try {
         const anime = req.params.anime;
@@ -418,7 +436,10 @@ app.delete('/api/comments/:id', async (req, res, next) => {
     }
 });
 
-// ===== API УДАЛЕНИЯ АККАУНТА =====
+// ============================================
+// API УДАЛЕНИЯ АККАУНТА
+// ============================================
+
 app.post('/api/delete-account', async (req, res, next) => {
     try {
         const { userId } = req.body;
@@ -434,7 +455,10 @@ app.post('/api/delete-account', async (req, res, next) => {
     }
 });
 
-// ===== ОБРАБОТЧИК ОШИБОК =====
+// ============================================
+// ОБРАБОТЧИК ОШИБОК
+// ============================================
+
 app.use((err, req, res, next) => {
     console.error('❌ Ошибка:', err.message);
     
@@ -453,7 +477,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ===== ЗАПУСК СЕРВЕРА =====
+// ============================================
+// ЗАПУСК СЕРВЕРА
+// ============================================
+
 initDatabase().then(() => {
     app.listen(PORT, () => {
         console.log('🚀 OnikaAnime сервер запущен!');
@@ -461,3 +488,5 @@ initDatabase().then(() => {
         console.log(`🌍 Режим: ${process.env.NODE_ENV || 'development'}`);
     });
 });
+
+module.exports = app;
