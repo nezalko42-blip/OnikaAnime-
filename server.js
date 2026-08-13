@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР (ДЛЯ RELAXDEV)
+// ONIKAANIME - СЕРВЕР (ДЛЯ RELAXDEV - ИСПРАВЛЕННЫЙ)
 // ============================================
 
 require('dotenv').config();
@@ -25,14 +25,7 @@ app.use(express.static(__dirname));
 // ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL (БЕЗ SSL) =====
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: false,
-    client_encoding: 'UTF8'
-});
-
-// При каждом подключении устанавливаем UTF8
-pool.on('connect', (client) => {
-    client.query('SET client_encoding = "UTF8"');
-    client.query('SET NAMES "UTF8"');
+    ssl: false
 });
 
 // ===== ПРОВЕРКА ПОДКЛЮЧЕНИЯ =====
@@ -49,8 +42,6 @@ pool.connect((err, client, release) => {
 async function initDatabase() {
     try {
         console.log('📦 Создание таблиц...');
-
-        await pool.query('SET client_encoding = "UTF8"');
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
@@ -414,12 +405,6 @@ app.post('/api/comments', async (req, res, next) => {
             } 
         });
     } catch (err) {
-        // Ошибка с эмодзи
-        if (err.code === '22021') {
-            return res.status(400).json({ 
-                error: 'Неподдерживаемые символы. Попробуйте убрать смайлики.' 
-            });
-        }
         next(err);
     }
 });
