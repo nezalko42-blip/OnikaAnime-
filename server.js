@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР (ИСПРАВЛЕННЫЙ CORS)
+// ONIKAANIME - СЕРВЕР (ДЛЯ RELAXDEV)
 // ============================================
 
 require('dotenv').config();
@@ -8,14 +8,13 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const Joi = require('joi');
-const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-// ===== ПРАВИЛЬНАЯ НАСТРОЙКА CORS =====
+// ===== НАСТРОЙКА CORS =====
 app.use(cors({
-    origin: '*',  // Разрешаем все источники
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -23,12 +22,10 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
 
-// ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL =====
+// ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL (БЕЗ SSL) =====
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
+    ssl: false  // Отключаем SSL для RelaxDev
 });
 
 // ===== ПРОВЕРКА ПОДКЛЮЧЕНИЯ =====
@@ -41,10 +38,96 @@ pool.connect((err, client, release) => {
     release();
 });
 
-// ============================================
-// ВАЛИДАЦИЯ
-// ============================================
+// ===== СОЗДАНИЕ ТАБЛИЦ =====
+async function initDatabase() {
+    try {
+        console.log('📦 Создание таблиц...');
 
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                name TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS profiles (
+                user_id INTEGER PRIMARY KEY,
+                bio TEXT,
+                avatar TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS favorites (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                anime TEXT NOT NULL,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(user_id, anime)
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS comments (
+                id SERIAL PRIMARY KEY,
+                anime TEXT NOT NULL,
+                user_name TEXT NOT NULL,
+                text TEXT NOT NULL,
+                date TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS achievements (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                achievement_id TEXT NOT NULL,
+                earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(user_id, achievement_id)
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS active_titles (
+                user_id INTEGER PRIMARY KEY,
+                title_id TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS continue_watching (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                anime TEXT NOT NULL,
+                episode INTEGER DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(user_id, anime)
+            )
+        `);
+
+        // Индексы
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_name ON users(name)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_anime ON comments(anime)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id)`);
+
+        console.log('✅ Все таблицы и индексы созданы!');
+    } catch (err) {
+        console.error('❌ Ошибка создания таблиц:', err.message);
+    }
+}
+
+// ===== ВАЛИДАЦИЯ =====
 const schemas = {
     register: Joi.object({
         email: Joi.string().email().required(),
@@ -66,10 +149,7 @@ const schemas = {
     })
 };
 
-// ============================================
-// API РЕГИСТРАЦИИ
-// ============================================
-
+// ===== API РЕГИСТРАЦИИ =====
 app.post('/api/register', async (req, res, next) => {
     try {
         const { error, value } = schemas.register.validate(req.body);
@@ -109,10 +189,7 @@ app.post('/api/register', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API ВХОДА
-// ============================================
-
+// ===== API ВХОДА =====
 app.post('/api/login', async (req, res, next) => {
     try {
         const { error, value } = schemas.login.validate(req.body);
@@ -140,10 +217,7 @@ app.post('/api/login', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API ПОЛЬЗОВАТЕЛЯ
-// ============================================
-
+// ===== API ПОЛЬЗОВАТЕЛЯ =====
 app.get('/api/user/:id', async (req, res, next) => {
     try {
         const userId = parseInt(req.params.id);
@@ -200,10 +274,7 @@ app.post('/api/update-name', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API ИЗБРАННОГО
-// ============================================
-
+// ===== API ИЗБРАННОГО =====
 app.post('/api/favorites', async (req, res, next) => {
     try {
         const { userId, favorites } = req.body;
@@ -228,10 +299,7 @@ app.post('/api/favorites', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API ДОСТИЖЕНИЙ
-// ============================================
-
+// ===== API ДОСТИЖЕНИЙ =====
 app.post('/api/achievements', async (req, res, next) => {
     try {
         const { userId, achievements } = req.body;
@@ -275,10 +343,7 @@ app.post('/api/active-title', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API КОММЕНТАРИЕВ
-// ============================================
-
+// ===== API КОММЕНТАРИЕВ =====
 app.get('/api/comments/:anime', async (req, res, next) => {
     try {
         const anime = req.params.anime;
@@ -353,10 +418,7 @@ app.delete('/api/comments/:id', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API УДАЛЕНИЯ АККАУНТА
-// ============================================
-
+// ===== API УДАЛЕНИЯ АККАУНТА =====
 app.post('/api/delete-account', async (req, res, next) => {
     try {
         const { userId } = req.body;
@@ -372,10 +434,7 @@ app.post('/api/delete-account', async (req, res, next) => {
     }
 });
 
-// ============================================
-// ОБРАБОТЧИК ОШИБОК
-// ============================================
-
+// ===== ОБРАБОТЧИК ОШИБОК =====
 app.use((err, req, res, next) => {
     console.error('❌ Ошибка:', err.message);
     
@@ -394,14 +453,11 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ============================================
-// ЗАПУСК СЕРВЕРА
-// ============================================
-
-app.listen(PORT, () => {
-    console.log('🚀 OnikaAnime сервер запущен!');
-    console.log(`📡 http://localhost:${PORT}`);
-    console.log(`🌍 Режим: ${process.env.NODE_ENV || 'development'}`);
+// ===== ЗАПУСК СЕРВЕРА =====
+initDatabase().then(() => {
+    app.listen(PORT, () => {
+        console.log('🚀 OnikaAnime сервер запущен!');
+        console.log(`📡 http://localhost:${PORT}`);
+        console.log(`🌍 Режим: ${process.env.NODE_ENV || 'development'}`);
+    });
 });
-
-module.exports = app;
