@@ -25,7 +25,14 @@ app.use(express.static(__dirname));
 // ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL (БЕЗ SSL) =====
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: false
+    ssl: false,
+    client_encoding: 'UTF8'
+});
+
+// При каждом подключении устанавливаем UTF8
+pool.on('connect', (client) => {
+    client.query('SET client_encoding = "UTF8"');
+    client.query('SET NAMES "UTF8"');
 });
 
 // ===== ПРОВЕРКА ПОДКЛЮЧЕНИЯ =====
@@ -42,6 +49,8 @@ pool.connect((err, client, release) => {
 async function initDatabase() {
     try {
         console.log('📦 Создание таблиц...');
+
+        await pool.query('SET client_encoding = "UTF8"');
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
@@ -115,7 +124,7 @@ async function initDatabase() {
             )
         `);
 
-        // Индексы для производительности
+        // Индексы
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_name ON users(name)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_anime ON comments(anime)`);
@@ -405,6 +414,12 @@ app.post('/api/comments', async (req, res, next) => {
             } 
         });
     } catch (err) {
+        // Ошибка с эмодзи
+        if (err.code === '22021') {
+            return res.status(400).json({ 
+                error: 'Неподдерживаемые символы. Попробуйте убрать смайлики.' 
+            });
+        }
         next(err);
     }
 });
