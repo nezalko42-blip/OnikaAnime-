@@ -4621,3 +4621,57 @@ h3 {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* ============================================
+   ЦВЕТА ДЛЯ ИКОНОК (SVG)
+   ============================================ */
+
+svg use {
+    color: currentColor;
+}
+
+/* Соцсети */
+.telegram-card .social-card-icon svg { color: #0088cc; }
+.vk-card .social-card-icon svg { color: #4e80b4; }
+.tiktok-card .social-card-icon svg { color: #25f4ee; }
+
+.telegram-btn svg { color: #fff; }
+.vk-btn svg { color: #fff; }
+.tiktok-btn svg { color: #fff; }
+
+.footer-social a svg {
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
+}
+.footer-social a:hover svg {
+    color: var(--text-primary);
+}
+
+/* Меню */
+.sidebar-nav a .icon svg { color: var(--text-secondary); }
+.sidebar-nav a.active .icon svg { color: #fff; }
+.sidebar-nav a:hover .icon svg { color: var(--text-primary); }
+
+/* Кнопки */
+.scroll-top svg { color: #fff; }
+.modal-close svg { color: var(--text-muted); }
+.modal-close:hover svg { color: #fff; }
+.popup-close svg { color: var(--text-muted); }
+.popup-close:hover svg { color: #fff; }
+.back-btn svg { color: var(--accent-glow); }
+
+/* Карточки */
+.stat-icon svg { color: var(--accent-glow); }
+.fav-btn svg { color: var(--accent-glow); }
+.fav-btn.active svg { color: #e74c3c; }
+
+/* Поиск */
+.search-icon svg { color: var(--text-muted); }
+
+/* Комментарии */
+.comment-form button svg { color: #fff; }
+
+/* Пагинация */
+.pagination button svg { color: var(--text-secondary); }
+.pagination button:hover svg { color: var(--text-primary); }
+.pagination button.active svg { color: #fff; }
