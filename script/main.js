@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С SHIKIMORI ПЛЕЕРОМ И ПИТОМЦЕМ)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -92,7 +92,12 @@ function updateUI() {
                 <span class="icon">⚙️</span> Настройки
             </a>
         `;
-        footer.innerHTML = `<div class="sidebar-user-info">🌟 ${user.name}</div>`;
+        footer.innerHTML = `
+            <div class="sidebar-user-info" onclick="openPetModal()" style="cursor:pointer;">
+                🌟 ${user.name}
+                <span class="pet-icon-inline" id="petIcon">🐱</span>
+            </div>
+        `;
     } else {
         nav.innerHTML = `
             <a class="active" data-page="catalog" onclick="navigate('catalog'); closeMenu();">
@@ -101,13 +106,6 @@ function updateUI() {
         `;
         footer.innerHTML = `<button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">🚀 Войти</button>`;
     }
-    
-    // Рендерим питомца после обновления UI
-    setTimeout(function() {
-        if (user && typeof renderPetInMenu === 'function') {
-            renderPetInMenu();
-        }
-    }, 300);
 }
 
 function toggleMenu() {
@@ -616,7 +614,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// ПЛЕЕР SHIKIMORI (ОСНОВНАЯ ФУНКЦИЯ)
+// ПЛЕЕР SHIKIMORI
 // ============================================
 
 async function playWithShikimori(animeId, episode = 1) {
@@ -647,12 +645,6 @@ async function playWithShikimori(animeId, episode = 1) {
                 if (totalEp === 0 || nextEp <= totalEp) {
                     playWithShikimori(animeId, nextEp);
                     showToast('▶️ Следующая серия', 'info');
-                    // Добавляем очки питомцу за просмотр
-                    const user = DB.get('currentUser');
-                    if (user) {
-                        DB.addPetExp(user.name, 5);
-                        renderPetInMenu();
-                    }
                 } else {
                     showToast('🎬 Все серии просмотрены!', 'success');
                 }
@@ -825,9 +817,6 @@ function addComment() {
                 input.value = '';
                 renderComments(title);
                 checkAchievements(title);
-                // Очки питомцу за комментарий
-                DB.addPetExp(user.name, 2);
-                renderPetInMenu();
                 showToast('💬 Комментарий добавлен!', 'success');
             } else {
                 showToast(data.error || 'Ошибка', 'error');
@@ -975,9 +964,6 @@ function toggleFav(name) {
         favs.push(name);
         showToast('Добавлено в избранное ❤️', 'success');
         checkAchievements(name);
-        // Очки питомцу за добавление в избранное
-        DB.addPetExp(user.name, 3);
-        renderPetInMenu();
     }
     DB.setUserData(user.name, 'favorites', favs);
     DB.save();
@@ -1929,7 +1915,7 @@ function updateSocialStats() {
         const vkCurrent = vkBase + vkGrowth;
         vkElement.textContent = '👥 ' + formatNumber(vkCurrent) + ' подписчиков';
         vkElement.classList.add('pulse');
-        setTimeout(function() { vkElement.classList.remove('pulse'); }, 500);
+        setTimeout(function() { tgElement.classList.remove('pulse'); }, 500);
     }
     
     const ttElement = document.getElementById('ttStats');
@@ -1939,7 +1925,7 @@ function updateSocialStats() {
         const ttCurrent = ttBase + ttGrowth;
         ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
         ttElement.classList.add('pulse');
-        setTimeout(function() { vkElement.classList.remove('pulse'); }, 500);
+        setTimeout(function() { ttElement.classList.remove('pulse'); }, 500);
     }
 }
 
@@ -1957,133 +1943,6 @@ console.log('📊 Система живой статистики запущен�
 console.log('💡 Используйте refreshStats() для ручного обновления');
 
 // ============================================
-// СЕРИЙЧИК (ПИТОМЕЦ В МЕНЮ)
-// ============================================
-
-// Рендеринг питомца в меню
-function renderPetInMenu() {
-    const user = DB.get('currentUser');
-    if (!user) {
-        console.log('🐱 Пользователь не авторизован');
-        return;
-    }
-    
-    const pet = DB.getPet(user.name);
-    if (!pet) {
-        console.log('🐱 Питомец не найден, создаём...');
-        // Создаём питомца если нет
-        DB._data.pets[user.name] = {
-            exp: 0,
-            skin: 'egg',
-            unlockedSkins: ['egg'],
-            days: 0,
-            lastDaily: null
-        };
-        DB.save();
-        const newPet = DB.getPet(user.name);
-        console.log('🐱 Питомец создан:', newPet);
-    }
-    
-    // Обновляем pet после возможного создания
-    const updatedPet = DB.getPet(user.name);
-    const progress = DB.getPetProgress(user.name);
-    const skin = DB._data.petSkins[updatedPet.skin];
-    const emoji = skin.name.split(' ')[0] || '🐱';
-    
-    const sidebarFooter = document.getElementById('sidebarFooter');
-    if (!sidebarFooter) {
-        console.log('❌ sidebarFooter не найден');
-        return;
-    }
-    
-    // Удаляем старый блок
-    const oldBlock = document.getElementById('petBlock');
-    if (oldBlock) oldBlock.remove();
-    
-    // Создаём новый блок
-    const petBlock = document.createElement('div');
-    petBlock.id = 'petBlock';
-    petBlock.className = 'pet-block';
-    petBlock.innerHTML = `
-        <div class="pet-info" onclick="togglePetDetails()">
-            <div class="pet-avatar">${emoji}</div>
-            <div class="pet-details">
-                <div class="pet-name">${skin.name}</div>
-                <div class="pet-progress">
-                    <div class="pet-progress-bar">
-                        <div class="pet-progress-fill" style="width:${progress.percent}%"></div>
-                    </div>
-                    <div class="pet-progress-text">${progress.current} / ${progress.max} очков</div>
-                </div>
-            </div>
-        </div>
-        <div class="pet-actions-mini">
-            <button onclick="claimDailyBonusPet()" class="pet-daily-btn ${DB.canClaimDaily(user.name) ? 'available' : 'claimed'}" title="${DB.canClaimDaily(user.name) ? 'Получить +5 очков' : 'Бонус получен'}">
-                📅
-            </button>
-        </div>
-    `;
-    
-    sidebarFooter.prepend(petBlock);
-    console.log('🐱 Серийчик обновлён:', skin.name, progress.percent + '%');
-}
-
-// Ежедневный бонус
-function claimDailyBonusPet() {
-    const user = DB.get('currentUser');
-    if (!user) {
-        showToast('Войдите в аккаунт!', 'error');
-        return;
-    }
-    
-    const claimed = DB.claimDailyBonus(user.name);
-    if (claimed) {
-        showToast('📅 +5 очков за ежедневный вход! 🐱', 'success');
-        renderPetInMenu();
-        renderProfile();
-    } else {
-        showToast('📅 Бонус уже получен сегодня!', 'warning');
-    }
-}
-
-// Детали питомца
-function togglePetDetails() {
-    const user = DB.get('currentUser');
-    if (!user) return;
-    
-    const pet = DB.getPet(user.name);
-    const progress = DB.getPetProgress(user.name);
-    const skin = DB._data.petSkins[pet.skin];
-    const emoji = skin.name.split(' ')[0] || '🐱';
-    
-    const nextText = progress.isMaxLevel 
-        ? '🏆 Максимальный уровень!' 
-        : `🎯 ${progress.percent}% до ${progress.nextSkin ? progress.nextSkin.name : 'максимума'}`;
-    
-    showToast(`
-        ${emoji} ${skin.name}
-        📊 ${progress.current} / ${progress.max} очков
-        ${nextText}
-        📅 Дней: ${pet.days || 0}
-    `, 'info');
-}
-
-// Добавление очков за просмотр
-function addPetExpForWatching(animeName) {
-    const user = DB.get('currentUser');
-    if (!user) return;
-    
-    const continueData = DB.getUserData(user.name, 'continueWatching', {});
-    if (continueData[animeName]) {
-        const epCount = continueData[animeName].ep || 0;
-        if (epCount <= 3) {
-            DB.addPetExp(user.name, 5);
-            renderPetInMenu();
-        }
-    }
-}
-
-// ============================================
 // ЗАПУСК
 // ============================================
 
@@ -2097,10 +1956,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const user = DB.get('currentUser');
     if (user) {
         startOnlineTracking();
-        // Рендерим питомца
-        setTimeout(function() {
-            renderPetInMenu();
-        }, 500);
+        // Инициализация питомца
+        if (typeof initPet === 'function') {
+            initPet();
+        }
     }
     
     console.log('✅ OnikaAnime готов!');
@@ -2109,7 +1968,6 @@ document.addEventListener('DOMContentLoaded', function() {
 console.log('🌟 OnikaAnime загружен!');
 console.log('💡 Используйте restoreAllData() для восстановления данных');
 console.log('💡 Используйте refreshStats() для обновления статистики соцсетей');
-console.log('🐱 Серийчик загружен!');
 
 // ============================================
 // ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ
@@ -2119,6 +1977,3 @@ window.playWithShikimori = playWithShikimori;
 window.currentPlayer = currentPlayer;
 window.allData = allData;
 window.showManualVideoInput = showManualVideoInput;
-window.renderPetInMenu = renderPetInMenu;
-window.claimDailyBonusPet = claimDailyBonusPet;
-window.togglePetDetails = togglePetDetails;
