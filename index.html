@@ -8,6 +8,7 @@
     <meta name="description" content="OnikaAnime - просмотр аниме онлайн">
     <title>OnikaAnime</title>
     <link rel="stylesheet" href="style/main.css">
+    <link rel="stylesheet" href="style/pet-styles.css">
     
     <style>
         #preloader {
@@ -89,7 +90,10 @@
         <aside class="sidebar" id="sidebar">
             <nav class="sidebar-nav" id="sidebarNav"></nav>
             <div class="sidebar-footer" id="sidebarFooter">
-                <!-- Питомец будет добавлен через JS -->
+                <div class="sidebar-user-info" onclick="openPetModal()" style="cursor:pointer;">
+                    🌟 <span id="sidebarUserName">Пользователь</span>
+                    <span class="pet-icon-inline" id="petIcon">🐱</span>
+                </div>
             </div>
         </aside>
 
@@ -601,6 +605,68 @@
         </div>
     </div>
 
+    <!-- ===== МОДАЛЬНОЕ ОКНО СЕРИЙЧИКА ===== -->
+    <div class="modal" id="petModal">
+        <div class="modal-box pet-modal-box">
+            <button class="modal-close" onclick="closePetModal()">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
+            
+            <div class="pet-modal-content">
+                <div class="pet-modal-header">
+                    <span class="pet-modal-avatar" id="petModalAvatar">🐱</span>
+                    <div class="pet-modal-title">
+                        <h2>Серийчик</h2>
+                        <span class="pet-modal-skin" id="petModalSkin">🥚 Яйцо</span>
+                    </div>
+                </div>
+                
+                <div class="pet-modal-progress">
+                    <div class="pet-modal-progress-info">
+                        <span id="petModalProgressText">0 / 50 очков</span>
+                        <span id="petModalProgressPercent">0%</span>
+                    </div>
+                    <div class="pet-modal-progress-bar">
+                        <div class="pet-modal-progress-fill" id="petModalProgressFill" style="width:0%"></div>
+                    </div>
+                    <div class="pet-modal-next" id="petModalNext">🐣 50 очков до нового облика</div>
+                </div>
+                
+                <div class="pet-modal-stats">
+                    <div class="pet-modal-stat">
+                        <span class="pet-modal-stat-icon">📅</span>
+                        <span class="pet-modal-stat-value" id="petModalDays">0</span>
+                        <span class="pet-modal-stat-label">дней</span>
+                    </div>
+                    <div class="pet-modal-stat">
+                        <span class="pet-modal-stat-icon">📺</span>
+                        <span class="pet-modal-stat-value" id="petModalEpisodes">0</span>
+                        <span class="pet-modal-stat-label">серий</span>
+                    </div>
+                    <div class="pet-modal-stat">
+                        <span class="pet-modal-stat-icon">⭐</span>
+                        <span class="pet-modal-stat-value" id="petModalExp">0</span>
+                        <span class="pet-modal-stat-label">очков</span>
+                    </div>
+                </div>
+                
+                <div class="pet-modal-skins">
+                    <div class="pet-modal-skins-title">🎨 Облики</div>
+                    <div class="pet-modal-skins-grid" id="petModalSkinsGrid"></div>
+                </div>
+                
+                <div class="pet-modal-actions">
+                    <button class="pet-modal-btn daily" onclick="claimDailyBonusPet()" id="petDailyBtn">
+                        📅 Ежедневный бонус <span class="pet-modal-btn-reward">+5</span>
+                    </button>
+                    <button class="pet-modal-btn" onclick="watchAnimeForPet()">
+                        🎬 Смотреть аниме <span class="pet-modal-btn-reward">+10</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== ФУТЕР ===== -->
     <footer class="site-footer">
         <div class="footer-content">
@@ -664,6 +730,7 @@
     <script src="script/utils.js"></script>
     <script src="script/auth.js"></script>
     <script src="script/shikimori-player.js"></script>
+    <script src="script/pet.js"></script>
     <script src="script/main.js"></script>
 
     <script>
@@ -702,15 +769,18 @@
             }
             
             const user = DB.get('currentUser');
-            if (user && typeof startOnlineTracking === 'function') {
-                startOnlineTracking();
-            }
-            
-            // Рендерим питомца в меню
-            if (user && typeof renderPetInMenu === 'function') {
-                setTimeout(function() {
-                    renderPetInMenu();
-                }, 400);
+            if (user) {
+                if (typeof startOnlineTracking === 'function') {
+                    startOnlineTracking();
+                }
+                if (typeof initPet === 'function') {
+                    initPet();
+                }
+                // Обновляем имя пользователя в меню
+                const userNameEl = document.getElementById('sidebarUserName');
+                if (userNameEl) {
+                    userNameEl.textContent = user.name;
+                }
             }
             
             window.addEventListener('scroll', function() {
