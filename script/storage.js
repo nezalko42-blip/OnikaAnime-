@@ -1,5 +1,5 @@
 // ============================================
-// ХРАНИЛИЩЕ ONIKAANIME (КЛАССОВАЯ ВЕРСИЯ)
+// ХРАНИЛИЩЕ ONIKAANIME (С ПИТОМЦЕМ)
 // ============================================
 
 class Storage {
@@ -28,7 +28,6 @@ class Storage {
             this._data = this._getDefaultData();
         }
         
-        // Восстанавливаем пользователя
         const user = localStorage.getItem('onika_currentUser');
         if (user) {
             try {
@@ -41,12 +40,10 @@ class Storage {
         
         this._initialized = true;
         
-        // Загружаем данные с сервера
         if (this._data.currentUser) {
             this._loadUserDataFromServer(this._data.currentUser.id);
         }
         
-        // Автосохранение
         if (this._saveInterval) clearInterval(this._saveInterval);
         this._saveInterval = setInterval(() => this.save(), 5000);
         
@@ -67,7 +64,16 @@ class Storage {
             onlineTime: {},
             lastSeen: {},
             currentUser: null,
-            settings: { "3d": true, "vibe": true }
+            settings: { "3d": true, "vibe": true },
+            pets: {},
+            petSkins: {
+                'egg': { name: '🥚 Яйцо', level: 0, expNeeded: 0 },
+                'baby': { name: '🐣 Малыш', level: 1, expNeeded: 50 },
+                'kitten': { name: '🐱 Котёнок', level: 2, expNeeded: 150 },
+                'cat': { name: '🐈 Кот', level: 3, expNeeded: 300 },
+                'lion': { name: '🦁 Король', level: 4, expNeeded: 500 },
+                'dragon': { name: '🐉 Дракон', level: 5, expNeeded: 750 }
+            }
         };
     }
 
@@ -79,7 +85,6 @@ class Storage {
             const userId = user.id;
             const name = user.name;
             
-            // Сохраняем избранное на сервер
             const favs = this._getUserData(name, 'favorites', []);
             fetch('/api/favorites', {
                 method: 'POST',
@@ -87,7 +92,6 @@ class Storage {
                 body: JSON.stringify({ userId, favorites: favs })
             }).catch(e => console.error('⚠️ Ошибка сохранения избранного:', e));
             
-            // Сохраняем достижения на сервер
             const ach = this._getUserData(name, 'achievements', []);
             fetch('/api/achievements', {
                 method: 'POST',
@@ -95,7 +99,6 @@ class Storage {
                 body: JSON.stringify({ userId, achievements: ach })
             }).catch(e => console.error('⚠️ Ошибка сохранения достижений:', e));
             
-            // Сохраняем титул на сервер
             const title = this._getUserData(name, 'activeTitle', null);
             fetch('/api/active-title', {
                 method: 'POST',
@@ -119,7 +122,6 @@ class Storage {
                 localStorage.setItem('onika_currentUser', JSON.stringify(this._data.currentUser));
             }
             
-            // Сохраняем аватарки
             const profiles = this._data.profiles || {};
             for (const name in profiles) {
                 if (profiles[name] && profiles[name].avatar) {
@@ -144,7 +146,6 @@ class Storage {
                 
                 const name = data.name;
                 
-                // Загружаем избранное
                 if (data.favorites && data.favorites.length > 0) {
                     const currentFavs = this._getUserData(name, 'favorites', []);
                     if (currentFavs.length === 0) {
@@ -153,7 +154,6 @@ class Storage {
                     }
                 }
                 
-                // Загружаем достижения
                 if (data.achievements && data.achievements.length > 0) {
                     const currentAch = this._getUserData(name, 'achievements', []);
                     if (currentAch.length === 0) {
@@ -162,7 +162,6 @@ class Storage {
                     }
                 }
                 
-                // Загружаем титул
                 if (data.activeTitle) {
                     this._setUserData(name, 'activeTitle', data.activeTitle);
                 }
@@ -187,7 +186,7 @@ class Storage {
         this._data[key][user] = val;
     }
 
-    // Публичные методы
+    // ===== ПУБЛИЧНЫЕ МЕТОДЫ =====
     get(key, def) {
         if (!this._data) return def;
         return this._data[key] !== undefined ? this._data[key] : def;
@@ -245,7 +244,6 @@ class Storage {
         
         const name = user.name;
         
-        // Восстанавливаем избранное
         const backupFavs = localStorage.getItem('favorites_' + name);
         if (backupFavs) {
             try {
@@ -258,7 +256,6 @@ class Storage {
             } catch(e) {}
         }
         
-        // Восстанавливаем аватар
         const backupAvatar = localStorage.getItem('avatar_' + name);
         if (backupAvatar) {
             const profiles = this._data.profiles || {};
@@ -272,15 +269,133 @@ class Storage {
         
         this._saveToLocal();
     }
+
+    // ============================================
+    // СЕРИЙЧИК (ПИТОМЕЦ)
+    // ============================================
+
+    getPet(user) {
+        if (!user) return null;
+        if (!this._data.pets[user]) {
+            this._data.pets[user] = {
+                exp: 0,
+                skin: 'egg',
+                unlockedSkins: ['egg'],
+                days: 0,
+                lastDaily: null
+            };
+        }
+        return this._data.pets[user];
+    }
+
+    addPetExp(user, amount) {
+        if (!user) return;
+        
+        const pet = this.getPet(user);
+        pet.exp += amount;
+        
+        let newSkinUnlocked = false;
+        for (const [skinId, skin] of Object.entries(this._data.petSkins)) {
+            if (pet.exp >= skin.expNeeded && !pet.unlockedSkins.includes(skinId)) {
+                pet.unlockedSkins.push(skinId);
+                newSkinUnlocked = true;
+            }
+        }
+        
+        let highestSkin = 'egg';
+        let highestLevel = 0;
+        for (const skinId of pet.unlockedSkins) {
+            const skin = this._data.petSkins[skinId];
+            if (skin.level > highestLevel) {
+                highestLevel = skin.level;
+                highestSkin = skinId;
+            }
+        }
+        pet.skin = highestSkin;
+        
+        this.save();
+        
+        if (newSkinUnlocked) {
+            const skin = this._data.petSkins[pet.skin];
+            setTimeout(() => {
+                if (typeof showToast === 'function') {
+                    showToast(`🎉 Новый облик разблокирован! ${skin.name}`, 'success');
+                }
+            }, 500);
+        }
+        
+        return pet;
+    }
+
+    getPetProgress(user) {
+        const pet = this.getPet(user);
+        if (!pet) return { current: 0, max: 1, percent: 0, nextSkin: null, currentSkin: null };
+        
+        const currentSkin = this._data.petSkins[pet.skin];
+        let nextSkin = null;
+        let nextLevel = currentSkin.level + 1;
+        
+        for (const [id, skin] of Object.entries(this._data.petSkins)) {
+            if (skin.level === nextLevel) {
+                nextSkin = skin;
+                break;
+            }
+        }
+        
+        if (!nextSkin) {
+            return { 
+                current: pet.exp, 
+                max: pet.exp, 
+                percent: 100, 
+                nextSkin: null, 
+                currentSkin: currentSkin,
+                isMaxLevel: true
+            };
+        }
+        
+        const expInLevel = pet.exp - currentSkin.expNeeded;
+        const expNeeded = nextSkin.expNeeded - currentSkin.expNeeded;
+        const percent = Math.min(100, Math.round((expInLevel / expNeeded) * 100));
+        
+        return { 
+            current: expInLevel, 
+            max: expNeeded, 
+            percent: percent,
+            nextSkin: nextSkin,
+            currentSkin: currentSkin,
+            isMaxLevel: false
+        };
+    }
+
+    claimDailyBonus(user) {
+        if (!user) return false;
+        
+        const pet = this.getPet(user);
+        const today = new Date().toDateString();
+        
+        if (pet.lastDaily === today) {
+            return false;
+        }
+        
+        pet.lastDaily = today;
+        pet.days = (pet.days || 0) + 1;
+        this.addPetExp(user, 5);
+        
+        return true;
+    }
+
+    canClaimDaily(user) {
+        if (!user) return false;
+        const pet = this.getPet(user);
+        const today = new Date().toDateString();
+        return pet.lastDaily !== today;
+    }
 }
 
-// Создаём глобальный экземпляр
+// ===== ИНИЦИАЛИЗАЦИЯ =====
 const DB = new Storage();
-
-// Восстанавливаем данные
 DB.restoreData();
 
-// Сохраняем при закрытии
 window.addEventListener('beforeunload', () => {
     DB.save();
 });
@@ -291,7 +406,6 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// Утилиты для совместимости
 window.saveDB = () => DB.save();
 window.saveAll = () => DB.save();
 
@@ -305,6 +419,7 @@ window.checkData = function() {
         console.log('Профиль:', DB._data.profiles ? DB._data.profiles[user.name] : null);
         console.log('Достижения:', DB.getAchievements(user.name));
         console.log('Время онлайн:', DB._getUserData(user.name, 'onlineTime', 0));
+        console.log('Питомец:', DB.getPet(user.name));
     }
 };
 
