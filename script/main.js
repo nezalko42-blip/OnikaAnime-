@@ -1962,3 +1962,139 @@ window.playWithShikimori = playWithShikimori;
 window.currentPlayer = currentPlayer;
 window.allData = allData;
 window.showManualVideoInput = showManualVideoInput;
+
+// ============================================
+// СЕРИЙЧИК (ПИТОМЕЦ В МЕНЮ)
+// ============================================
+
+// Рендеринг питомца в меню
+function renderPetInMenu() {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    
+    const pet = DB.getPet(user.name);
+    if (!pet) return;
+    
+    const progress = DB.getPetProgress(user.name);
+    const skin = DB._data.petSkins[pet.skin];
+    
+    const sidebarFooter = document.getElementById('sidebarFooter');
+    if (!sidebarFooter) return;
+    
+    let petBlock = document.getElementById('petBlock');
+    if (!petBlock) {
+        petBlock = document.createElement('div');
+        petBlock.id = 'petBlock';
+        petBlock.className = 'pet-block';
+        sidebarFooter.prepend(petBlock);
+    }
+    
+    const emoji = skin.name.split(' ')[0] || '🐱';
+    
+    petBlock.innerHTML = `
+        <div class="pet-info" onclick="togglePetDetails()">
+            <div class="pet-avatar">${emoji}</div>
+            <div class="pet-details">
+                <div class="pet-name">${skin.name}</div>
+                <div class="pet-progress">
+                    <div class="pet-progress-bar">
+                        <div class="pet-progress-fill" style="width:${progress.percent}%"></div>
+                    </div>
+                    <div class="pet-progress-text">${progress.current} / ${progress.max} очков</div>
+                </div>
+            </div>
+        </div>
+        <div class="pet-actions-mini">
+            <button onclick="claimDailyBonusPet()" class="pet-daily-btn ${DB.canClaimDaily(user.name) ? 'available' : 'claimed'}" title="${DB.canClaimDaily(user.name) ? 'Получить +5 очков' : 'Бонус получен'}">
+                📅
+            </button>
+        </div>
+    `;
+}
+
+// Ежедневный бонус
+function claimDailyBonusPet() {
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    
+    const claimed = DB.claimDailyBonus(user.name);
+    if (claimed) {
+        showToast('📅 +5 очков за ежедневный вход! 🐱', 'success');
+        renderPetInMenu();
+        renderProfile();
+    } else {
+        showToast('📅 Бонус уже получен сегодня!', 'warning');
+    }
+}
+
+// Детали питомца
+function togglePetDetails() {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    
+    const pet = DB.getPet(user.name);
+    const progress = DB.getPetProgress(user.name);
+    const skin = DB._data.petSkins[pet.skin];
+    const emoji = skin.name.split(' ')[0] || '🐱';
+    
+    const nextText = progress.isMaxLevel 
+        ? '🏆 Максимальный уровень!' 
+        : `🎯 ${progress.percent}% до ${progress.nextSkin ? progress.nextSkin.name : 'максимума'}`;
+    
+    showToast(`
+        ${emoji} ${skin.name}
+        📊 ${progress.current} / ${progress.max} очков
+        ${nextText}
+        📅 Дней: ${pet.days || 0}
+    `, 'info');
+}
+
+// Добавление очков за просмотр
+function addPetExpForWatching(animeName) {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    
+    const continueData = DB.getUserData(user.name, 'continueWatching', {});
+    if (continueData[animeName]) {
+        const epCount = continueData[animeName].ep || 0;
+        if (epCount <= 3) {
+            DB.addPetExp(user.name, 5);
+            renderPetInMenu();
+        }
+    }
+}
+
+// Обновление UI с питомцем
+const originalUpdateUI = window.updateUI;
+if (typeof originalUpdateUI === 'function') {
+    window.updateUI = function() {
+        originalUpdateUI();
+        setTimeout(renderPetInMenu, 100);
+    };
+}
+
+// Отслеживание просмотра в Shikimori плеере
+if (typeof ShikimoriPlayer !== 'undefined') {
+    const originalOnEnded = ShikimoriPlayer.prototype.onEnded;
+    if (originalOnEnded) {
+        ShikimoriPlayer.prototype.onEnded = function() {
+            originalOnEnded.call(this);
+            const user = DB.get('currentUser');
+            if (user) {
+                DB.addPetExp(user.name, 10);
+                renderPetInMenu();
+            }
+        };
+    }
+}
+
+// Экспорт
+window.renderPetInMenu = renderPetInMenu;
+window.claimDailyBonusPet = claimDailyBonusPet;
+window.togglePetDetails = togglePetDetails;
+window.addPetExpForWatching = addPetExpForWatching;
+
+console.log('🐱 Серийчик загружен!');
