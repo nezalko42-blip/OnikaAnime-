@@ -5,14 +5,27 @@
 /* ===== ИКОНКА В МЕНЮ ===== */
 .pet-icon-inline {
     cursor: pointer;
-    font-size: 20px;
     margin-left: 6px;
     transition: transform 0.3s ease;
     display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
 }
 
 .pet-icon-inline:hover {
     transform: scale(1.2);
+}
+
+.pet-icon-inline img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
+.pet-icon-inline:empty {
+    display: none;
 }
 
 /* ===== МОДАЛЬНОЕ ОКНО ===== */
@@ -41,9 +54,24 @@
 }
 
 .pet-modal-avatar {
-    font-size: 56px;
+    width: 72px;
+    height: 72px;
     line-height: 1;
+    flex-shrink: 0;
+    border-radius: 50%;
     animation: petFloat 3s ease-in-out infinite;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+}
+
+.pet-modal-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
 }
 
 @keyframes petFloat {
@@ -156,27 +184,42 @@
 }
 
 .pet-modal-skin-item {
-    padding: 6px 12px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.04);
     background: rgba(255, 255, 255, 0.02);
-    font-size: 13px;
+    font-size: 18px;
     transition: all 0.3s ease;
     cursor: pointer;
+    overflow: hidden;
+}
+
+.pet-modal-skin-item img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 50%;
 }
 
 .pet-modal-skin-item.locked {
     opacity: 0.3;
     cursor: not-allowed;
+    filter: grayscale(1);
 }
 
 .pet-modal-skin-item.active {
     border-color: var(--accent);
     background: rgba(108, 92, 231, 0.1);
+    box-shadow: 0 0 20px rgba(108, 92, 231, 0.2);
 }
 
 .pet-modal-skin-item:hover:not(.locked) {
-    border-color: rgba(108, 92, 231, 0.2);
+    border-color: rgba(108, 92, 231, 0.3);
+    transform: scale(1.1);
 }
 
 /* ===== КНОПКИ ===== */
@@ -241,7 +284,8 @@
         width: 98%;
     }
     .pet-modal-avatar {
-        font-size: 40px;
+        width: 56px;
+        height: 56px;
     }
     .pet-modal-title h2 {
         font-size: 18px;
@@ -261,5 +305,14 @@
     }
     .pet-modal-btn.daily {
         grid-column: span 1;
+    }
+    .pet-modal-skin-item {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+    .pet-modal-skin-item img {
+        width: 24px;
+        height: 24px;
     }
 }
