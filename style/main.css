@@ -277,6 +277,10 @@ body {
     font-weight: 600;
     font-size: 15px;
     padding: 4px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .sidebar-overlay {
@@ -2674,7 +2678,7 @@ h3 {
 }
 
 /* ============================================
-   ПОДПИШИСЬ НА НАС - 3 В РЯД
+   ПОДПИШИСЬ НА НАС
    ============================================ */
 
 .social-section {
@@ -2958,627 +2962,6 @@ h3 {
     margin: 0;
 }
 
-/* Анимация для статистики */
-.social-stats span {
-    transition: all 0.5s ease;
-    display: inline-block;
-}
-
-@keyframes statPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); color: #ffd700; }
-    100% { transform: scale(1); }
-}
-
-.social-stats span.pulse {
-    animation: statPulse 0.5s ease;
-}
-
-/* Анимации */
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-}
-
-/* ===== АДАПТИВ ===== */
-
-/* Планшеты */
-@media (max-width: 900px) {
-    .social-grid-3 {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-    }
-
-    .social-bonus {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-    }
-
-    .social-container {
-        padding: 30px 24px;
-    }
-
-    .social-card {
-        padding: 20px 16px;
-    }
-
-    .social-card-icon {
-        font-size: 36px;
-    }
-
-    .social-card h3 {
-        font-size: 17px;
-    }
-
-    .social-features span {
-        font-size: 10px;
-        padding: 3px 10px;
-    }
-
-    .social-btn {
-        font-size: 13px;
-        padding: 10px 20px;
-    }
-}
-
-/* Телефоны */
-@media (max-width: 600px) {
-    .social-grid-3 {
-        grid-template-columns: 1fr;
-        max-width: 350px;
-        margin: 0 auto;
-    }
-
-    .social-bonus {
-        grid-template-columns: 1fr;
-    }
-
-    .social-container {
-        padding: 24px 16px;
-        border-radius: var(--radius);
-    }
-
-    .social-header h2 {
-        font-size: 22px;
-    }
-
-    .social-header p {
-        font-size: 14px;
-    }
-
-    .social-card {
-        padding: 24px 20px;
-    }
-
-    .social-card-icon {
-        font-size: 40px;
-    }
-
-    .social-btn {
-        font-size: 14px;
-        padding: 12px 24px;
-    }
-
-    .bonus-item {
-        padding: 12px 16px;
-    }
-}
-
-/* Маленькие телефоны */
-@media (max-width: 400px) {
-    .social-container {
-        padding: 18px 12px;
-    }
-
-    .social-header h2 {
-        font-size: 18px;
-    }
-
-    .social-card {
-        padding: 18px 14px;
-    }
-
-    .social-card-icon {
-        font-size: 32px;
-    }
-
-    .social-card h3 {
-        font-size: 15px;
-    }
-
-    .social-features span {
-        font-size: 9px;
-        padding: 2px 8px;
-    }
-
-    .social-btn {
-        font-size: 12px;
-        padding: 10px 16px;
-    }
-
-    .social-stats {
-        font-size: 11px;
-    }
-}
-
-/* ============================================
-   ДРУЗЬЯ И ЧАТ - СТИЛИ
-   ============================================ */
-
-.friends-container {
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-.friends-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.friends-header h2 {
-    margin: 0;
-    font-size: 22px;
-}
-
-.friends-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.friends-btn {
-    padding: 6px 16px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.06);
-    background: rgba(255,255,255,0.02);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.3s ease;
-}
-
-.friends-btn:hover {
-    border-color: var(--accent);
-    color: var(--text-primary);
-    background: rgba(108,92,231,0.05);
-}
-
-/* ===== ПОИСК ===== */
-.friends-search {
-    background: rgba(255,255,255,0.02);
-    border-radius: var(--radius);
-    padding: 12px;
-    margin-bottom: 16px;
-    border: 1px solid rgba(255,255,255,0.04);
-}
-
-.friends-search input {
-    width: 100%;
-    padding: 10px 16px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(255,255,255,0.06);
-    background: rgba(255,255,255,0.02);
-    color: var(--text-primary);
-    font-size: 14px;
-    outline: none;
-    transition: all 0.3s ease;
-}
-
-.friends-search input:focus {
-    border-color: var(--accent);
-    background: rgba(108,92,231,0.03);
-}
-
-#searchResults {
-    margin-top: 8px;
-}
-
-.search-result {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.search-result:hover {
-    background: rgba(108,92,231,0.05);
-}
-
-.search-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
-    color: #fff;
-    flex-shrink: 0;
-}
-
-.search-info {
-    flex: 1;
-}
-
-.search-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-}
-
-.search-id {
-    font-size: 11px;
-    color: var(--text-muted);
-}
-
-.search-add {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(46,204,113,0.1);
-    color: #2ecc71;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s ease;
-}
-
-.search-add:hover {
-    background: rgba(46,204,113,0.2);
-    transform: scale(1.1);
-}
-
-/* ===== ВКЛАДКИ ===== */
-.friends-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 12px;
-}
-
-.tab-btn {
-    padding: 8px 20px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.04);
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.tab-btn:hover {
-    border-color: rgba(108,92,231,0.1);
-    color: var(--text-primary);
-}
-
-.tab-btn.active {
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    color: #fff;
-    border-color: transparent;
-}
-
-.tab-btn #badge {
-    display: none;
-    background: #e74c3c;
-    color: #fff;
-    font-size: 10px;
-    padding: 0 6px;
-    border-radius: 10px;
-    margin-left: 4px;
-}
-
-.tab-btn #badge:not(:empty) {
-    display: inline;
-}
-
-/* ===== СПИСОК ===== */
-.friends-list-container {
-    min-height: 200px;
-}
-
-.loading {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-muted);
-}
-
-.empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text-muted);
-}
-
-.empty .empty-icon {
-    font-size: 48px;
-    display: block;
-    margin-bottom: 12px;
-}
-
-.friend-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    border-radius: var(--radius-sm);
-    border-bottom: 1px solid rgba(255,255,255,0.02);
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.friend-item:hover {
-    background: rgba(255,255,255,0.03);
-}
-
-.friend-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 700;
-    color: #fff;
-    flex-shrink: 0;
-}
-
-.friend-info {
-    flex: 1;
-}
-
-.friend-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-}
-
-.friend-id {
-    font-size: 11px;
-    color: var(--text-muted);
-}
-
-.friend-status {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.friend-status.online {
-    background: #2ecc71;
-    box-shadow: 0 0 10px rgba(46,204,113,0.3);
-}
-
-.friend-status.offline {
-    background: #666;
-}
-
-/* ===== ЗАЯВКИ ===== */
-.request-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    border-radius: var(--radius-sm);
-    border-bottom: 1px solid rgba(255,255,255,0.02);
-}
-
-.request-actions {
-    display: flex;
-    gap: 4px;
-}
-
-.request-accept,
-.request-reject {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s ease;
-}
-
-.request-accept {
-    background: rgba(46,204,113,0.1);
-    color: #2ecc71;
-}
-
-.request-accept:hover {
-    background: rgba(46,204,113,0.2);
-    transform: scale(1.05);
-}
-
-.request-reject {
-    background: rgba(231,76,60,0.1);
-    color: #e74c3c;
-}
-
-.request-reject:hover {
-    background: rgba(231,76,60,0.2);
-    transform: scale(1.05);
-}
-
-/* ===== ЧАТ ===== */
-.chat-panel {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 360px;
-    max-width: 90vw;
-    height: 480px;
-    max-height: 80vh;
-    background: var(--bg-card);
-    backdrop-filter: blur(20px);
-    border-radius: var(--radius-lg);
-    border: 1px solid rgba(108,92,231,0.1);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    display: none;
-    flex-direction: column;
-    overflow: hidden;
-    z-index: 200;
-}
-
-.chat-panel.active {
-    display: flex;
-}
-
-.chat-header {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    background: rgba(0,0,0,0.15);
-}
-
-.chat-close {
-    cursor: pointer;
-    color: var(--text-muted);
-    font-size: 18px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-}
-
-.chat-close:hover {
-    color: var(--text-primary);
-    background: rgba(255,255,255,0.05);
-}
-
-.chat-user {
-    flex: 1;
-    text-align: center;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.chat-messages {
-    flex: 1;
-    padding: 12px 16px;
-    overflow-y: auto;
-    min-height: 100px;
-}
-
-.chat-messages::-webkit-scrollbar {
-    width: 4px;
-}
-.chat-messages::-webkit-scrollbar-thumb {
-    background: var(--accent);
-    border-radius: 10px;
-}
-
-.chat-empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text-muted);
-}
-
-.msg {
-    margin-bottom: 6px;
-    max-width: 80%;
-    padding: 8px 14px;
-    border-radius: 14px;
-    font-size: 14px;
-    word-wrap: break-word;
-}
-
-.msg.mine {
-    margin-left: auto;
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    color: #fff;
-    border-bottom-right-radius: 4px;
-}
-
-.msg.theirs {
-    margin-right: auto;
-    background: rgba(255,255,255,0.05);
-    color: var(--text-primary);
-    border-bottom-left-radius: 4px;
-}
-
-.msg-time {
-    font-size: 10px;
-    color: rgba(255,255,255,0.4);
-    margin-top: 2px;
-    text-align: right;
-}
-
-.msg.theirs .msg-time {
-    color: var(--text-muted);
-}
-
-.chat-input {
-    display: flex;
-    gap: 8px;
-    padding: 10px 14px;
-    border-top: 1px solid rgba(255,255,255,0.04);
-    background: rgba(0,0,0,0.1);
-}
-
-.chat-input input {
-    flex: 1;
-    padding: 8px 16px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.06);
-    background: rgba(255,255,255,0.02);
-    color: var(--text-primary);
-    font-size: 14px;
-    outline: none;
-}
-
-.chat-input input:focus {
-    border-color: var(--accent);
-}
-
-.chat-input button {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: none;
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    color: #fff;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.3s ease;
-}
-
-.chat-input button:hover {
-    transform: scale(1.05);
-}
-
-/* ===== АДАПТИВ ===== */
-@media (max-width: 600px) {
-    .chat-panel {
-        width: 100%;
-        max-width: 100%;
-        bottom: 0;
-        right: 0;
-        height: 100%;
-        max-height: 100%;
-        border-radius: 0;
-    }
-    
-    .friends-header h2 {
-        font-size: 18px;
-    }
-    
-    .friends-btn {
-        font-size: 12px;
-        padding: 4px 12px;
-    }
-}
-
-
 /* ============================================
    РАСПИСАНИЕ ВЫХОДА
    ============================================ */
@@ -3590,10 +2973,10 @@ h3 {
 .schedule-container {
     max-width: 1200px;
     margin: 0 auto;
-    background: rgba(255,255,255,0.02);
+    background: rgba(255, 255, 255, 0.02);
     border-radius: var(--radius-lg);
     padding: 24px;
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .schedule-container h2 {
@@ -3603,40 +2986,100 @@ h3 {
 
 .schedule-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
 }
 
 .schedule-item {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255, 255, 255, 0.03);
     border-radius: var(--radius-sm);
     padding: 12px 14px;
-    border-left: 3px solid var(--accent);
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.04);
     transition: all 0.3s ease;
     cursor: pointer;
 }
 
 .schedule-item:hover {
     transform: translateY(-3px);
-    background: rgba(255,255,255,0.05);
-    border-color: var(--accent-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(108, 92, 231, 0.15);
+    box-shadow: var(--shadow-glow);
+}
+
+.schedule-item .s-day {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
 }
 
 .schedule-item .s-title {
     font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
-}
-
-.schedule-item .s-day {
-    font-size: 11px;
-    color: var(--accent-glow);
-    font-weight: 600;
+    margin-top: 4px;
 }
 
 .schedule-item .s-time {
     font-size: 11px;
     color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.schedule-item.today {
+    border-color: rgba(255, 215, 0, 0.2);
+    background: rgba(255, 215, 0, 0.03);
+}
+
+.schedule-item.today .s-day {
+    color: #ffd700;
+}
+
+.schedule-item.today .s-title {
+    color: #ffd700;
+}
+
+.schedule-item.monday { border-left: 3px solid #6c5ce7; }
+.schedule-item.tuesday { border-left: 3px solid #fd79a8; }
+.schedule-item.wednesday { border-left: 3px solid #00b894; }
+.schedule-item.thursday { border-left: 3px solid #0984e3; }
+.schedule-item.friday { border-left: 3px solid #fdcb6e; }
+.schedule-item.saturday { border-left: 3px solid #e17055; }
+.schedule-item.sunday { border-left: 3px solid #a29bfe; }
+
+.schedule-loading {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-muted);
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+    .schedule-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .schedule-item {
+        padding: 10px 8px;
+    }
+    .schedule-item .s-title {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .schedule-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+    .schedule-item {
+        padding: 8px 6px;
+    }
+    .schedule-item .s-title {
+        font-size: 10px;
+    }
 }
 
 /* ============================================
@@ -3663,12 +3106,12 @@ h3 {
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 30px rgba(108,92,231,0.2);
+    box-shadow: 0 4px 30px rgba(108, 92, 231, 0.2);
 }
 
 .random-btn:hover {
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 40px rgba(108,92,231,0.3);
+    box-shadow: 0 8px 40px rgba(108, 92, 231, 0.3);
 }
 
 .random-btn:active {
@@ -3685,17 +3128,17 @@ h3 {
     gap: 16px;
     max-width: 400px;
     margin: 0 auto;
-    background: rgba(255,255,255,0.03);
+    background: rgba(255, 255, 255, 0.03);
     border-radius: var(--radius);
     padding: 12px 16px;
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(255, 255, 255, 0.04);
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
 .random-result-card:hover {
     border-color: var(--accent);
-    background: rgba(108,92,231,0.05);
+    background: rgba(108, 92, 231, 0.05);
     transform: translateY(-3px);
 }
 
@@ -3746,909 +3189,21 @@ h3 {
 }
 
 /* ============================================
-   СТАТИСТИКА САЙТА
-   ============================================ */
-
-.stats-section {
-    margin: 30px 0;
-}
-
-.stats-container {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-}
-
-.stats-card {
-    background: rgba(255,255,255,0.02);
-    backdrop-filter: blur(20px);
-    border-radius: var(--radius);
-    padding: 24px 20px;
-    text-align: center;
-    border: 1px solid rgba(255,255,255,0.04);
-    transition: all 0.3s ease;
-}
-
-.stats-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(108,92,231,0.15);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-}
-
-.stats-icon {
-    font-size: 32px;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.stats-number {
-    font-size: 32px;
-    font-weight: 800;
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: block;
-}
-
-.stats-label {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-top: 4px;
-}
-
-@media (max-width: 768px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-    }
-    
-    .stats-card {
-        padding: 16px 12px;
-    }
-    
-    .stats-number {
-        font-size: 24px;
-    }
-    
-    .schedule-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-    }
-    
-    .stats-card {
-        padding: 12px 8px;
-    }
-    
-    .stats-number {
-        font-size: 18px;
-    }
-    
-    .stats-icon {
-        font-size: 24px;
-    }
-    
-    .stats-label {
-        font-size: 10px;
-    }
-    
-    .random-btn {
-        padding: 12px 24px;
-        font-size: 15px;
-    }
-    
-    .random-result-card {
-        flex-direction: column;
-        text-align: center;
-        padding: 16px;
-    }
-    
-    .random-result-img {
-        width: 80px;
-        height: 110px;
-    }
-    
-    .random-result-info {
-        text-align: center;
-    }
-}
-
-/* ============================================
-   РАСПИСАНИЕ ВЫХОДА - КРАСИВАЯ ВЕРСИЯ
-   ============================================ */
-
-.schedule-section {
-    margin: 40px 0 20px;
-}
-
-.schedule-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    background: rgba(255,255,255,0.02);
-    border-radius: var(--radius-lg);
-    padding: 28px 30px 34px;
-    border: 1px solid rgba(255,255,255,0.04);
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-}
-
-.schedule-container:hover {
-    border-color: rgba(108,92,231,0.08);
-}
-
-.schedule-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.schedule-header h2 {
-    font-size: 22px;
-    margin: 0;
-    -webkit-text-fill-color: #fff;
-    background: none;
-}
-
-.schedule-week {
-    font-size: 13px;
-    color: var(--text-muted);
-    background: rgba(255,255,255,0.03);
-    padding: 4px 16px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.04);
-    font-weight: 500;
-}
-
-.schedule-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
-}
-
-.schedule-item {
-    background: rgba(255,255,255,0.02);
-    border-radius: var(--radius-sm);
-    padding: 14px 12px 12px;
-    text-align: center;
-    border: 1px solid rgba(255,255,255,0.04);
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    min-height: 100px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.schedule-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    border-radius: var(--radius-sm);
-}
-
-.schedule-item:hover {
-    transform: translateY(-4px);
-    border-color: rgba(108,92,231,0.15);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-}
-
-.schedule-item:hover::before {
-    opacity: 1;
-}
-
-.schedule-item .s-day {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
-    margin-bottom: 4px;
-}
-
-.schedule-item .s-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-primary);
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.schedule-item .s-time {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 6px;
-    font-weight: 500;
-}
-
-/* Today highlight */
-.schedule-item.today {
-    border-color: rgba(255, 215, 0, 0.2);
-    background: rgba(255, 215, 0, 0.03);
-}
-
-.schedule-item.today .s-day {
-    color: #ffd700;
-}
-
-.schedule-item.today::after {
-    content: '📌';
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    font-size: 12px;
-}
-
-.schedule-item.today .s-title {
-    color: #ffd700;
-}
-
-/* Day colors */
-.schedule-item.monday { border-left: 3px solid #6c5ce7; }
-.schedule-item.tuesday { border-left: 3px solid #fd79a8; }
-.schedule-item.wednesday { border-left: 3px solid #00b894; }
-.schedule-item.thursday { border-left: 3px solid #0984e3; }
-.schedule-item.friday { border-left: 3px solid #fdcb6e; }
-.schedule-item.saturday { border-left: 3px solid #e17055; }
-.schedule-item.sunday { border-left: 3px solid #a29bfe; }
-
-.schedule-loading {
-    text-align: center;
-    padding: 30px;
-    color: var(--text-muted);
-    grid-column: 1 / -1;
-}
-
-/* Адаптив */
-@media (max-width: 1024px) {
-    .schedule-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
-    }
-}
-
-@media (max-width: 768px) {
-    .schedule-container {
-        padding: 20px 16px 24px;
-    }
-    
-    .schedule-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-    }
-    
-    .schedule-item {
-        padding: 12px 8px;
-        min-height: 80px;
-    }
-    
-    .schedule-item .s-title {
-        font-size: 12px;
-    }
-    
-    .schedule-header h2 {
-        font-size: 18px;
-    }
-}
-
-@media (max-width: 480px) {
-    .schedule-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-    }
-    
-    .schedule-item {
-        padding: 10px 6px;
-        min-height: 70px;
-    }
-    
-    .schedule-item .s-title {
-        font-size: 11px;
-    }
-    
-    .schedule-item .s-day {
-        font-size: 9px;
-    }
-    
-    .schedule-item .s-time {
-        font-size: 10px;
-    }
-    
-    .schedule-container {
-        padding: 14px 10px 18px;
-        border-radius: var(--radius);
-    }
-}
-
-/* ============================================
-   SVG ИКОНКИ
-   ============================================ */
-
-/* Базовые размеры */
-.icon-svg {
-    width: 20px;
-    height: 20px;
-    display: inline-block;
-    vertical-align: middle;
-    flex-shrink: 0;
-}
-
-.icon-svg-sm { width: 16px; height: 16px; }
-.icon-svg-md { width: 24px; height: 24px; }
-.icon-svg-lg { width: 32px; height: 32px; }
-.icon-svg-xl { width: 48px; height: 48px; }
-
-/* Цвета */
-.icon-primary { color: var(--accent); }
-.icon-success { color: #2ecc71; }
-.icon-danger { color: #e74c3c; }
-.icon-warning { color: #f1c40f; }
-.icon-info { color: #3498db; }
-.icon-white { color: #fff; }
-
-/* Анимация при наведении */
-.icon-hover {
-    transition: transform 0.3s ease;
-}
-.icon-hover:hover {
-    transform: scale(1.1);
-}
-
-/* Иконки в кнопках */
-.btn-icon {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-icon svg {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-}
-
-/* Иконки в меню */
-.sidebar-nav a .icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    font-size: 0;
-}
-
-.sidebar-nav a .icon svg {
-    width: 20px;
-    height: 20px;
-    color: currentColor;
-}
-
-/* Поиск */
-.search-wrapper {
-    position: relative;
-}
-
-.search-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    pointer-events: none;
-}
-
-.search-wrapper input {
-    padding-left: 40px !important;
-}
-
-/* Кнопка "Назад" */
-.back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.back-btn svg {
-    width: 20px;
-    height: 20px;
-}
-
-/* Социальные иконки в футере */
-.footer-social a svg {
-    width: 24px;
-    height: 24px;
-    transition: transform 0.3s ease;
-}
-
-.footer-social a:hover svg {
-    transform: scale(1.15);
-}
-
-/* Кнопка вверх */
-.scroll-top svg {
-    width: 24px;
-    height: 24px;
-}
-
-/* Закрыть в модалках */
-.modal-close svg {
-    width: 24px;
-    height: 24px;
-}
-
-/* Fav button */
-.fav-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.fav-btn svg {
-    width: 20px;
-    height: 20px;
-}
-
-.fav-btn.active svg {
-    color: #e74c3c;
-    fill: #e74c3c;
-}
-
-/* Комментарии */
-.comment-form button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.comment-form button svg {
-    width: 18px;
-    height: 18px;
-}
-
-/* Бонус: анимация вращения для случайного */
-.random-btn svg {
-    transition: transform 0.5s ease;
-}
-
-.random-btn:hover svg {
-    transform: rotate(180deg);
-}
-
-/* ============================================
-   ПЛЕЕР И СЕРИИ
-   ============================================ */
-
-.player-wrapper {
-    position: relative;
-    padding-bottom: 56.25%;
-    height: 0;
-    border-radius: var(--radius);
-    background: rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-    border: 1px solid rgba(108, 92, 231, 0.05);
-    min-height: 200px;
-}
-
-.player-wrapper iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
-}
-
-/* Анимация загрузки */
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.loader {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(108, 92, 231, 0.1);
-    border-top-color: #6c5ce7;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-/* Кнопки серий */
-.ep-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(108, 92, 231, 0.1);
-    background: rgba(108, 92, 231, 0.03);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    min-width: 44px;
-}
-
-.ep-btn:hover {
-    background: rgba(108, 92, 231, 0.08);
-    border-color: var(--accent);
-    color: var(--text-primary);
-    transform: translateY(-2px);
-}
-
-.ep-btn.active {
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    border-color: transparent;
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.2);
-}
-
-.ep-btn.playing {
-    background: rgba(46, 204, 113, 0.1);
-    border-color: rgba(46, 204, 113, 0.3);
-    color: #2ecc71;
-}
-
-#episodeBtns {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-    justify-content: center;
-}
-
-#episodeBtns span {
-    font-size: 13px;
-    color: var(--text-muted);
-}
-
-/* ============================================
-   ONIKA PLAYER - КАСТОМНЫЙ ПЛЕЕР
-   ============================================ */
-
-.onika-player-container {
-    width: 100%;
-    max-width: 1000px;
-    margin: 0 auto;
-    border-radius: 14px;
-    overflow: hidden;
-    background: #0a0a1a;
-    border: 1px solid rgba(108,92,231,0.15);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-}
-
-.onika-player {
-    position: relative;
-    background: #000;
-}
-
-.onika-player-video-wrapper {
-    position: relative;
-    padding-bottom: 56.25%;
-    background: #000;
-}
-
-.onika-player-video {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-}
-
-.onika-player-loading {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.7);
-    color: #888;
-    gap: 12px;
-    z-index: 10;
-}
-
-.onika-player-loading.active {
-    display: flex;
-}
-
-.onika-loader {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(108,92,231,0.1);
-    border-top-color: #6c5ce7;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-.onika-player-error {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.85);
-    color: #888;
-    gap: 12px;
-    z-index: 10;
-}
-
-.onika-player-error.active {
-    display: flex;
-}
-
-.onika-error-icon { 
-    font-size: 48px; 
-    opacity: 0.5;
-}
-.onika-error-text { 
-    font-size: 16px; 
-    color: #aaa; 
-}
-.onika-error-retry {
-    padding: 10px 24px;
-    border-radius: 20px;
-    border: 1px solid rgba(108,92,231,0.2);
-    background: rgba(108,92,231,0.05);
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s ease;
-}
-
-.onika-error-retry:hover {
-    background: rgba(108,92,231,0.1);
-    border-color: var(--accent);
-}
-
-.onika-player-controls {
-    background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.7));
-    padding: 12px 16px 14px;
-    position: relative;
-}
-
-.onika-player-progress {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
-}
-
-.onika-player-progress-bar {
-    flex: 1;
-    height: 4px;
-    border-radius: 2px;
-    background: rgba(255,255,255,0.1);
-    cursor: pointer;
-    position: relative;
-    transition: height 0.2s ease;
-}
-
-.onika-player-progress-bar:hover {
-    height: 6px;
-}
-
-.onika-player-progress-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: linear-gradient(135deg, #6c5ce7, #fd79a8);
-    width: 0%;
-    position: relative;
-    transition: width 0.1s linear;
-}
-
-.onika-player-progress-buffer {
-    height: 100%;
-    border-radius: 2px;
-    background: rgba(255,255,255,0.15);
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0%;
-}
-
-.onika-player-progress-thumb {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #6c5ce7;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-    box-shadow: 0 0 20px rgba(108,92,231,0.3);
-}
-
-.onika-player-progress-bar:hover .onika-player-progress-thumb {
-    opacity: 1;
-}
-
-.onika-player-time-current,
-.onika-player-time-total {
-    font-size: 12px;
-    color: #aaa;
-    min-width: 40px;
-    font-variant-numeric: tabular-nums;
-}
-
-.onika-player-buttons {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.onika-player-btn {
-    background: none;
-    border: none;
-    color: #ccc;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 32px;
-    height: 32px;
-}
-
-.onika-player-btn:hover {
-    color: #fff;
-    background: rgba(255,255,255,0.05);
-}
-
-.onika-player-btn-play {
-    background: rgba(108,92,231,0.15);
-    border-radius: 50%;
-    min-width: 36px;
-    height: 36px;
-}
-
-.onika-player-btn-play:hover {
-    background: rgba(108,92,231,0.25);
-}
-
-.onika-player-episode-info {
-    flex: 1;
-    font-size: 13px;
-    color: #aaa;
-    margin: 0 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.onika-player-right-controls {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.onika-player-btn-speed,
-.onika-player-btn-quality {
-    font-size: 12px;
-    font-weight: 600;
-    color: #888;
-    padding: 4px 10px;
-    border-radius: 12px;
-}
-
-.onika-player-btn-speed:hover,
-.onika-player-btn-quality:hover {
-    color: #fff;
-    background: rgba(255,255,255,0.05);
-}
-
-/* Мобильная адаптация */
-@media (max-width: 600px) {
-    .onika-player-buttons {
-        gap: 4px;
-    }
-    
-    .onika-player-btn {
-        min-width: 28px;
-        height: 28px;
-        padding: 4px;
-    }
-    
-    .onika-player-btn svg {
-        width: 16px;
-        height: 16px;
-    }
-    
-    .onika-player-episode-info {
-        font-size: 11px;
-        margin: 0 4px;
-    }
-    
-    .onika-player-btn-speed,
-    .onika-player-btn-quality {
-        font-size: 10px;
-        padding: 2px 8px;
-    }
-    
-    .onika-player-btn-play {
-        min-width: 32px;
-        height: 32px;
-    }
-    
-    .onika-player-time-current,
-    .onika-player-time-total {
-        font-size: 10px;
-        min-width: 30px;
-    }
-    
-    .onika-player-progress {
-        gap: 6px;
-    }
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-
-/* ============================================
    ЦВЕТА ДЛЯ ИКОНОК SVG
    ============================================ */
 
-/* Общие настройки */
 svg use {
     color: currentColor;
 }
 
-/* --- Соцсети в карточках --- */
-.telegram-card .social-card-icon svg { 
-    color: #0088cc; 
-}
-.vk-card .social-card-icon svg { 
-    color: #4e80b4; 
-}
-.tiktok-card .social-card-icon svg { 
-    color: #25f4ee; 
-}
+.telegram-card .social-card-icon svg { color: #0088cc; }
+.vk-card .social-card-icon svg { color: #4e80b4; }
+.tiktok-card .social-card-icon svg { color: #25f4ee; }
 
-/* Кнопки подписаться */
 .telegram-btn svg { color: #fff; }
 .vk-btn svg { color: #fff; }
 .tiktok-btn svg { color: #fff; }
 
-/* --- Футер --- */
 .footer-social a svg {
     color: var(--text-secondary);
     transition: color 0.3s ease;
@@ -4657,18 +3212,10 @@ svg use {
     color: var(--text-primary);
 }
 
-/* --- Меню --- */
-.sidebar-nav a .icon svg { 
-    color: var(--text-secondary); 
-}
-.sidebar-nav a.active .icon svg { 
-    color: #fff; 
-}
-.sidebar-nav a:hover .icon svg { 
-    color: var(--text-primary); 
-}
+.sidebar-nav a .icon svg { color: var(--text-secondary); }
+.sidebar-nav a.active .icon svg { color: #fff; }
+.sidebar-nav a:hover .icon svg { color: var(--text-primary); }
 
-/* --- Кнопки --- */
 .scroll-top svg { color: #fff; }
 .modal-close svg { color: var(--text-muted); }
 .modal-close:hover svg { color: #fff; }
@@ -4676,177 +3223,23 @@ svg use {
 .popup-close:hover svg { color: #fff; }
 .back-btn svg { color: var(--accent-glow); }
 
-/* --- Карточки --- */
 .stat-icon svg { color: var(--accent-glow); }
 
-/* --- Кнопка "В избранное" --- */
 .fav-btn svg { color: var(--accent-glow); }
 .fav-btn.active svg { color: #e74c3c; }
 
-/* --- Поиск --- */
 .search-icon svg { color: var(--text-muted); }
 
-/* --- Комментарии --- */
 .comment-form button svg { color: #fff; }
 
-/* --- Пагинация --- */
 .pagination button svg { color: var(--text-secondary); }
 .pagination button:hover svg { color: var(--text-primary); }
 .pagination button.active svg { color: #fff; }
 
-/* --- Кнопка назад в детальной странице --- */
-.back-btn svg { color: var(--accent-glow); }
-
-/* --- Иконки в настройках --- */
 .profile-edit-btn svg { color: var(--text-muted); }
 .profile-edit-btn:hover svg { color: var(--text-primary); }
 
-/* --- Иконка в аватаре --- */
 .avatar-edit-icon svg { color: #fff; }
 
-/* --- Попап достижений --- */
-.popup-close svg { color: var(--text-muted); }
-.popup-close:hover svg { color: #fff; }
-
-/* --- Меню на мобильных --- */
 .menu-toggle svg { color: var(--text-primary); }
 .menu-toggle:hover svg { color: var(--accent-glow); }
-
-/* ============================================
-   СЕРИЙЧИК (ПИТОМЕЦ В МЕНЮ)
-   ============================================ */
-
-.pet-block {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    margin: 8px 0 12px;
-    background: rgba(108, 92, 231, 0.05);
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(108, 92, 231, 0.06);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    gap: 10px;
-}
-
-.pet-block:hover {
-    background: rgba(108, 92, 231, 0.08);
-    border-color: rgba(108, 92, 231, 0.12);
-}
-
-.pet-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-    min-width: 0;
-}
-
-.pet-avatar {
-    font-size: 26px;
-    line-height: 1;
-    flex-shrink: 0;
-    animation: petFloat 3s ease-in-out infinite;
-}
-
-@keyframes petFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
-}
-
-.pet-details {
-    flex: 1;
-    min-width: 0;
-}
-
-.pet-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 2px;
-}
-
-.pet-progress {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.pet-progress-bar {
-    width: 100%;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.pet-progress-fill {
-    height: 100%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-    border-radius: 10px;
-    transition: width 0.6s ease;
-}
-
-.pet-progress-text {
-    font-size: 9px;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-.pet-actions-mini {
-    flex-shrink: 0;
-}
-
-.pet-daily-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.02);
-}
-
-.pet-daily-btn.available {
-    color: var(--accent-glow);
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.pet-daily-btn.available:hover {
-    background: rgba(108, 92, 231, 0.1);
-    transform: scale(1.1);
-}
-
-.pet-daily-btn.claimed {
-    color: var(--text-muted);
-    opacity: 0.4;
-    cursor: default;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-/* Адаптив */
-@media (max-width: 600px) {
-    .pet-block {
-        padding: 8px 10px;
-        gap: 8px;
-    }
-    .pet-avatar {
-        font-size: 22px;
-    }
-    .pet-name {
-        font-size: 10px;
-    }
-    .pet-progress-text {
-        font-size: 8px;
-    }
-    .pet-daily-btn {
-        font-size: 14px;
-        padding: 2px 6px;
-    }
-}
