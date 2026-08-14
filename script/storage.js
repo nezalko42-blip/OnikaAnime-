@@ -1,5 +1,5 @@
 // ============================================
-// ХРАНИЛИЩЕ ONIKAANIME (С ПИТОМЦЕМ)
+// ХРАНИЛИЩЕ ONIKAANIME (С ПИТОМЦЕМ И КАСТОМНЫМИ ОБЛИКАМИ)
 // ============================================
 
 class Storage {
@@ -66,13 +66,97 @@ class Storage {
             currentUser: null,
             settings: { "3d": true, "vibe": true },
             pets: {},
+            // ============================================
+            // 🎨 ОБЛИКИ СЕРИЙЧИКА С ИЗОБРАЖЕНИЯМИ
+            // ============================================
             petSkins: {
-                'egg': { name: '🥚 Яйцо', level: 0, expNeeded: 0 },
-                'baby': { name: '🐣 Малыш', level: 1, expNeeded: 50 },
-                'kitten': { name: '🐱 Котёнок', level: 2, expNeeded: 150 },
-                'cat': { name: '🐈 Кот', level: 3, expNeeded: 300 },
-                'lion': { name: '🦁 Король', level: 4, expNeeded: 500 },
-                'dragon': { name: '🐉 Дракон', level: 5, expNeeded: 750 }
+                // --- СТАНДАРТНЫЕ ---
+                'egg': { 
+                    name: 'Яйцо', 
+                    emoji: '🥚',
+                    image: 'images/pet/egg.png',
+                    level: 0, 
+                    expNeeded: 0 
+                },
+                'baby': { 
+                    name: 'Малыш', 
+                    emoji: '🐣',
+                    image: 'images/pet/baby.png',
+                    level: 1, 
+                    expNeeded: 50 
+                },
+                'kitten': { 
+                    name: 'Котёнок', 
+                    emoji: '🐱',
+                    image: 'images/pet/kitten.png',
+                    level: 2, 
+                    expNeeded: 150 
+                },
+                'cat': { 
+                    name: 'Кот', 
+                    emoji: '🐈',
+                    image: 'images/pet/cat.png',
+                    level: 3, 
+                    expNeeded: 300 
+                },
+                'lion': { 
+                    name: 'Король', 
+                    emoji: '🦁',
+                    image: 'images/pet/lion.png',
+                    level: 4, 
+                    expNeeded: 500 
+                },
+                'dragon': { 
+                    name: 'Дракон', 
+                    emoji: '🐉',
+                    image: 'images/pet/dragon.png',
+                    level: 5, 
+                    expNeeded: 750 
+                },
+                
+                // --- НОВЫЕ С ИЗОБРАЖЕНИЯМИ ---
+                'fox': { 
+                    name: 'Лисёнок', 
+                    emoji: '🦊',
+                    image: 'images/pet/fox.png',
+                    level: 6, 
+                    expNeeded: 1000 
+                },
+                'wolf': { 
+                    name: 'Волк', 
+                    emoji: '🐺',
+                    image: 'images/pet/wolf.png',
+                    level: 7, 
+                    expNeeded: 1300 
+                },
+                'phoenix': { 
+                    name: 'Феникс', 
+                    emoji: '🔥',
+                    image: 'images/pet/phoenix.png',
+                    level: 8, 
+                    expNeeded: 1700 
+                },
+                'demon': { 
+                    name: 'Демон', 
+                    emoji: '👿',
+                    image: 'images/pet/demon.png',
+                    level: 9, 
+                    expNeeded: 2100 
+                },
+                'angel': { 
+                    name: 'Ангел', 
+                    emoji: '😇',
+                    image: 'images/pet/angel.png',
+                    level: 10, 
+                    expNeeded: 2600 
+                },
+                'god': { 
+                    name: 'Бог', 
+                    emoji: '⭐',
+                    image: 'images/pet/god.png',
+                    level: 11, 
+                    expNeeded: 3200 
+                }
             }
         };
     }
