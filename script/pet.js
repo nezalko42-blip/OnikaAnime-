@@ -1,5 +1,5 @@
 // ============================================
-// СЕРИЙЧИК - ВИРТУАЛЬНЫЙ ПИТОМЕЦ
+// СЕРИЙЧИК - С КАСТОМНЫМИ ИЗОБРАЖЕНИЯМИ
 // ============================================
 
 // ===== ОТКРЫТЬ МОДАЛЬНОЕ ОКНО =====
@@ -25,7 +25,6 @@ function renderPetModal() {
         return;
     }
     
-    // Создаём питомца если нет
     let pet = DB.getPet(user.name);
     if (!pet) {
         DB._data.pets[user.name] = {
@@ -40,15 +39,24 @@ function renderPetModal() {
     }
     
     const progress = DB.getPetProgress(user.name);
-    const skin = DB._data.petSkins[pet.skin];
-    const emoji = skin.name.split(' ')[0] || '🐱';
+    const skinData = DB._data.petSkins[pet.skin];
     
-    // Аватар и имя
-    document.getElementById('petModalAvatar').textContent = emoji;
+    // ===== АВАТАР С ИЗОБРАЖЕНИЕМ =====
+    const avatarEl = document.getElementById('petModalAvatar');
+    if (skinData.image) {
+        avatarEl.innerHTML = `<img src="${skinData.image}" alt="${skinData.name}" style="width:100%;height:100%;object-fit:contain;border-radius:50%;">`;
+        avatarEl.style.background = 'transparent';
+        avatarEl.style.fontSize = '0';
+    } else {
+        avatarEl.textContent = skinData.emoji || '🐱';
+        avatarEl.style.background = 'transparent';
+        avatarEl.style.fontSize = '56px';
+    }
+    
     document.getElementById('petModalName').textContent = 'Серийчик';
-    document.getElementById('petModalSkin').textContent = skin.name;
+    document.getElementById('petModalSkin').textContent = skinData.name;
     
-    // Прогресс
+    // ===== ПРОГРЕСС =====
     document.getElementById('petModalProgressText').textContent = `${progress.current} / ${progress.max} очков`;
     document.getElementById('petModalProgressPercent').textContent = `${progress.percent}%`;
     document.getElementById('petModalProgressFill').style.width = `${progress.percent}%`;
@@ -58,15 +66,15 @@ function renderPetModal() {
         : `🎯 ${progress.nextSkin ? progress.nextSkin.name : 'Новый облик'} (${progress.max - progress.current} очков)`;
     document.getElementById('petModalNext').textContent = nextText;
     
-    // Статистика
+    // ===== СТАТИСТИКА =====
     document.getElementById('petModalDays').textContent = pet.days || 0;
     document.getElementById('petModalEpisodes').textContent = pet.exp || 0;
     document.getElementById('petModalExp').textContent = pet.exp || 0;
     
-    // Скины
+    // ===== СКИНЫ =====
     renderPetSkins(pet);
     
-    // Ежедневный бонус
+    // ===== ЕЖЕДНЕВНЫЙ БОНУС =====
     const dailyBtn = document.getElementById('petDailyBtn');
     if (dailyBtn) {
         const canClaim = DB.canClaimDaily(user.name);
@@ -77,11 +85,10 @@ function renderPetModal() {
         dailyBtn.disabled = !canClaim;
     }
     
-    // Обновляем иконку в меню
     updatePetIcon(user.name);
 }
 
-// ===== РЕНДЕРИНГ СКИНОВ =====
+// ===== РЕНДЕРИНГ СКИНОВ С ИЗОБРАЖЕНИЯМИ =====
 function renderPetSkins(pet) {
     const grid = document.getElementById('petModalSkinsGrid');
     if (!grid) return;
@@ -90,13 +97,20 @@ function renderPetSkins(pet) {
     for (const [id, skin] of Object.entries(DB._data.petSkins)) {
         const unlocked = pet.unlockedSkins.includes(id);
         const active = pet.skin === id;
-        const emoji = skin.name.split(' ')[0] || '🎨';
+        
+        // Определяем, что показывать: изображение или эмодзи
+        let displayContent;
+        if (skin.image) {
+            displayContent = `<img src="${skin.image}" alt="${skin.name}" style="width:28px;height:28px;object-fit:contain;border-radius:50%;">`;
+        } else {
+            displayContent = skin.emoji || '🎨';
+        }
         
         html += `
             <div class="pet-modal-skin-item ${unlocked ? '' : 'locked'} ${active ? 'active' : ''}" 
                  onclick="${unlocked ? `changePetSkin('${id}')` : ''}"
                  title="${unlocked ? 'Надеть' : '🔒 Закрыто'}">
-                ${emoji}
+                ${displayContent}
             </div>
         `;
     }
@@ -121,7 +135,7 @@ function changePetSkin(skinId) {
     showToast('✅ Облик изменён!', 'success');
 }
 
-// ===== ОБНОВЛЕНИЕ ИКОНКИ В МЕНЮ =====
+// ===== ОБНОВЛЕНИЕ ИКОНКИ В МЕНЮ С ИЗОБРАЖЕНИЕМ =====
 function updatePetIcon(userName) {
     const user = DB.get('currentUser');
     if (!user) return;
@@ -129,18 +143,20 @@ function updatePetIcon(userName) {
     const pet = DB.getPet(user.name);
     if (!pet) return;
     
-    const skin = DB._data.petSkins[pet.skin];
-    const emoji = skin.name.split(' ')[0] || '🐱';
-    
+    const skinData = DB._data.petSkins[pet.skin];
     const petIcon = document.getElementById('petIcon');
-    if (petIcon) {
-        petIcon.textContent = emoji;
+    if (!petIcon) return;
+    
+    if (skinData.image) {
+        petIcon.innerHTML = `<img src="${skinData.image}" alt="${skinData.name}" style="width:24px;height:24px;object-fit:contain;border-radius:50%;vertical-align:middle;">`;
+        petIcon.style.fontSize = '0';
+    } else {
+        petIcon.textContent = skinData.emoji || '🐱';
+        petIcon.style.fontSize = '20px';
     }
 }
 
 // ===== ДЕЙСТВИЯ =====
-
-// Смотреть аниме (+10 очков)
 function watchAnimeForPet() {
     const user = DB.get('currentUser');
     if (!user) {
@@ -162,7 +178,6 @@ function watchAnimeForPet() {
     showToast('📺 +10 очков за просмотр! 🐱', 'success');
 }
 
-// Ежедневный бонус
 function claimDailyBonusPet() {
     const user = DB.get('currentUser');
     if (!user) {
@@ -180,29 +195,26 @@ function claimDailyBonusPet() {
     }
 }
 
-// Детали питомца (toast)
 function togglePetDetails() {
     const user = DB.get('currentUser');
     if (!user) return;
     
     const pet = DB.getPet(user.name);
     const progress = DB.getPetProgress(user.name);
-    const skin = DB._data.petSkins[pet.skin];
-    const emoji = skin.name.split(' ')[0] || '🐱';
+    const skinData = DB._data.petSkins[pet.skin];
     
     const nextText = progress.isMaxLevel 
         ? '🏆 Максимальный уровень!' 
         : `🎯 ${progress.percent}% до ${progress.nextSkin ? progress.nextSkin.name : 'максимума'}`;
     
     showToast(`
-        ${emoji} ${skin.name}
+        ${skinData.emoji || '🐱'} ${skinData.name}
         📊 ${progress.current} / ${progress.max} очков
         ${nextText}
         📅 Дней: ${pet.days || 0}
     `, 'info');
 }
 
-// ===== ДОБАВЛЕНИЕ ОЧКОВ ЗА ПРОСМОТР =====
 function addPetExpForWatching(animeName) {
     const user = DB.get('currentUser');
     if (!user) return;
@@ -221,11 +233,9 @@ function addPetExpForWatching(animeName) {
     }
 }
 
-// ===== ПРИНУДИТЕЛЬНАЯ ИНИЦИАЛИЗАЦИЯ =====
 function initPet() {
     const user = DB.get('currentUser');
     if (user) {
-        // Создаём питомца если нет
         const pet = DB.getPet(user.name);
         if (!pet) {
             DB._data.pets[user.name] = {
@@ -237,7 +247,6 @@ function initPet() {
             };
             DB.save();
         }
-        // Обновляем имя пользователя
         const userNameEl = document.getElementById('sidebarUserName');
         if (userNameEl) {
             userNameEl.textContent = user.name;
@@ -246,7 +255,7 @@ function initPet() {
     }
 }
 
-// ===== ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ =====
+// ===== ЭКСПОРТ =====
 window.openPetModal = openPetModal;
 window.closePetModal = closePetModal;
 window.renderPetModal = renderPetModal;
@@ -258,4 +267,4 @@ window.addPetExpForWatching = addPetExpForWatching;
 window.initPet = initPet;
 window.updatePetIcon = updatePetIcon;
 
-console.log('🐱 Серийчик загружен (отдельный модуль)!');
+console.log('🐱 Серийчик с кастомными изображениями загружен!');
