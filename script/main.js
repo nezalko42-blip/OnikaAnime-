@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С SHIKIMORI ПЛЕЕРОМ)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С SHIKIMORI ПЛЕЕРОМ И ПИТОМЦЕМ)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -101,6 +101,13 @@ function updateUI() {
         `;
         footer.innerHTML = `<button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">🚀 Войти</button>`;
     }
+    
+    // Рендерим питомца после обновления UI
+    setTimeout(function() {
+        if (user && typeof renderPetInMenu === 'function') {
+            renderPetInMenu();
+        }
+    }, 300);
 }
 
 function toggleMenu() {
@@ -619,18 +626,14 @@ async function playWithShikimori(animeId, episode = 1) {
         return;
     }
     
-    // Очищаем контейнер
     wrapper.innerHTML = '';
     
-    // Сохраняем ID аниме
     currentAnimeId = animeId;
     
-    // Получаем данные из каталога
     const anime = allData[animeId];
     const title = anime ? getRussianTitle(anime) : 'Аниме';
     const totalEp = parseInt(anime?.episodes) || 0;
     
-    // Создаём плеер
     try {
         currentPlayer = new ShikimoriPlayer(wrapper, {
             animeId: animeId,
@@ -644,6 +647,12 @@ async function playWithShikimori(animeId, episode = 1) {
                 if (totalEp === 0 || nextEp <= totalEp) {
                     playWithShikimori(animeId, nextEp);
                     showToast('▶️ Следующая серия', 'info');
+                    // Добавляем очки питомцу за просмотр
+                    const user = DB.get('currentUser');
+                    if (user) {
+                        DB.addPetExp(user.name, 5);
+                        renderPetInMenu();
+                    }
                 } else {
                     showToast('🎬 Все серии просмотрены!', 'success');
                 }
@@ -655,7 +664,6 @@ async function playWithShikimori(animeId, episode = 1) {
         return;
     }
     
-    // Загружаем видео через Shikimori
     try {
         console.log('📡 Загрузка через Shikimori, ID:', animeId, 'Серия:', episode);
         await currentPlayer.loadFromShikimori(animeId, episode);
@@ -664,11 +672,21 @@ async function playWithShikimori(animeId, episode = 1) {
         showManualVideoButton(wrapper, title, episode, animeId);
     }
     
-    // Обновляем кнопки серий
     updateEpisodeButtons(animeId, episode);
 }
 
-// ===== ПОКАЗ КНОПКИ ДЛЯ РУЧНОГО ВВОДА =====
+function showErrorInPlayer(message) {
+    const wrapper = document.getElementById('playerWrapper');
+    if (wrapper) {
+        wrapper.innerHTML = `
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+                <span style="font-size:48px;">⚠️</span>
+                <span style="font-size:16px;color:#aaa;">${message}</span>
+            </div>
+        `;
+    }
+}
+
 function showManualVideoButton(wrapper, title, episode, animeId) {
     wrapper.innerHTML = `
         <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
@@ -693,7 +711,6 @@ function showManualVideoButton(wrapper, title, episode, animeId) {
     `;
 }
 
-// ===== РУЧНОЙ ВВОД ССЫЛКИ =====
 function showManualVideoInput(animeTitle) {
     const url = prompt('Вставьте ссылку на видео (YouTube, VK, etc.) для "' + animeTitle + '":');
     if (url && url.startsWith('http')) {
@@ -714,7 +731,6 @@ function showManualVideoInput(animeTitle) {
     }
 }
 
-// ===== ОБНОВЛЕНИЕ КНОПОК СЕРИЙ =====
 function updateEpisodeButtons(animeId, currentEpisode) {
     const container = document.getElementById('episodeBtns');
     if (!container) return;
@@ -737,7 +753,10 @@ function updateEpisodeButtons(animeId, currentEpisode) {
     container.innerHTML = html;
 }
 
-// ===== КОММЕНТАРИИ =====
+// ============================================
+// КОММЕНТАРИИ
+// ============================================
+
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
     if (!container) return;
@@ -806,6 +825,9 @@ function addComment() {
                 input.value = '';
                 renderComments(title);
                 checkAchievements(title);
+                // Очки питомцу за комментарий
+                DB.addPetExp(user.name, 2);
+                renderPetInMenu();
                 showToast('💬 Комментарий добавлен!', 'success');
             } else {
                 showToast(data.error || 'Ошибка', 'error');
@@ -953,6 +975,9 @@ function toggleFav(name) {
         favs.push(name);
         showToast('Добавлено в избранное ❤️', 'success');
         checkAchievements(name);
+        // Очки питомцу за добавление в избранное
+        DB.addPetExp(user.name, 3);
+        renderPetInMenu();
     }
     DB.setUserData(user.name, 'favorites', favs);
     DB.save();
@@ -1914,7 +1939,7 @@ function updateSocialStats() {
         const ttCurrent = ttBase + ttGrowth;
         ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
         ttElement.classList.add('pulse');
-        setTimeout(function() { ttElement.classList.remove('pulse'); }, 500);
+        setTimeout(function() { vkElement.classList.remove('pulse'); }, 500);
     }
 }
 
@@ -1932,65 +1957,53 @@ console.log('📊 Система живой статистики запущен�
 console.log('💡 Используйте refreshStats() для ручного обновления');
 
 // ============================================
-// ЗАПУСК
-// ============================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🌟 OnikaAnime загружается...');
-    
-    restoreAllData();
-    updateUI();
-    navigate('catalog');
-    
-    const user = DB.get('currentUser');
-    if (user) {
-        startOnlineTracking();
-    }
-    
-    console.log('✅ OnikaAnime готов!');
-});
-
-console.log('🌟 OnikaAnime загружен!');
-console.log('💡 Используйте restoreAllData() для восстановления данных');
-console.log('💡 Используйте refreshStats() для обновления статистики соцсетей');
-
-// ============================================
-// ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ
-// ============================================
-
-window.playWithShikimori = playWithShikimori;
-window.currentPlayer = currentPlayer;
-window.allData = allData;
-window.showManualVideoInput = showManualVideoInput;
-
-// ============================================
 // СЕРИЙЧИК (ПИТОМЕЦ В МЕНЮ)
 // ============================================
 
 // Рендеринг питомца в меню
 function renderPetInMenu() {
     const user = DB.get('currentUser');
-    if (!user) return;
-    
-    const pet = DB.getPet(user.name);
-    if (!pet) return;
-    
-    const progress = DB.getPetProgress(user.name);
-    const skin = DB._data.petSkins[pet.skin];
-    
-    const sidebarFooter = document.getElementById('sidebarFooter');
-    if (!sidebarFooter) return;
-    
-    let petBlock = document.getElementById('petBlock');
-    if (!petBlock) {
-        petBlock = document.createElement('div');
-        petBlock.id = 'petBlock';
-        petBlock.className = 'pet-block';
-        sidebarFooter.prepend(petBlock);
+    if (!user) {
+        console.log('🐱 Пользователь не авторизован');
+        return;
     }
     
+    const pet = DB.getPet(user.name);
+    if (!pet) {
+        console.log('🐱 Питомец не найден, создаём...');
+        // Создаём питомца если нет
+        DB._data.pets[user.name] = {
+            exp: 0,
+            skin: 'egg',
+            unlockedSkins: ['egg'],
+            days: 0,
+            lastDaily: null
+        };
+        DB.save();
+        const newPet = DB.getPet(user.name);
+        console.log('🐱 Питомец создан:', newPet);
+    }
+    
+    // Обновляем pet после возможного создания
+    const updatedPet = DB.getPet(user.name);
+    const progress = DB.getPetProgress(user.name);
+    const skin = DB._data.petSkins[updatedPet.skin];
     const emoji = skin.name.split(' ')[0] || '🐱';
     
+    const sidebarFooter = document.getElementById('sidebarFooter');
+    if (!sidebarFooter) {
+        console.log('❌ sidebarFooter не найден');
+        return;
+    }
+    
+    // Удаляем старый блок
+    const oldBlock = document.getElementById('petBlock');
+    if (oldBlock) oldBlock.remove();
+    
+    // Создаём новый блок
+    const petBlock = document.createElement('div');
+    petBlock.id = 'petBlock';
+    petBlock.className = 'pet-block';
     petBlock.innerHTML = `
         <div class="pet-info" onclick="togglePetDetails()">
             <div class="pet-avatar">${emoji}</div>
@@ -2010,6 +2023,9 @@ function renderPetInMenu() {
             </button>
         </div>
     `;
+    
+    sidebarFooter.prepend(petBlock);
+    console.log('🐱 Серийчик обновлён:', skin.name, progress.percent + '%');
 }
 
 // Ежедневный бонус
@@ -2067,34 +2083,42 @@ function addPetExpForWatching(animeName) {
     }
 }
 
-// Обновление UI с питомцем
-const originalUpdateUI = window.updateUI;
-if (typeof originalUpdateUI === 'function') {
-    window.updateUI = function() {
-        originalUpdateUI();
-        setTimeout(renderPetInMenu, 100);
-    };
-}
+// ============================================
+// ЗАПУСК
+// ============================================
 
-// Отслеживание просмотра в Shikimori плеере
-if (typeof ShikimoriPlayer !== 'undefined') {
-    const originalOnEnded = ShikimoriPlayer.prototype.onEnded;
-    if (originalOnEnded) {
-        ShikimoriPlayer.prototype.onEnded = function() {
-            originalOnEnded.call(this);
-            const user = DB.get('currentUser');
-            if (user) {
-                DB.addPetExp(user.name, 10);
-                renderPetInMenu();
-            }
-        };
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🌟 OnikaAnime загружается...');
+    
+    restoreAllData();
+    updateUI();
+    navigate('catalog');
+    
+    const user = DB.get('currentUser');
+    if (user) {
+        startOnlineTracking();
+        // Рендерим питомца
+        setTimeout(function() {
+            renderPetInMenu();
+        }, 500);
     }
-}
+    
+    console.log('✅ OnikaAnime готов!');
+});
 
-// Экспорт
+console.log('🌟 OnikaAnime загружен!');
+console.log('💡 Используйте restoreAllData() для восстановления данных');
+console.log('💡 Используйте refreshStats() для обновления статистики соцсетей');
+console.log('🐱 Серийчик загружен!');
+
+// ============================================
+// ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ
+// ============================================
+
+window.playWithShikimori = playWithShikimori;
+window.currentPlayer = currentPlayer;
+window.allData = allData;
+window.showManualVideoInput = showManualVideoInput;
 window.renderPetInMenu = renderPetInMenu;
 window.claimDailyBonusPet = claimDailyBonusPet;
 window.togglePetDetails = togglePetDetails;
-window.addPetExpForWatching = addPetExpForWatching;
-
-console.log('🐱 Серийчик загружен!');
