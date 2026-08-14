@@ -88,7 +88,9 @@
     <div class="layout">
         <aside class="sidebar" id="sidebar">
             <nav class="sidebar-nav" id="sidebarNav"></nav>
-            <div class="sidebar-footer" id="sidebarFooter"></div>
+            <div class="sidebar-footer" id="sidebarFooter">
+                <!-- Питомец будет добавлен через JS -->
+            </div>
         </aside>
 
         <div class="content">
@@ -144,7 +146,7 @@
                             <div class="social-grid-3">
                                 <div class="social-card telegram-card">
                                     <div class="social-card-icon">
-                                        <svg width="48" height="48"><use href="icons/icons.svg#icon-telegram"/></svg>
+                                        <svg width="48" height="48" fill="#0088cc"><use href="icons/icons.svg#icon-telegram"/></svg>
                                     </div>
                                     <h3>Telegram</h3>
                                     <p>Новости, розыгрыши, общение</p>
@@ -154,7 +156,7 @@
                                         <span>Новости первыми</span>
                                     </div>
                                     <a href="https://t.me/onikaanime" target="_blank" class="social-btn telegram-btn">
-                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;"><use href="icons/icons.svg#icon-telegram"/></svg>
+                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-telegram"/></svg>
                                         Подписаться
                                     </a>
                                     <div class="social-stats">
@@ -164,7 +166,7 @@
 
                                 <div class="social-card vk-card">
                                     <div class="social-card-icon">
-                                        <svg width="48" height="48"><use href="icons/icons.svg#icon-vk"/></svg>
+                                        <svg width="48" height="48" fill="#4e80b4"><use href="icons/icons.svg#icon-vk"/></svg>
                                     </div>
                                     <h3>VKontakte</h3>
                                     <p>Сообщество, обсуждения, опросы</p>
@@ -174,7 +176,7 @@
                                         <span>Арты и мемы</span>
                                     </div>
                                     <a href="https://vk.com/onikaanime" target="_blank" class="social-btn vk-btn">
-                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;"><use href="icons/icons.svg#icon-vk"/></svg>
+                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-vk"/></svg>
                                         Подписаться
                                     </a>
                                     <div class="social-stats">
@@ -184,7 +186,7 @@
 
                                 <div class="social-card tiktok-card">
                                     <div class="social-card-icon">
-                                        <svg width="48" height="48"><use href="icons/icons.svg#icon-tiktok"/></svg>
+                                        <svg width="48" height="48" fill="#25f4ee"><use href="icons/icons.svg#icon-tiktok"/></svg>
                                     </div>
                                     <h3>TikTok</h3>
                                     <p>Клипы, тренды, моменты</p>
@@ -194,7 +196,7 @@
                                         <span>Лучшие сцены</span>
                                     </div>
                                     <a href="https://tiktok.com/@onikaanime" target="_blank" class="social-btn tiktok-btn">
-                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;"><use href="icons/icons.svg#icon-tiktok"/></svg>
+                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-tiktok"/></svg>
                                         Подписаться
                                     </a>
                                     <div class="social-stats">
@@ -607,13 +609,13 @@
                 <p>Твой космический портал в мир аниме. Смотри, общайся и развивайся вместе с нами!</p>
                 <div class="footer-social">
                     <a href="https://t.me/onikaanime" target="_blank" title="Telegram">
-                        <svg width="24" height="24"><use href="icons/icons.svg#icon-telegram"/></svg>
+                        <svg width="24" height="24" fill="#0088cc"><use href="icons/icons.svg#icon-telegram"/></svg>
                     </a>
                     <a href="https://vk.com/onikaanime" target="_blank" title="VK">
-                        <svg width="24" height="24"><use href="icons/icons.svg#icon-vk"/></svg>
+                        <svg width="24" height="24" fill="#4e80b4"><use href="icons/icons.svg#icon-vk"/></svg>
                     </a>
                     <a href="https://tiktok.com/@onikaanime" target="_blank" title="TikTok">
-                        <svg width="24" height="24"><use href="icons/icons.svg#icon-tiktok"/></svg>
+                        <svg width="24" height="24" fill="#25f4ee"><use href="icons/icons.svg#icon-tiktok"/></svg>
                     </a>
                 </div>
             </div>
@@ -702,6 +704,13 @@
             const user = DB.get('currentUser');
             if (user && typeof startOnlineTracking === 'function') {
                 startOnlineTracking();
+            }
+            
+            // Рендерим питомца в меню
+            if (user && typeof renderPetInMenu === 'function') {
+                setTimeout(function() {
+                    renderPetInMenu();
+                }, 400);
             }
             
             window.addEventListener('scroll', function() {
