@@ -1,5 +1,5 @@
 // ============================================
-// СЕРИЙЧИК - С КАСТОМНЫМИ ИЗОБРАЖЕНИЯМИ
+// СЕРИЙЧИК - ВИРТУАЛЬНЫЙ ПИТОМЕЦ (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
 // ============================================
 
 // ===== ОТКРЫТЬ МОДАЛЬНОЕ ОКНО =====
@@ -25,6 +25,7 @@ function renderPetModal() {
         return;
     }
     
+    // Создаём питомца если нет
     let pet = DB.getPet(user.name);
     if (!pet) {
         DB._data.pets[user.name] = {
@@ -32,7 +33,8 @@ function renderPetModal() {
             skin: 'egg',
             unlockedSkins: ['egg'],
             days: 0,
-            lastDaily: null
+            lastDaily: null,
+            name: 'Серийчик'
         };
         DB.save();
         pet = DB.getPet(user.name);
@@ -43,18 +45,19 @@ function renderPetModal() {
     
     // ===== АВАТАР С ИЗОБРАЖЕНИЕМ =====
     const avatarEl = document.getElementById('petModalAvatar');
-    if (skinData.image) {
+    if (skinData && skinData.image) {
         avatarEl.innerHTML = `<img src="${skinData.image}" alt="${skinData.name}" style="width:100%;height:100%;object-fit:contain;border-radius:50%;">`;
         avatarEl.style.background = 'transparent';
         avatarEl.style.fontSize = '0';
     } else {
-        avatarEl.textContent = skinData.emoji || '🐱';
+        avatarEl.textContent = skinData ? (skinData.emoji || '🐱') : '🐱';
         avatarEl.style.background = 'transparent';
         avatarEl.style.fontSize = '56px';
     }
     
-    document.getElementById('petModalName').textContent = 'Серийчик';
-    document.getElementById('petModalSkin').textContent = skinData.name;
+    // ===== ИМЯ ПИТОМЦА =====
+    document.getElementById('petModalName').textContent = pet.name || 'Серийчик';
+    document.getElementById('petModalSkin').textContent = skinData ? skinData.name : '❓ Неизвестно';
     
     // ===== ПРОГРЕСС =====
     document.getElementById('petModalProgressText').textContent = `${progress.current} / ${progress.max} очков`;
@@ -88,7 +91,7 @@ function renderPetModal() {
     updatePetIcon(user.name);
 }
 
-// ===== РЕНДЕРИНГ СКИНОВ С ИЗОБРАЖЕНИЯМИ =====
+// ===== РЕНДЕРИНГ СКИНОВ =====
 function renderPetSkins(pet) {
     const grid = document.getElementById('petModalSkinsGrid');
     if (!grid) return;
@@ -98,7 +101,6 @@ function renderPetSkins(pet) {
         const unlocked = pet.unlockedSkins.includes(id);
         const active = pet.skin === id;
         
-        // Определяем, что показывать: изображение или эмодзи
         let displayContent;
         if (skin.image) {
             displayContent = `<img src="${skin.image}" alt="${skin.name}" style="width:28px;height:28px;object-fit:contain;border-radius:50%;">`;
@@ -135,7 +137,7 @@ function changePetSkin(skinId) {
     showToast('✅ Облик изменён!', 'success');
 }
 
-// ===== ОБНОВЛЕНИЕ ИКОНКИ В МЕНЮ С ИЗОБРАЖЕНИЕМ =====
+// ===== ОБНОВЛЕНИЕ ИКОНКИ В МЕНЮ =====
 function updatePetIcon(userName) {
     const user = DB.get('currentUser');
     if (!user) return;
@@ -147,12 +149,32 @@ function updatePetIcon(userName) {
     const petIcon = document.getElementById('petIcon');
     if (!petIcon) return;
     
-    if (skinData.image) {
+    if (skinData && skinData.image) {
         petIcon.innerHTML = `<img src="${skinData.image}" alt="${skinData.name}" style="width:24px;height:24px;object-fit:contain;border-radius:50%;vertical-align:middle;">`;
         petIcon.style.fontSize = '0';
     } else {
-        petIcon.textContent = skinData.emoji || '🐱';
+        petIcon.textContent = skinData ? (skinData.emoji || '🐱') : '🐱';
         petIcon.style.fontSize = '20px';
+    }
+}
+
+// ===== ИЗМЕНЕНИЕ ИМЕНИ ПИТОМЦА =====
+function changePetName() {
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    
+    const pet = DB.getPet(user.name);
+    const newName = prompt('Введите новое имя для Серийчика:', pet.name || 'Серийчик');
+    if (newName && newName.trim().length > 0) {
+        pet.name = newName.trim();
+        DB.save();
+        renderPetModal();
+        showToast(`✅ Имя изменено на "${pet.name}"! 🐱`, 'success');
+    } else if (newName !== null) {
+        showToast('❌ Имя не может быть пустым!', 'warning');
     }
 }
 
@@ -208,63 +230,102 @@ function togglePetDetails() {
         : `🎯 ${progress.percent}% до ${progress.nextSkin ? progress.nextSkin.name : 'максимума'}`;
     
     showToast(`
-        ${skinData.emoji || '🐱'} ${skinData.name}
+        ${skinData ? skinData.emoji || '🐱' : '🐱'} ${pet.name || 'Серийчик'}
         📊 ${progress.current} / ${progress.max} очков
         ${nextText}
         📅 Дней: ${pet.days || 0}
     `, 'info');
 }
 
-function addPetExpForWatching(animeName) {
+// ===== АВТОМАТИЧЕСКОЕ НАЧИСЛЕНИЕ ОЧКОВ =====
+function checkDailyBonus() {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    
+    // Автоматически начисляем ежедневный бонус
+    const claimed = DB.claimDailyBonus(user.name);
+    if (claimed) {
+        console.log('📅 +5 очков за ежедневный вход! 🐱');
+        // Обновляем иконку если нужно
+        updatePetIcon(user.name);
+    }
+}
+
+// ===== ОЧКИ ЗА ПРОСМОТР 12 СЕРИЙ =====
+function checkAnimeComplete(animeName) {
     const user = DB.get('currentUser');
     if (!user) return;
     
     const continueData = DB.getUserData(user.name, 'continueWatching', {});
     if (continueData[animeName]) {
         const epCount = continueData[animeName].ep || 0;
-        if (epCount <= 5) {
-            DB.addPetExp(user.name, 5);
-            updatePetIcon(user.name);
-            const modal = document.getElementById('petModal');
-            if (modal && modal.style.display === 'flex') {
+        // Если просмотрено 12 серий — даём бонус
+        if (epCount >= 12) {
+            // Проверяем, не давали ли уже бонус за это аниме
+            const completedAnime = DB.getUserData(user.name, 'completedAnime', []);
+            if (!completedAnime.includes(animeName)) {
+                completedAnime.push(animeName);
+                DB.setUserData(user.name, 'completedAnime', completedAnime);
+                DB.addPetExp(user.name, 10);
+                console.log(`🎉 +10 очков за просмотр всех 12 серий "${animeName}"!`);
+                showToast(`🎉 +10 очков за просмотр всех серий! 🐱`, 'success');
                 renderPetModal();
+                updatePetIcon(user.name);
             }
         }
     }
 }
 
+// ===== ПРИНУДИТЕЛЬНАЯ ИНИЦИАЛИЗАЦИЯ =====
 function initPet() {
     const user = DB.get('currentUser');
-    if (user) {
-        const pet = DB.getPet(user.name);
-        if (!pet) {
-            DB._data.pets[user.name] = {
-                exp: 0,
-                skin: 'egg',
-                unlockedSkins: ['egg'],
-                days: 0,
-                lastDaily: null
-            };
-            DB.save();
-        }
-        const userNameEl = document.getElementById('sidebarUserName');
-        if (userNameEl) {
-            userNameEl.textContent = user.name;
-        }
-        updatePetIcon(user.name);
+    if (!user) return;
+    
+    // Создаём питомца если нет
+    let pet = DB.getPet(user.name);
+    if (!pet) {
+        DB._data.pets[user.name] = {
+            exp: 0,
+            skin: 'egg',
+            unlockedSkins: ['egg'],
+            days: 0,
+            lastDaily: null,
+            name: 'Серийчик'
+        };
+        DB.save();
+        pet = DB.getPet(user.name);
     }
+    
+    // Обновляем имя пользователя в меню
+    const userNameEl = document.getElementById('sidebarUserName');
+    if (userNameEl) {
+        userNameEl.textContent = user.name;
+    }
+    
+    // Обновляем иконку питомца
+    updatePetIcon(user.name);
+    
+    // Проверяем ежедневный бонус
+    checkDailyBonus();
+    
+    console.log('🐱 Серийчик инициализирован!');
+    console.log('  Имя:', pet.name || 'Серийчик');
+    console.log('  Облик:', DB._data.petSkins[pet.skin].name);
+    console.log('  Очки:', pet.exp);
 }
 
-// ===== ЭКСПОРТ =====
+// ===== ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ =====
 window.openPetModal = openPetModal;
 window.closePetModal = closePetModal;
 window.renderPetModal = renderPetModal;
 window.changePetSkin = changePetSkin;
+window.changePetName = changePetName;
 window.watchAnimeForPet = watchAnimeForPet;
 window.claimDailyBonusPet = claimDailyBonusPet;
 window.togglePetDetails = togglePetDetails;
-window.addPetExpForWatching = addPetExpForWatching;
 window.initPet = initPet;
 window.updatePetIcon = updatePetIcon;
+window.checkDailyBonus = checkDailyBonus;
+window.checkAnimeComplete = checkAnimeComplete;
 
-console.log('🐱 Серийчик с кастомными изображениями загружен!');
+console.log('🐱 Серийчик с именем и автоматическими бонусами загружен!');
