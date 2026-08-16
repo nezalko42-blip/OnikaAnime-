@@ -614,10 +614,11 @@
             
             <div class="pet-modal-content">
                 <div class="pet-modal-header">
-                    <span class="pet-modal-avatar" id="petModalAvatar">🐶</span>
+                    <span class="pet-modal-avatar" id="petModalAvatar">🐱</span>
                     <div class="pet-modal-title">
-                        <h2>Питомец</h2>
-                        <span class="pet-modal-skin" id="petModalSkin">🥚 Яйцо</span>
+                        <h2 onclick="changePetName()" title="Нажмите, чтобы изменить имя">Серийчик ✏️</h2>
+                        <span class="pet-rename-hint" onclick="changePetName()">Нажмите на имя, чтобы изменить</span>
+                        <div class="pet-modal-skin" id="petModalSkin">🥚 Яйцо</div>
                     </div>
                 </div>
                 
@@ -776,7 +777,6 @@
                 if (typeof initPet === 'function') {
                     initPet();
                 }
-                // Обновляем имя пользователя в меню
                 const userNameEl = document.getElementById('sidebarUserName');
                 if (userNameEl) {
                     userNameEl.textContent = user.name;
