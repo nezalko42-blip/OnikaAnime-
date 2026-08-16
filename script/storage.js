@@ -63,6 +63,7 @@ class Storage {
             videos: {},
             onlineTime: {},
             lastSeen: {},
+            completedAnime: {},
             currentUser: null,
             settings: { "3d": true, "vibe": true },
             pets: {},
@@ -72,42 +73,42 @@ class Storage {
             petSkins: {
                 // --- СТАНДАРТНЫЕ ---
                 'egg': { 
-                    name: 'Яйцо', 
+                    name: '🥚 Яйцо', 
                     emoji: '🥚',
                     image: 'images/pet/egg.png',
                     level: 0, 
                     expNeeded: 0 
                 },
                 'baby': { 
-                    name: 'Малыш', 
+                    name: '🐣 Малыш', 
                     emoji: '🐣',
                     image: 'images/pet/baby.png',
                     level: 1, 
                     expNeeded: 50 
                 },
                 'kitten': { 
-                    name: 'Котёнок', 
+                    name: '🐱 Котёнок', 
                     emoji: '🐱',
                     image: 'images/pet/kitten.png',
                     level: 2, 
                     expNeeded: 150 
                 },
                 'cat': { 
-                    name: 'Кот', 
+                    name: '🐈 Кот', 
                     emoji: '🐈',
                     image: 'images/pet/cat.png',
                     level: 3, 
                     expNeeded: 300 
                 },
                 'lion': { 
-                    name: 'Король', 
+                    name: '🦁 Король', 
                     emoji: '🦁',
                     image: 'images/pet/lion.png',
                     level: 4, 
                     expNeeded: 500 
                 },
                 'dragon': { 
-                    name: 'Дракон', 
+                    name: '🐉 Дракон', 
                     emoji: '🐉',
                     image: 'images/pet/dragon.png',
                     level: 5, 
@@ -116,42 +117,42 @@ class Storage {
                 
                 // --- НОВЫЕ С ИЗОБРАЖЕНИЯМИ ---
                 'fox': { 
-                    name: 'Лисёнок', 
+                    name: '🦊 Лисёнок', 
                     emoji: '🦊',
                     image: 'images/pet/fox.png',
                     level: 6, 
                     expNeeded: 1000 
                 },
                 'wolf': { 
-                    name: 'Волк', 
+                    name: '🐺 Волк', 
                     emoji: '🐺',
                     image: 'images/pet/wolf.png',
                     level: 7, 
                     expNeeded: 1300 
                 },
                 'phoenix': { 
-                    name: 'Феникс', 
+                    name: '🔥 Феникс', 
                     emoji: '🔥',
                     image: 'images/pet/phoenix.png',
                     level: 8, 
                     expNeeded: 1700 
                 },
                 'demon': { 
-                    name: 'Демон', 
+                    name: '👿 Демон', 
                     emoji: '👿',
                     image: 'images/pet/demon.png',
                     level: 9, 
                     expNeeded: 2100 
                 },
                 'angel': { 
-                    name: 'Ангел', 
+                    name: '😇 Ангел', 
                     emoji: '😇',
                     image: 'images/pet/angel.png',
                     level: 10, 
                     expNeeded: 2600 
                 },
                 'god': { 
-                    name: 'Бог', 
+                    name: '⭐ Бог', 
                     emoji: '⭐',
                     image: 'images/pet/god.png',
                     level: 11, 
@@ -366,7 +367,8 @@ class Storage {
                 skin: 'egg',
                 unlockedSkins: ['egg'],
                 days: 0,
-                lastDaily: null
+                lastDaily: null,
+                name: 'Серийчик'
             };
         }
         return this._data.pets[user];
@@ -378,6 +380,7 @@ class Storage {
         const pet = this.getPet(user);
         pet.exp += amount;
         
+        // Проверяем разблокировку новых обликов
         let newSkinUnlocked = false;
         for (const [skinId, skin] of Object.entries(this._data.petSkins)) {
             if (pet.exp >= skin.expNeeded && !pet.unlockedSkins.includes(skinId)) {
@@ -386,6 +389,7 @@ class Storage {
             }
         }
         
+        // Обновляем текущий облик (самый высокий доступный)
         let highestSkin = 'egg';
         let highestLevel = 0;
         for (const skinId of pet.unlockedSkins) {
@@ -464,6 +468,7 @@ class Storage {
         pet.lastDaily = today;
         pet.days = (pet.days || 0) + 1;
         this.addPetExp(user, 5);
+        this.save();
         
         return true;
     }
