@@ -24,10 +24,6 @@
     border-radius: 50%;
 }
 
-.pet-icon-inline:empty {
-    display: none;
-}
-
 /* ===== МОДАЛЬНОЕ ОКНО ===== */
 .pet-modal-box {
     max-width: 450px;
@@ -65,6 +61,7 @@
     align-items: center;
     justify-content: center;
     background: transparent;
+    font-size: 56px;
 }
 
 .pet-modal-avatar img {
@@ -83,6 +80,23 @@
     font-size: 22px;
     margin: 0;
     color: var(--text-primary);
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.pet-modal-title h2:hover {
+    color: var(--accent-glow);
+}
+
+.pet-modal-title .pet-rename-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.pet-modal-title .pet-rename-hint:hover {
+    color: var(--accent-glow);
 }
 
 .pet-modal-skin {
@@ -286,6 +300,7 @@
     .pet-modal-avatar {
         width: 56px;
         height: 56px;
+        font-size: 40px;
     }
     .pet-modal-title h2 {
         font-size: 18px;
