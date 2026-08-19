@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ТОЛЬКО SHIKIMORI)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -173,7 +173,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ
+// КАТАЛОГ (ТОЛЬКО SHIKIMORI)
 // ============================================
 
 async function loadCatalog() {
@@ -183,12 +183,7 @@ async function loadCatalog() {
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
     
     try {
-        let result = await API.searchAnilibria(query, genre, page);
-        
-        if (!result || !result.items || result.items.length === 0) {
-            console.log('🔄 Anilibria не ответил, пробуем Shikimori...');
-            result = await API.searchShikimori(query, genre, page);
-        }
+        const result = await API.searchShikimori(query, genre, page);
         
         if (result && result.items && result.items.length > 0) {
             totalPages = result.totalPages || 1;
@@ -1956,7 +1951,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const user = DB.get('currentUser');
     if (user) {
         startOnlineTracking();
-        // Инициализация питомца
         if (typeof initPet === 'function') {
             initPet();
         }
@@ -2047,3 +2041,47 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 });
+
+// Проверка питомца при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        const user = DB.get('currentUser');
+        if (user && typeof initPet === 'function') {
+            initPet();
+            console.log('🐱 Питомец инициализирован принудительно');
+        }
+    }, 1000);
+});
+
+// Тестовая функция для добавления очков
+window.addTestPoints = function() {
+    const user = DB.get('currentUser');
+    if (user) {
+        DB.addPetExp(user.name, 50);
+        if (typeof renderPetModal === 'function') {
+            renderPetModal();
+        }
+        if (typeof updatePetIcon === 'function') {
+            updatePetIcon(user.name);
+        }
+        showToast('🧪 +50 тестовых очков!', 'success');
+    } else {
+        showToast('❌ Войдите в аккаунт!', 'error');
+    }
+};
+
+// Проверка статуса
+window.checkPet = function() {
+    const user = DB.get('currentUser');
+    if (!user) {
+        console.log('❌ Нет пользователя');
+        return;
+    }
+    const pet = DB.getPet(user.name);
+    console.log('🐱 ПИТОМЕЦ:');
+    console.log('Имя:', pet.name);
+    console.log('Очки:', pet.exp);
+    console.log('Облик:', DB._data.petSkins[pet.skin].name);
+    console.log('Дней:', pet.days);
+    console.log('Разблокировано:', pet.unlockedSkins.length + '/' + Object.keys(DB._data.petSkins).length);
+};
