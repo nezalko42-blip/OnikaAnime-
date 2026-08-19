@@ -1,8 +1,10 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (ТОЛЬКО SHIKIMORI)
+// API МОДУЛЬ ONIKAANIME (JIKAN + ANILIBRIA + SHIKIMORI)
 // ============================================
 
 const API = {
+    JIKAN: 'https://api.jikan.moe/v4',
+    ANILIBRIA: 'https://api.anilibria.tv/v3',
     SHIKIMORI: 'https://shikimori.one/api',
     
     _cache: new Map(),
@@ -43,92 +45,256 @@ const API = {
         }
     },
 
-    // ===== ПОИСК В SHIKIMORI =====
-    async searchShikimori(query, genre = null, page = 1) {
+    // ============================================
+    // ПОИСК В JIKAN (MyAnimeList) — ОСНОВНОЙ
+    // ============================================
+    async searchJikan(query, genre = null, page = 1) {
         const isSearch = query && query.length > 1;
-        let url = `${this.SHIKIMORI}/animes?limit=12&page=${page}`;
+        let url = `${this.JIKAN}/anime?page=${page}&limit=12&sfw=true`;
 
         if (isSearch) {
-            url += `&search=${encodeURIComponent(query)}`;
+            url += `&q=${encodeURIComponent(query)}`;
         } else if (genre) {
-            const genreMap = { 
-                '1': 'action', 
-                '8': 'drama', 
-                '21': 'comedy', 
-                '10': 'fantasy', 
-                '22': 'romance' 
+            // Маппинг жанров Jikan
+            const genreMap = {
+                '1': '1',      // Action
+                '8': '8',      // Drama
+                '21': '4',     // Comedy
+                '10': '10',    // Fantasy
+                '22': '22'     // Romance
             };
-            url += `&genre=${genreMap[genre] || ''}`;
+            const jikanGenre = genreMap[genre] || genre;
+            url += `&genres=${jikanGenre}`;
         } else {
-            url += '&order=popularity';
+            url += '&order_by=popularity&sort=desc';
         }
 
-        const cacheKey = `shikimori_${query || 'all'}_${genre || 'all'}_${page}`;
+        const cacheKey = `jikan_${query || 'all'}_${genre || 'all'}_${page}`;
 
         try {
             const data = await this._fetchWithCache(url, { method: 'GET' }, cacheKey);
             
-            if (data?.length > 0) {
+            if (data?.data?.length > 0) {
                 return {
-                    items: data.map(item => ({
-                        mal_id: item.id,
-                        title: item.russian || item.name || 'Без названия',
-                        title_russian: item.russian || '',
-                        title_english: item.name || '',
-                        year: item.aired_on ? item.aired_on.split('-')[0] : '--',
+                    items: data.data.map(item => ({
+                        mal_id: item.mal_id,
+                        title: item.title || item.title_english || 'Без названия',
+                        title_russian: item.title || '',
+                        title_english: item.title_english || '',
+                        year: item.year || '--',
                         episodes: item.episodes || '?',
-                        images: { jpg: { image_url: item.image?.original || '' } },
-                        synopsis: item.description || 'Описание отсутствует',
-                        genres: item.genres || [],
+                        images: { jpg: { image_url: item.images?.jpg?.image_url || '' } },
+                        synopsis: item.synopsis || 'Описание отсутствует',
+                        genres: item.genres?.map(g => g.name) || [],
                         score: item.score || 0,
-                        russian: item.russian || '',
-                        source: 'Shikimori'
+                        russian: item.title || '',
+                        source: 'Jikan'
                     })),
-                    totalPages: Math.ceil(data.length / 12) + 1
+                    totalPages: Math.ceil((data.pagination?.items?.total || 0) / 12)
                 };
             }
             return null;
-        } catch {
-            return null;
+        } catch (error) {
+            console.log('⚠️ Jikan ошибка:', error.message);
+            // Пробуем Anilibria
+            return await this.searchAnilibria(query, genre, page);
         }
     },
 
-    // ===== ПОЛУЧЕНИЕ ДЕТАЛЕЙ АНИМЕ =====
-    async getAnimeDetails(id) {
+    // ============================================
+    // ПОИСК В ANILIBRIA (РЕЗЕРВ)
+    // ============================================
+    async searchAnilibria(query, genre = null, page = 1) {
+        const isSearch = query && query.length > 1;
+        const body = { 
+            page: page, 
+            limit: 12, 
+            f: { sorting: 'FRESH_AT_DESC' } 
+        };
+
+        if (isSearch) {
+            body.f.search = query;
+        } else if (genre) {
+            body.f.genres = [parseInt(genre)];
+        }
+
         try {
             const data = await this._fetchWithCache(
-                `${this.SHIKIMORI}/animes/${id}`,
-                { method: 'GET' },
-                `shikimori_detail_${id}`
+                this.ANILIBRIA + '/anime/catalog/releases',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                },
+                `anilibria_${query || 'all'}_${genre || 'all'}_${page}`
             );
-            
-            if (data?.id) {
+
+            if (data?.data?.length > 0) {
                 return {
-                    mal_id: data.id,
-                    title: data.russian || data.name || 'Без названия',
-                    title_russian: data.russian || '',
-                    title_english: data.name || '',
-                    year: data.aired_on ? data.aired_on.split('-')[0] : '--',
-                    episodes: data.episodes || '?',
-                    images: { jpg: { image_url: data.image?.original || '' } },
-                    synopsis: data.description || 'Описание отсутствует',
-                    genres: data.genres || [],
-                    score: data.score || 0,
-                    russian: data.russian || '',
-                    rating: data.rating || '',
-                    status: data.status || '',
-                    duration: data.duration || '',
-                    source: 'Shikimori'
+                    items: data.data.map(item => {
+                        let img = '';
+                        if (item.poster) {
+                            const p = item.poster.optimized || item.poster;
+                            img = typeof p === 'string' ? p : (p.preview || p.src || '');
+                            if (img && img[0] === '/') {
+                                img = 'https://anilibria.top' + img;
+                            }
+                        }
+                        return {
+                            mal_id: 'anilibria_' + item.id,
+                            title: item.name?.main || item.name?.english || 'Без названия',
+                            title_russian: item.name?.main || '',
+                            title_english: item.name?.english || '',
+                            year: item.year || '--',
+                            episodes: item.episodes_total || '?',
+                            images: { jpg: { image_url: img || '' } },
+                            synopsis: item.description || 'Описание отсутствует',
+                            genres: item.genres || [],
+                            score: item.rating || 0,
+                            russian: item.name?.main || '',
+                            source: 'Anilibria'
+                        };
+                    }),
+                    totalPages: data.meta?.pagination?.total_pages || 1
                 };
             }
             return null;
         } catch {
-            console.error('❌ Не удалось загрузить детали аниме');
             return null;
         }
     },
 
-    // ===== ПОИСК ВИДЕО В KODIK =====
+    // ============================================
+    // ГИБРИДНЫЙ ПОИСК (Jikan + Anilibria + Shikimori)
+    // ============================================
+    async searchAll(query, genre = null, page = 1) {
+        console.log('🔍 Поиск:', query || 'все', 'Жанр:', genre || 'все');
+        
+        let allItems = [];
+        const seenTitles = new Set();
+        
+        // 1. Jikan (основной)
+        try {
+            const result = await this.searchJikan(query, genre, page);
+            if (result?.items) {
+                for (const item of result.items) {
+                    const key = (item.title_russian || item.title || '').toLowerCase().trim();
+                    if (!seenTitles.has(key) && key) {
+                        seenTitles.add(key);
+                        allItems.push(item);
+                    }
+                }
+                console.log('✅ Jikan найдено:', result.items.length);
+            }
+        } catch (e) {
+            console.log('⚠️ Jikan ошибка');
+        }
+        
+        // 2. Anilibria (дополнение)
+        try {
+            const result = await this.searchAnilibria(query, genre, page);
+            if (result?.items) {
+                for (const item of result.items) {
+                    const key = (item.title_russian || item.title || '').toLowerCase().trim();
+                    if (!seenTitles.has(key) && key) {
+                        seenTitles.add(key);
+                        allItems.push(item);
+                    }
+                }
+                console.log('✅ Anilibria найдено:', result.items.length);
+            }
+        } catch (e) {
+            console.log('⚠️ Anilibria ошибка');
+        }
+        
+        if (allItems.length === 0) {
+            return { items: [], totalPages: 1 };
+        }
+        
+        const totalPages = Math.ceil(allItems.length / 12);
+        const start = (page - 1) * 12;
+        const paginatedItems = allItems.slice(start, start + 12);
+        
+        return {
+            items: paginatedItems,
+            totalPages: Math.max(totalPages, 1)
+        };
+    },
+
+    // ============================================
+    // ДЕТАЛИ АНИМЕ (Jikan + Anilibria)
+    // ============================================
+    async getAnimeDetails(id) {
+        // Пробуем Jikan
+        try {
+            const data = await this._fetchWithCache(
+                `${this.JIKAN}/anime/${id}`,
+                { method: 'GET' },
+                `jikan_detail_${id}`
+            );
+            
+            if (data?.data) {
+                const item = data.data;
+                return {
+                    mal_id: item.mal_id,
+                    title: item.title || item.title_english || 'Без названия',
+                    title_russian: item.title || '',
+                    title_english: item.title_english || '',
+                    year: item.year || '--',
+                    episodes: item.episodes || '?',
+                    images: { jpg: { image_url: item.images?.jpg?.image_url || '' } },
+                    synopsis: item.synopsis || 'Описание отсутствует',
+                    genres: item.genres?.map(g => g.name) || [],
+                    score: item.score || 0,
+                    russian: item.title || '',
+                    rating: item.rating || '',
+                    status: item.status || '',
+                    source: 'Jikan'
+                };
+            }
+        } catch (e) {
+            console.log('⚠️ Jikan детали ошибка');
+        }
+        
+        // Пробуем Anilibria
+        try {
+            const data = await this._fetchWithCache(
+                `${this.ANILIBRIA}/title/${id}`,
+                { method: 'GET' },
+                `anilibria_detail_${id}`
+            );
+            if (data?.id) {
+                let img = '';
+                if (data.poster) {
+                    const p = data.poster.optimized || data.poster;
+                    img = typeof p === 'string' ? p : (p.preview || p.src || '');
+                    if (img && img[0] === '/') img = 'https://anilibria.top' + img;
+                }
+                return {
+                    mal_id: data.id,
+                    title: data.name?.main || data.name?.english || 'Без названия',
+                    title_russian: data.name?.main || '',
+                    title_english: data.name?.english || '',
+                    year: data.year || '--',
+                    episodes: data.episodes_total || '?',
+                    images: { jpg: { image_url: img || '' } },
+                    synopsis: data.description || 'Описание отсутствует',
+                    genres: data.genres || [],
+                    score: data.rating || 0,
+                    russian: data.name?.main || '',
+                    source: 'Anilibria'
+                };
+            }
+        } catch (e) {
+            console.log('⚠️ Anilibria детали ошибка');
+        }
+        
+        return null;
+    },
+
+    // ============================================
+    // ПОИСК ВИДЕО В KODIK (БЕЗ ИЗМЕНЕНИЙ)
+    // ============================================
     async searchKodik(animeTitle, episode = 1) {
         if (!animeTitle) throw new Error('Название аниме не указано');
 
@@ -145,19 +311,14 @@ const API = {
                         (item.title || '').toLowerCase().trim() === animeTitle.toLowerCase().trim() ||
                         (item.title_orig || '').toLowerCase().trim() === animeTitle.toLowerCase().trim()
                     );
-                    
-                    if (!found) {
-                        found = data.results[0];
-                    }
+                    if (!found) found = data.results[0];
 
                     if (found?.link) {
                         if (episode && found.seasons) {
                             for (const season of found.seasons) {
                                 if (season.episodes) {
                                     const ep = season.episodes.find(e => e.number === episode);
-                                    if (ep?.link) {
-                                        return ep.link;
-                                    }
+                                    if (ep?.link) return ep.link;
                                 }
                             }
                         }
@@ -172,32 +333,24 @@ const API = {
         throw new Error('Видео не найдено в Kodik');
     },
 
-    // ===== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ =====
     _generateSearchTitles(animeTitle) {
         const titles = [animeTitle];
         const words = animeTitle.split(' ');
-        
         if (words.length > 2) {
             titles.push(words.slice(0, 2).join(' '));
             titles.push(words[0]);
         }
-
         if (window.allData) {
             for (const id in window.allData) {
                 const a = window.allData[id];
                 const title = getRussianTitle(a);
                 if (title && title.toLowerCase().trim() === animeTitle.toLowerCase().trim()) {
-                    if (a.title_english && a.title_english !== title) {
-                        titles.push(a.title_english);
-                    }
-                    if (a.title_original && a.title_original !== title) {
-                        titles.push(a.title_original);
-                    }
+                    if (a.title_english && a.title_english !== title) titles.push(a.title_english);
+                    if (a.title_original && a.title_original !== title) titles.push(a.title_original);
                     break;
                 }
             }
         }
-
         return titles.filter((v, i, a) => a.indexOf(v) === i);
     },
 
@@ -208,4 +361,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль загружен (только Shikimori)');
+console.log('✅ API модуль загружен (Jikan + Anilibria)');
