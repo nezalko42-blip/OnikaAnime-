@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ТОЛЬКО SHIKIMORI)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Jikan + Anilibria)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -173,7 +173,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (ТОЛЬКО SHIKIMORI)
+// КАТАЛОГ (Jikan + Anilibria)
 // ============================================
 
 async function loadCatalog() {
@@ -183,7 +183,7 @@ async function loadCatalog() {
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
     
     try {
-        const result = await API.searchShikimori(query, genre, page);
+        const result = await API.searchAll(query, genre, page);
         
         if (result && result.items && result.items.length > 0) {
             totalPages = result.totalPages || 1;
@@ -462,7 +462,7 @@ function setGenre(genreId, btn) {
 }
 
 // ============================================
-// ДЕТАЛЬНАЯ СТРАНИЦА С SHIKIMORI ПЛЕЕРОМ
+// ДЕТАЛЬНАЯ СТРАНИЦА
 // ============================================
 
 async function openDetail(id) {
