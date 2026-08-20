@@ -1,5 +1,5 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (ANILIBRIA V1 + V2 + V3)
+// API МОДУЛЬ ONIKAANIME (ПОЛНОЦЕННЫЙ ПОИСК)
 // ============================================
 
 const API = {
@@ -28,74 +28,44 @@ const API = {
     },
 
     // ============================================
-    // ANILIBRIA V1
+    // ПОИСК В V1 (ПРЯМОЙ ПОИСК)
     // ============================================
-    async searchAnilibriaV1(query, genre = null, page = 1) {
-        const isSearch = query && query.length > 1;
-        let url = `${this.ANILIBRIA_V1}/anime/catalog/releases?page=${page}&limit=24`;
-        
-        if (isSearch) {
-            url += `&search=${encodeURIComponent(query)}`;
-        }
-        if (genre) {
-            url += `&genre=${parseInt(genre)}`;
-        }
-
-        console.log('🔍 V1:', url);
+    async searchV1(query, page = 1) {
+        const url = `${this.ANILIBRIA_V1}/anime/catalog/releases?search=${encodeURIComponent(query)}&page=${page}&limit=50`;
         const data = await this._fetch(url);
         
         if (data?.data?.length > 0) {
-            return {
-                items: data.data.map(item => this._convertItem(item, 'V1')),
-                totalPages: data.meta?.pagination?.total_pages || 1
-            };
+            return data.data.map(item => this._convertItem(item, 'V1'));
         }
-        return null;
+        return [];
     },
 
     // ============================================
-    // ANILIBRIA V2
+    // ПОИСК В V2 (ПРЯМОЙ ПОИСК)
     // ============================================
-    async searchAnilibriaV2(query, genre = null, page = 1) {
-        const isSearch = query && query.length > 1;
-        let url = `${this.ANILIBRIA_V2}/getReleases?page=${page}&limit=24`;
-        
-        if (isSearch) {
-            url = `${this.ANILIBRIA_V2}/getReleases?search=${encodeURIComponent(query)}&page=${page}&limit=24`;
-        } else if (genre) {
-            url += `&genre=${parseInt(genre)}`;
-        }
-
-        console.log('🔍 V2:', url);
+    async searchV2(query, page = 1) {
+        const url = `${this.ANILIBRIA_V2}/getReleases?search=${encodeURIComponent(query)}&page=${page}&limit=50`;
         const data = await this._fetch(url);
         
         if (data?.list?.length > 0) {
-            return {
-                items: data.list.map(item => this._convertItem(item, 'V2')),
-                totalPages: data.meta?.pagination?.total_pages || 1
-            };
+            return data.list.map(item => this._convertItem(item, 'V2'));
         }
-        return null;
+        return [];
     },
 
     // ============================================
-    // ANILIBRIA V3
+    // ПОИСК В V3 (ПРЯМОЙ ПОИСК)
     // ============================================
-    async searchAnilibriaV3(query, genre = null, page = 1) {
-        const isSearch = query && query.length > 1;
+    async searchV3(query, page = 1) {
         const body = { 
             page: page, 
-            limit: 24, 
-            f: { sorting: 'FRESH_AT_DESC' } 
+            limit: 50,
+            f: { 
+                sorting: 'FRESH_AT_DESC',
+                search: query
+            } 
         };
 
-        if (isSearch) {
-            body.f.search = query;
-        } else if (genre) {
-            body.f.genres = [parseInt(genre)];
-        }
-
-        console.log('🔍 V3:', this.ANILIBRIA_V3 + '/anime/catalog/releases', body);
         const data = await this._fetch(
             this.ANILIBRIA_V3 + '/anime/catalog/releases',
             {
@@ -106,12 +76,9 @@ const API = {
         );
 
         if (data?.data?.length > 0) {
-            return {
-                items: data.data.map(item => this._convertItem(item, 'V3')),
-                totalPages: data.meta?.pagination?.total_pages || 1
-            };
+            return data.data.map(item => this._convertItem(item, 'V3'));
         }
-        return null;
+        return [];
     },
 
     // ============================================
@@ -160,57 +127,142 @@ const API = {
     },
 
     // ============================================
-    // ПОИСК ПО ВСЕМ ВЕРСИЯМ
+    // ГЛАВНАЯ ФУНКЦИЯ ПОИСКА
     // ============================================
     async searchAll(query, genre = null, page = 1) {
-        const isSearch = query && query.length > 1;
-        console.log('🔍 Поиск:', query || 'каталог');
-        
-        let allItems = [];
+        // Если это не поиск — показываем каталог
+        if (!query || query.length < 2) {
+            console.log('📚 Каталог Anilibria');
+            return await this.getCatalog(page, genre);
+        }
+
+        console.log(`🔍 ПОИСК: "${query}"`);
+
+        let allResults = [];
         const seenIds = new Set();
-        
-        // Список версий для поиска
-        const versions = [
-            { name: 'V1', fn: this.searchAnilibriaV1.bind(this) },
-            { name: 'V2', fn: this.searchAnilibriaV2.bind(this) },
-            { name: 'V3', fn: this.searchAnilibriaV3.bind(this) }
-        ];
-        
-        // Пробуем каждую версию
-        for (const version of versions) {
-            try {
-                const result = await version.fn(query, genre, page);
-                if (result?.items?.length > 0) {
-                    console.log(`✅ ${version.name} найдено:`, result.items.length);
-                    for (const item of result.items) {
-                        const key = item.id + '_' + item.title;
-                        if (!seenIds.has(key)) {
-                            seenIds.add(key);
-                            allItems.push(item);
-                        }
+
+        // 1. Пробуем V1
+        console.log('  ⏳ V1...');
+        try {
+            const items = await this.searchV1(query, page);
+            if (items.length > 0) {
+                console.log(`  ✅ V1: ${items.length} результатов`);
+                for (const item of items) {
+                    if (!seenIds.has(item.id)) {
+                        seenIds.add(item.id);
+                        allResults.push(item);
                     }
                 }
-            } catch (e) {
-                console.log(`⚠️ ${version.name} ошибка:`, e.message);
+            } else {
+                console.log('  ❌ V1: ничего не найдено');
             }
+        } catch (e) {
+            console.log('  ⚠️ V1 ошибка:', e.message);
         }
-        
-        if (allItems.length === 0) {
-            console.log('❌ Ничего не найдено');
+
+        // 2. Пробуем V2
+        console.log('  ⏳ V2...');
+        try {
+            const items = await this.searchV2(query, page);
+            if (items.length > 0) {
+                console.log(`  ✅ V2: ${items.length} результатов`);
+                for (const item of items) {
+                    if (!seenIds.has(item.id)) {
+                        seenIds.add(item.id);
+                        allResults.push(item);
+                    }
+                }
+            } else {
+                console.log('  ❌ V2: ничего не найдено');
+            }
+        } catch (e) {
+            console.log('  ⚠️ V2 ошибка:', e.message);
+        }
+
+        // 3. Пробуем V3
+        console.log('  ⏳ V3...');
+        try {
+            const items = await this.searchV3(query, page);
+            if (items.length > 0) {
+                console.log(`  ✅ V3: ${items.length} результатов`);
+                for (const item of items) {
+                    if (!seenIds.has(item.id)) {
+                        seenIds.add(item.id);
+                        allResults.push(item);
+                    }
+                }
+            } else {
+                console.log('  ❌ V3: ничего не найдено');
+            }
+        } catch (e) {
+            console.log('  ⚠️ V3 ошибка:', e.message);
+        }
+
+        // ФИЛЬТРУЕМ РЕЗУЛЬТАТЫ — оставляем только релевантные
+        const searchLower = query.toLowerCase().trim();
+        const filteredResults = allResults.filter(item => {
+            const title = (item.title_russian || item.title || '').toLowerCase();
+            const titleEn = (item.title_english || '').toLowerCase();
+            const name = (item.russian || '').toLowerCase();
+            
+            // Проверяем все возможные поля
+            return title.includes(searchLower) || 
+                   titleEn.includes(searchLower) || 
+                   name.includes(searchLower);
+        });
+
+        console.log(`📊 ВСЕГО НАЙДЕНО: ${allResults.length}, ПОСЛЕ ФИЛЬТРАЦИИ: ${filteredResults.length}`);
+
+        if (filteredResults.length === 0) {
+            console.log('❌ По вашему запросу ничего не найдено');
             return { items: [], totalPages: 1 };
         }
-        
-        console.log(`✅ Всего найдено: ${allItems.length}`);
-        
-        // Пагинация
+
+        // Пагинация (12 на страницу)
         const start = (page - 1) * 12;
-        const paginatedItems = allItems.slice(start, start + 12);
-        const totalPages = Math.ceil(allItems.length / 12);
-        
+        const paginatedItems = filteredResults.slice(start, start + 12);
+        const totalPages = Math.ceil(filteredResults.length / 12);
+
         return {
             items: paginatedItems,
             totalPages: Math.max(totalPages, 1)
         };
+    },
+
+    // ============================================
+    // КАТАЛОГ (БЕЗ ПОИСКА)
+    // ============================================
+    async getCatalog(page = 1, genre = null) {
+        let url = `${this.ANILIBRIA_V1}/anime/catalog/releases?page=${page}&limit=24`;
+        if (genre) {
+            url += `&genre=${parseInt(genre)}`;
+        }
+
+        const data = await this._fetch(url);
+        
+        if (data?.data?.length > 0) {
+            return {
+                items: data.data.map(item => this._convertItem(item, 'V1')),
+                totalPages: data.meta?.pagination?.total_pages || 1
+            };
+        }
+
+        // Если V1 не работает — пробуем V2
+        try {
+            let url2 = `${this.ANILIBRIA_V2}/getReleases?page=${page}&limit=24`;
+            if (genre) {
+                url2 += `&genre=${parseInt(genre)}`;
+            }
+            const data2 = await this._fetch(url2);
+            if (data2?.list?.length > 0) {
+                return {
+                    items: data2.list.map(item => this._convertItem(item, 'V2')),
+                    totalPages: data2.meta?.pagination?.total_pages || 1
+                };
+            }
+        } catch (e) {}
+
+        return { items: [], totalPages: 1 };
     },
 
     // ============================================
@@ -273,4 +325,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль загружен (Anilibria V1 + V2 + V3)');
+console.log('✅ API модуль загружен (полноценный поиск)');
