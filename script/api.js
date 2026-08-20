@@ -1,5 +1,5 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (SHIKIMORI ДЛЯ ПОИСКА)
+// API МОДУЛЬ ONIKAANIME (ПОКАЗЫВАЕТ ВСЕ СЕЗОНЫ)
 // ============================================
 
 const API = {
@@ -27,7 +27,79 @@ const API = {
     },
 
     // ============================================
-    // SHIKIMORI — ПОИСК (ОСНОВНОЙ)
+    // SHIKIMORI — ПОИСК ВСЕХ СЕЗОНОВ
+    // ============================================
+    async searchShikimoriAllSeasons(query, genre = null, page = 1) {
+        const isSearch = query && query.length > 1;
+        let url = `${this.SHIKIMORI}/animes?page=${page}&limit=50`; // Больше лимит
+
+        if (isSearch) {
+            url += `&search=${encodeURIComponent(query)}`;
+        } else if (genre) {
+            const genreMap = {
+                '1': 'action', '8': 'drama', '21': 'comedy',
+                '10': 'fantasy', '22': 'romance'
+            };
+            url += `&genre=${genreMap[genre] || ''}`;
+        } else {
+            url += '&order=popularity';
+        }
+
+        const data = await this._fetch(url);
+        if (data?.length > 0) {
+            // Группируем по основному названию
+            const grouped = {};
+            const items = [];
+            
+            data.forEach(item => {
+                const baseName = item.russian || item.name || 'Без названия';
+                // Убираем из названия "(сезон 2)" и подобное для группировки
+                const cleanName = baseName.replace(/\([^)]*сезон[^)]*\)/i, '').trim();
+                const key = cleanName || baseName;
+                
+                if (!grouped[key]) {
+                    grouped[key] = [];
+                }
+                grouped[key].push({
+                    mal_id: item.id,
+                    title: item.russian || item.name || 'Без названия',
+                    title_russian: item.russian || '',
+                    title_english: item.name || '',
+                    year: item.aired_on ? item.aired_on.split('-')[0] : '--',
+                    episodes: item.episodes || '?',
+                    images: { jpg: { image_url: item.poster?.originalUrl || '' } },
+                    synopsis: item.description || 'Описание отсутствует',
+                    genres: item.genres?.map(g => g.russian || g.name) || [],
+                    score: item.score || 0,
+                    russian: item.russian || '',
+                    source: 'Shikimori',
+                    season: item.season || '',
+                    seasonYear: item.season_year || item.year || '',
+                    isSeason: grouped[key].length > 0
+                });
+            });
+            
+            // Собираем все сезоны в один массив (не группируем, а показываем все)
+            const allItems = [];
+            for (const key in grouped) {
+                const seasonItems = grouped[key];
+                // Сортируем сезоны по году
+                seasonItems.sort((a, b) => (a.year || 0) - (b.year || 0));
+                allItems.push(...seasonItems);
+            }
+            
+            console.log(`✅ Найдено: ${allItems.length} сезонов (${Object.keys(grouped).length} тайтлов)`);
+            
+            return {
+                items: allItems,
+                totalPages: Math.ceil(allItems.length / 24) + 1
+            };
+        }
+        return null;
+    },
+
+    // ============================================
+    // SHIKIMORI — ОБЫЧНЫЙ ПОИСК (РЕЗЕРВ)
     // ============================================
     async searchShikimori(query, genre = null, page = 1) {
         const isSearch = query && query.length > 1;
@@ -69,10 +141,9 @@ const API = {
     },
 
     // ============================================
-    // ANILIBRIA V1 — КАТАЛОГ (НЕ ПОИСК)
+    // ANILIBRIA V1 — КАТАЛОГ
     // ============================================
     async searchAnilibriaV1(query, genre = null, page = 1) {
-        // Если это поиск — пропускаем Anilibria (он плохо ищет)
         if (query && query.length > 1) {
             return null;
         }
@@ -123,36 +194,31 @@ const API = {
     async searchAll(query, genre = null, page = 1) {
         const isSearch = query && query.length > 1;
         
-        // Если это поиск — используем Shikimori
         if (isSearch) {
-            console.log('🔍 Поиск в Shikimori:', query);
+            console.log('🔍 Поиск ВСЕХ сезонов в Shikimori:', query);
             try {
-                const result = await this.searchShikimori(query, genre, page);
+                const result = await this.searchShikimoriAllSeasons(query, genre, page);
                 if (result?.items?.length > 0) {
-                    console.log('✅ Shikimori найдено:', result.items.length);
                     return result;
                 }
             } catch (e) {
                 console.log('⚠️ Shikimori ошибка:', e.message);
             }
             
-            // Если Shikimori не работает — пробуем Anilibria (как резерв)
-            console.log('🔄 Пробуем Anilibria...');
+            console.log('🔄 Пробуем обычный поиск...');
             try {
-                const result = await this.searchAnilibriaV1(query, genre, page);
+                const result = await this.searchShikimori(query, genre, page);
                 if (result?.items?.length > 0) {
-                    console.log('✅ Anilibria найдено:', result.items.length);
                     return result;
                 }
             } catch (e) {
-                console.log('⚠️ Anilibria ошибка:', e.message);
+                console.log('⚠️ Shikimori ошибка:', e.message);
             }
             
             console.log('❌ Ничего не найдено');
             return { items: [], totalPages: 1 };
         }
         
-        // Если не поиск — каталог из Anilibria
         console.log('📚 Каталог Anilibria');
         try {
             const result = await this.searchAnilibriaV1(query, genre, page);
@@ -172,7 +238,6 @@ const API = {
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('anilibria_', '');
         
-        // Пробуем Shikimori
         try {
             const data = await this._fetch(`${this.SHIKIMORI}/animes/${cleanId}`);
             if (data?.id) {
@@ -195,7 +260,6 @@ const API = {
             console.log('⚠️ Shikimori детали ошибка');
         }
 
-        // Пробуем Anilibria
         try {
             const data = await this._fetch(`${this.ANILIBRIA_V1}/anime/releases/${cleanId}`);
             if (data?.id) {
@@ -262,4 +326,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль загружен (Shikimori для поиска + Anilibria для каталога)');
+console.log('✅ API модуль загружен (показывает все сезоны)');
