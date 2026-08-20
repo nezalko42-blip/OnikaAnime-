@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (SHIKIMORI + ANILIBRIA)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ANILIBRIA V1+V2+V3)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -173,7 +173,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (SHIKIMORI + ANILIBRIA)
+// КАТАЛОГ (ANILIBRIA V1+V2+V3)
 // ============================================
 
 async function loadCatalog() {
