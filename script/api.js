@@ -41,6 +41,7 @@ const API = {
             url += `&genre=${parseInt(genre)}`;
         }
 
+        console.log('🔍 V1:', url);
         const data = await this._fetch(url);
         
         if (data?.data?.length > 0) {
@@ -65,6 +66,7 @@ const API = {
             url += `&genre=${parseInt(genre)}`;
         }
 
+        console.log('🔍 V2:', url);
         const data = await this._fetch(url);
         
         if (data?.list?.length > 0) {
@@ -93,6 +95,7 @@ const API = {
             body.f.genres = [parseInt(genre)];
         }
 
+        console.log('🔍 V3:', this.ANILIBRIA_V3 + '/anime/catalog/releases', body);
         const data = await this._fetch(
             this.ANILIBRIA_V3 + '/anime/catalog/releases',
             {
@@ -112,12 +115,12 @@ const API = {
     },
 
     // ============================================
-    // КОНВЕРТАЦИЯ ДАННЫХ (ОБЩАЯ ДЛЯ ВСЕХ ВЕРСИЙ)
+    // КОНВЕРТАЦИЯ
     // ============================================
     _convertItem(item, version) {
         let img = '';
         let id = item.id || item.code;
-        let name = item.name?.main || item.name?.english || item.name?.original || item.name || 'Без названия';
+        let name = item.name?.main || item.name?.english || item.name || 'Без названия';
         let russian = item.name?.main || item.russian || '';
         let english = item.name?.english || item.english || '';
         let year = item.year || '--';
@@ -126,7 +129,6 @@ const API = {
         let score = item.rating || item.score || 0;
         let description = item.description || item.synopsis || 'Описание отсутствует';
         
-        // Извлечение постера (разные форматы в разных версиях)
         if (item.poster) {
             const poster = item.poster.optimized || item.poster;
             if (typeof poster === 'string') {
@@ -134,12 +136,6 @@ const API = {
             } else {
                 img = poster.src || poster.preview || poster.thumbnail || poster.url || '';
             }
-            if (img && img.startsWith('/')) {
-                img = 'https://anilibria.top' + img;
-            }
-        }
-        if (!img && item.image) {
-            img = item.image;
             if (img && img.startsWith('/')) {
                 img = 'https://anilibria.top' + img;
             }
@@ -164,29 +160,28 @@ const API = {
     },
 
     // ============================================
-    // ГИБРИДНЫЙ ПОИСК (V1 + V2 + V3)
+    // ПОИСК ПО ВСЕМ ВЕРСИЯМ
     // ============================================
     async searchAll(query, genre = null, page = 1) {
-        console.log('🔍 Поиск во всех версиях Anilibria:', query || 'каталог');
+        const isSearch = query && query.length > 1;
+        console.log('🔍 Поиск:', query || 'каталог');
         
         let allItems = [];
         const seenIds = new Set();
-        let totalPages = 1;
         
-        // Список всех методов для поиска
-        const searchMethods = [
-            { name: 'V1', fn: this.searchAnilibriaV1 },
-            { name: 'V2', fn: this.searchAnilibriaV2 },
-            { name: 'V3', fn: this.searchAnilibriaV3 }
+        // Список версий для поиска
+        const versions = [
+            { name: 'V1', fn: this.searchAnilibriaV1.bind(this) },
+            { name: 'V2', fn: this.searchAnilibriaV2.bind(this) },
+            { name: 'V3', fn: this.searchAnilibriaV3.bind(this) }
         ];
         
-        // Пробуем все версии
-        for (const method of searchMethods) {
+        // Пробуем каждую версию
+        for (const version of versions) {
             try {
-                const result = await method.fn.call(this, query, genre, page);
+                const result = await version.fn(query, genre, page);
                 if (result?.items?.length > 0) {
-                    console.log(`✅ Anilibria ${method.name} найдено:`, result.items.length);
-                    // Добавляем уникальные элементы
+                    console.log(`✅ ${version.name} найдено:`, result.items.length);
                     for (const item of result.items) {
                         const key = item.id + '_' + item.title;
                         if (!seenIds.has(key)) {
@@ -194,38 +189,32 @@ const API = {
                             allItems.push(item);
                         }
                     }
-                    if (result.totalPages > totalPages) {
-                        totalPages = result.totalPages;
-                    }
-                } else {
-                    console.log(`⚠️ Anilibria ${method.name} ничего не нашёл`);
                 }
             } catch (e) {
-                console.log(`⚠️ Anilibria ${method.name} ошибка:`, e.message);
+                console.log(`⚠️ ${version.name} ошибка:`, e.message);
             }
         }
         
-        // Если ничего не нашли — возвращаем пустой результат
         if (allItems.length === 0) {
             console.log('❌ Ничего не найдено');
             return { items: [], totalPages: 1 };
         }
         
-        console.log(`✅ Всего найдено: ${allItems.length} релизов`);
+        console.log(`✅ Всего найдено: ${allItems.length}`);
         
-        // Пагинация (12 элементов на страницу)
+        // Пагинация
         const start = (page - 1) * 12;
         const paginatedItems = allItems.slice(start, start + 12);
-        const calculatedTotalPages = Math.ceil(allItems.length / 12);
+        const totalPages = Math.ceil(allItems.length / 12);
         
         return {
             items: paginatedItems,
-            totalPages: Math.max(calculatedTotalPages, 1)
+            totalPages: Math.max(totalPages, 1)
         };
     },
 
     // ============================================
-    // ДЕТАЛИ АНИМЕ (V1 + V2 + V3)
+    // ДЕТАЛИ АНИМЕ
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('anilibria_', '');
@@ -233,32 +222,20 @@ const API = {
         // Пробуем V1
         try {
             const data = await this._fetch(`${this.ANILIBRIA_V1}/anime/releases/${cleanId}`);
-            if (data?.id) {
-                return this._convertItem(data, 'V1');
-            }
-        } catch (e) {
-            console.log('⚠️ V1 детали ошибка');
-        }
+            if (data?.id) return this._convertItem(data, 'V1');
+        } catch (e) {}
 
         // Пробуем V2
         try {
             const data = await this._fetch(`${this.ANILIBRIA_V2}/getRelease?id=${cleanId}`);
-            if (data?.id) {
-                return this._convertItem(data, 'V2');
-            }
-        } catch (e) {
-            console.log('⚠️ V2 детали ошибка');
-        }
+            if (data?.id) return this._convertItem(data, 'V2');
+        } catch (e) {}
 
         // Пробуем V3
         try {
             const data = await this._fetch(`${this.ANILIBRIA_V3}/title/${cleanId}`);
-            if (data?.id) {
-                return this._convertItem(data, 'V3');
-            }
-        } catch (e) {
-            console.log('⚠️ V3 детали ошибка');
-        }
+            if (data?.id) return this._convertItem(data, 'V3');
+        } catch (e) {}
 
         return null;
     },
