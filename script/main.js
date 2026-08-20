@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Jikan + Anilibria)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (SHIKIMORI + ANILIBRIA)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -173,7 +173,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (Jikan + Anilibria)
+// КАТАЛОГ (SHIKIMORI + ANILIBRIA)
 // ============================================
 
 async function loadCatalog() {
