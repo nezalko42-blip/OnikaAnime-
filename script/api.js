@@ -1,10 +1,11 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (ANILIBERTY + SHIKIMORI)
+// API МОДУЛЬ ONIKAANIME (SHIKIMORI + ANILIBRIA)
 // ============================================
 
 const API = {
-    ANILIBERTY: 'https://anilibria.top/api/v1',
     SHIKIMORI: 'https://shikimori.one/api/v2',
+    ANILIBRIA: 'https://api.anilibria.tv/v3',
+    ANILIBERTY: 'https://anilibria.top/api/v1',
     
     _cache: new Map(),
     _cacheTTL: 5 * 60 * 1000,
@@ -26,68 +27,7 @@ const API = {
     },
 
     // ============================================
-    // ANILIBERTY — ОСНОВНОЙ ПОИСК
-    // ============================================
-    async searchAniliberty(query, genre = null, page = 1) {
-        const isSearch = query && query.length > 1;
-        let url = `${this.ANILIBERTY}/collections/releases?page=${page}&limit=24`;
-        
-        // Добавляем поиск
-        if (isSearch) {
-            url += `&f[search]=${encodeURIComponent(query)}`;
-        }
-        
-        // Добавляем жанры
-        if (genre) {
-            url += `&f[genres]=${genre}`;
-        }
-        
-        // Если нет поиска и нет жанра — показываем популярное
-        if (!isSearch && !genre) {
-            url += `&f[sorting]=RATING_DESC`;
-        }
-
-        // Добавляем include для получения полных данных
-        url += `&include=id,name,description,season,year,type,genres,posters,rating,ageRating,episodesTotal`;
-
-        const data = await this._fetch(url);
-        
-        if (data?.list?.length > 0) {
-            return {
-                items: data.list.map(item => {
-                    let img = '';
-                    if (item.posters) {
-                        const poster = item.posters.find(p => p.type === 'POSTER') || item.posters[0];
-                        if (poster) {
-                            img = poster.url || '';
-                            if (img && img.startsWith('/')) {
-                                img = 'https://anilibria.top' + img;
-                            }
-                        }
-                    }
-                    return {
-                        mal_id: item.id,
-                        title: item.name || item.englishName || 'Без названия',
-                        title_russian: item.name || '',
-                        title_english: item.englishName || '',
-                        year: item.year || '--',
-                        episodes: item.episodesTotal || item.episodes || '?',
-                        images: { jpg: { image_url: img || '' } },
-                        synopsis: item.description || 'Описание отсутствует',
-                        genres: item.genres?.map(g => g.name) || [],
-                        score: item.rating || 0,
-                        russian: item.name || '',
-                        source: 'Aniliberty'
-                    };
-                }),
-                totalPages: Math.ceil((data.total || data.list.length) / 24)
-            };
-        }
-        return null;
-    },
-
-    // ============================================
-    // SHIKIMORI — РЕЗЕРВ
+    // SHIKIMORI — ОСНОВНОЙ
     // ============================================
     async searchShikimori(query, genre = null, page = 1) {
         const isSearch = query && query.length > 1;
@@ -129,24 +69,74 @@ const API = {
     },
 
     // ============================================
+    // ANILIBRIA — РЕЗЕРВ (ДЛЯ ВИДЕО И КАТАЛОГА)
+    // ============================================
+    async searchAnilibria(query, genre = null, page = 1) {
+        const isSearch = query && query.length > 1;
+        const body = { 
+            page: page, 
+            limit: 12, 
+            f: { sorting: 'FRESH_AT_DESC' } 
+        };
+
+        if (isSearch) {
+            body.f.search = query;
+        } else if (genre) {
+            body.f.genres = [parseInt(genre)];
+        }
+
+        try {
+            const data = await this._fetch(
+                this.ANILIBRIA + '/anime/catalog/releases',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }
+            );
+
+            if (data?.data?.length > 0) {
+                return {
+                    items: data.data.map(item => {
+                        let img = '';
+                        if (item.poster) {
+                            const p = item.poster.optimized || item.poster;
+                            img = typeof p === 'string' ? p : (p.preview || p.src || '');
+                            if (img && img[0] === '/') img = 'https://anilibria.top' + img;
+                        }
+                        return {
+                            mal_id: 'anilibria_' + item.id,
+                            id: item.id,
+                            title: item.name?.main || item.name?.english || item.name?.original || 'Без названия',
+                            title_russian: item.name?.main || '',
+                            title_english: item.name?.english || '',
+                            year: item.year || '--',
+                            episodes: item.episodes_total || '?',
+                            images: { jpg: { image_url: img || '' } },
+                            synopsis: item.description || 'Описание отсутствует',
+                            genres: item.genres || [],
+                            score: item.rating || 0,
+                            russian: item.name?.main || '',
+                            source: 'Anilibria'
+                        };
+                    }),
+                    totalPages: data.meta?.pagination?.total_pages || 1
+                };
+            }
+            return null;
+        } catch (error) {
+            console.log('⚠️ Anilibria ошибка:', error.message);
+            return null;
+        }
+    },
+
+    // ============================================
     // ГИБРИДНЫЙ ПОИСК
     // ============================================
     async searchAll(query, genre = null, page = 1) {
-        console.log('🔍 Поиск в Aniliberty:', query || 'все');
+        console.log('🔍 Поиск в Shikimori:', query || 'все');
         
-        // 1. Пробуем Aniliberty
-        try {
-            const result = await this.searchAniliberty(query, genre, page);
-            if (result?.items?.length > 0) {
-                console.log('✅ Aniliberty найдено:', result.items.length);
-                return result;
-            }
-        } catch (e) {
-            console.log('⚠️ Aniliberty ошибка:', e.message);
-        }
-        
-        // 2. Если Aniliberty не дал результат — пробуем Shikimori
-        console.log('🔄 Пробуем Shikimori...');
+        // 1. Пробуем Shikimori
         try {
             const result = await this.searchShikimori(query, genre, page);
             if (result?.items?.length > 0) {
@@ -157,47 +147,27 @@ const API = {
             console.log('⚠️ Shikimori ошибка:', e.message);
         }
         
+        // 2. Если Shikimori не дал результат — пробуем Anilibria
+        console.log('🔄 Пробуем Anilibria...');
+        try {
+            const result = await this.searchAnilibria(query, genre, page);
+            if (result?.items?.length > 0) {
+                console.log('✅ Anilibria найдено:', result.items.length);
+                return result;
+            }
+        } catch (e) {
+            console.log('⚠️ Anilibria ошибка:', e.message);
+        }
+        
         // 3. Если ничего не найдено
+        console.log('❌ Ничего не найдено');
         return { items: [], totalPages: 1 };
     },
 
     // ============================================
-    // ДЕТАЛИ АНИМЕ (ANILIBERTY)
+    // ДЕТАЛИ АНИМЕ
     // ============================================
     async getAnimeDetails(id) {
-        // Пробуем Aniliberty
-        try {
-            const data = await this._fetch(`${this.ANILIBERTY}/releases/${id}?include=id,name,description,season,year,type,genres,posters,rating,ageRating,episodesTotal`);
-            if (data?.id) {
-                let img = '';
-                if (data.posters) {
-                    const poster = data.posters.find(p => p.type === 'POSTER') || data.posters[0];
-                    if (poster) {
-                        img = poster.url || '';
-                        if (img && img.startsWith('/')) {
-                            img = 'https://anilibria.top' + img;
-                        }
-                    }
-                }
-                return {
-                    mal_id: data.id,
-                    title: data.name || data.englishName || 'Без названия',
-                    title_russian: data.name || '',
-                    title_english: data.englishName || '',
-                    year: data.year || '--',
-                    episodes: data.episodesTotal || data.episodes || '?',
-                    images: { jpg: { image_url: img || '' } },
-                    synopsis: data.description || 'Описание отсутствует',
-                    genres: data.genres?.map(g => g.name) || [],
-                    score: data.rating || 0,
-                    russian: data.name || '',
-                    source: 'Aniliberty'
-                };
-            }
-        } catch (e) {
-            console.log('⚠️ Aniliberty детали ошибка');
-        }
-        
         // Пробуем Shikimori
         try {
             const data = await this._fetch(`${this.SHIKIMORI}/animes/${id}`);
@@ -221,11 +191,41 @@ const API = {
             console.log('⚠️ Shikimori детали ошибка');
         }
 
+        // Пробуем Anilibria
+        try {
+            const cleanId = id.toString().replace('anilibria_', '');
+            const data = await this._fetch(`${this.ANILIBRIA}/title/${cleanId}`);
+            if (data?.id) {
+                let img = '';
+                if (data.poster) {
+                    const p = data.poster.optimized || data.poster;
+                    img = typeof p === 'string' ? p : (p.preview || p.src || '');
+                    if (img && img[0] === '/') img = 'https://anilibria.top' + img;
+                }
+                return {
+                    mal_id: data.id,
+                    title: data.name?.main || data.name?.english || 'Без названия',
+                    title_russian: data.name?.main || '',
+                    title_english: data.name?.english || '',
+                    year: data.year || '--',
+                    episodes: data.episodes_total || '?',
+                    images: { jpg: { image_url: img || '' } },
+                    synopsis: data.description || 'Описание отсутствует',
+                    genres: data.genres || [],
+                    score: data.rating || 0,
+                    russian: data.name?.main || '',
+                    source: 'Anilibria'
+                };
+            }
+        } catch (e) {
+            console.log('⚠️ Anilibria детали ошибка');
+        }
+
         return null;
     },
 
     // ============================================
-    // ПОИСК ВИДЕО В KODIK (БЕЗ ИЗМЕНЕНИЙ)
+    // ПОИСК ВИДЕО В KODIK
     // ============================================
     async searchKodik(animeTitle, episode = 1) {
         if (!animeTitle) throw new Error('Название не указано');
@@ -257,4 +257,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль загружен (Aniliberty + Shikimori)');
+console.log('✅ API модуль загружен (Shikimori основной)');
