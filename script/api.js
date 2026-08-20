@@ -1,13 +1,62 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (ANILIBRIA V1 + SHIKIMORI)
+// API МОДУЛЬ ONIKAANLINE (С СИНОНИМАМИ)
 // ============================================
 
 const API = {
     ANILIBRIA_V1: 'https://anilibria.top/api/v1',
     SHIKIMORI: 'https://shikimori.one/api/v2',
     
+    // ===== СИНОНИМЫ ДЛЯ ПОИСКА =====
+    SYNONYMS: {
+        'блич': 'Bleach',
+        'bleach': 'Bleach',
+        'наруто': 'Naruto',
+        'naruto': 'Naruto',
+        'ван пис': 'One Piece',
+        'one piece': 'One Piece',
+        'one piece': 'One Piece',
+        'атака титанов': 'Attack on Titan',
+        'attack on titan': 'Attack on Titan',
+        'магическая битва': 'Jujutsu Kaisen',
+        'jujutsu kaisen': 'Jujutsu Kaisen',
+        'клинок рассекающий демонов': 'Demon Slayer',
+        'demon slayer': 'Demon Slayer',
+        'кимецу но яиба': 'Demon Slayer',
+        'kimetsu no yaiba': 'Demon Slayer',
+        'токийский гуль': 'Tokyo Ghoul',
+        'tokyo ghoul': 'Tokyo Ghoul',
+        'моя геройская академия': 'My Hero Academia',
+        'my hero academia': 'My Hero Academia',
+        'стальной алхимик': 'Fullmetal Alchemist',
+        'fullmetal alchemist': 'Fullmetal Alchemist',
+        'гуррен лаганн': 'Gurren Lagann',
+        'gurren lagann': 'Gurren Lagann',
+        'евангелион': 'Evangelion',
+        'evangelion': 'Evangelion',
+        'ковбой бибоп': 'Cowboy Bebop',
+        'cowboy bebop': 'Cowboy Bebop',
+        'самурай чамплу': 'Samurai Champloo',
+        'samurai champloo': 'Samurai Champloo'
+    },
+    
     _cache: new Map(),
     _cacheTTL: 5 * 60 * 1000,
+
+    // ===== ПОЛУЧИТЬ СИНОНИМ ДЛЯ ПОИСКА =====
+    _getSynonym(query) {
+        const lower = query.toLowerCase().trim();
+        // Проверяем точное совпадение
+        if (this.SYNONYMS[lower]) {
+            return this.SYNONYMS[lower];
+        }
+        // Проверяем частичное совпадение
+        for (const [key, value] of Object.entries(this.SYNONYMS)) {
+            if (lower.includes(key) || key.includes(lower)) {
+                return value;
+            }
+        }
+        return query;
+    },
 
     async _fetch(url, options = {}) {
         const headers = {
@@ -27,56 +76,54 @@ const API = {
     },
 
     // ============================================
-    // ANILIBRIA V1 — ПОИСК ВО ВСЕХ СТРАНИЦАХ
+    // ANILIBRIA V1 — ПОИСК С СИНОНИМАМИ
     // ============================================
-    async searchAnilibriaDeep(query, genre = null, maxPages = 15) {
+    async searchAnilibriaDeep(query, genre = null, maxPages = 10) {
         if (!query || query.length < 2) return { items: [], totalPages: 1 };
         
-        console.log(`🔍 Глубокий поиск Anilibria: "${query}" (${maxPages} страниц)`);
+        // Получаем синоним
+        const searchQuery = this._getSynonym(query);
+        console.log(`🔍 Поиск Anilibria: "${query}" → "${searchQuery}"`);
         
         let allItems = [];
         const seenIds = new Set();
-        const searchLower = query.toLowerCase().trim();
         
-        // Сначала пробуем прямой поиск
-        for (let page = 1; page <= maxPages; page++) {
-            try {
-                let url = `${this.ANILIBRIA_V1}/anime/catalog/releases?page=${page}&limit=50`;
-                url += `&search=${encodeURIComponent(query)}`;
-                if (genre) url += `&genre=${parseInt(genre)}`;
-                
-                const data = await this._fetch(url);
-                if (!data?.data?.length) break;
-                
-                for (const item of data.data) {
-                    if (!seenIds.has(item.id)) {
-                        seenIds.add(item.id);
-                        const title = (item.name?.main || '').toLowerCase().trim();
-                        const titleEn = (item.name?.english || '').toLowerCase().trim();
-                        const alias = (item.alias || '').toLowerCase().trim();
-                        
-                        // Проверяем совпадение
-                        if (title.includes(searchLower) || 
-                            titleEn.includes(searchLower) || 
-                            alias.includes(searchLower)) {
+        // Ищем по оригинальному запросу и по синониму
+        const searchTerms = [query, searchQuery];
+        if (searchQuery !== query) {
+            searchTerms.push(searchQuery);
+        }
+        
+        for (const term of searchTerms) {
+            for (let page = 1; page <= maxPages; page++) {
+                try {
+                    const url = `${this.ANILIBRIA_V1}/anime/catalog/releases?page=${page}&limit=50&search=${encodeURIComponent(term)}`;
+                    if (genre) url += `&genre=${parseInt(genre)}`;
+                    
+                    const data = await this._fetch(url);
+                    if (!data?.data?.length) break;
+                    
+                    for (const item of data.data) {
+                        if (!seenIds.has(item.id)) {
+                            seenIds.add(item.id);
                             allItems.push(this._convertAnilibriaItem(item));
                         }
                     }
+                    
+                    if (data.data.length < 50) break;
+                    
+                } catch (e) {
+                    console.log(`⚠️ Страница ${page} не загружена`);
+                    break;
                 }
-                
-                if (data.data.length < 50) break;
-                
-            } catch (e) {
-                console.log(`⚠️ Страница ${page} не загружена`);
-                break;
             }
         }
         
-        // Если ничего не нашли — пробуем поиск по alias (альтернативные названия)
+        // Если ничего не нашли — пробуем поиск по alias
         if (allItems.length === 0) {
             console.log('🔄 Пробуем поиск по alias...');
             try {
-                const url = `${this.ANILIBRIA_V1}/anime/catalog/releases?page=1&limit=50&search=${encodeURIComponent(query)}`;
+                const url = `${this.ANILIBRIA_V1}/anime/catalog/releases?page=1&limit=50&search=${encodeURIComponent(searchQuery)}`;
                 const data = await this._fetch(url);
                 if (data?.data) {
                     for (const item of data.data) {
@@ -147,7 +194,7 @@ const API = {
     },
 
     // ============================================
-    // SHIKIMORI — РЕЗЕРВ (ЕСЛИ ANILIBRIA НЕ РАБОТАЕТ)
+    // SHIKIMORI — РЕЗЕРВ
     // ============================================
     async searchShikimori(query, genre = null, page = 1) {
         const isSearch = query && query.length > 1;
@@ -194,9 +241,8 @@ const API = {
     async searchAll(query, genre = null, page = 1) {
         const isSearch = query && query.length > 1;
         
-        // Если это поиск — используем Anilibria с глубоким поиском
         if (isSearch) {
-            console.log('🔍 Поиск в Anilibria (глубокий):', query);
+            console.log('🔍 Поиск с синонимами:', query);
             
             try {
                 const result = await this.searchAnilibriaDeep(query, genre);
@@ -205,10 +251,9 @@ const API = {
                     return result;
                 }
             } catch (e) {
-                console.log('⚠️ Anilibria глубокая ошибка:', e.message);
+                console.log('⚠️ Anilibria ошибка:', e.message);
             }
             
-            // Если Anilibria не дал результат — пробуем Shikimori
             console.log('🔄 Пробуем Shikimori...');
             try {
                 const result = await this.searchShikimori(query, genre, 1);
@@ -224,7 +269,6 @@ const API = {
             return { items: [], totalPages: 1 };
         }
         
-        // Если не поиск — каталог из Anilibria
         console.log('📚 Каталог Anilibria');
         try {
             const result = await this.searchAnilibriaCatalog(page, genre);
@@ -233,17 +277,6 @@ const API = {
             }
         } catch (e) {
             console.log('⚠️ Anilibria каталог ошибка:', e.message);
-        }
-        
-        // Если Anilibria не работает — пробуем Shikimori
-        console.log('🔄 Пробуем Shikimori для каталога...');
-        try {
-            const result = await this.searchShikimori('', genre, page);
-            if (result?.items?.length > 0) {
-                return result;
-            }
-        } catch (e) {
-            console.log('⚠️ Shikimori каталог ошибка:', e.message);
         }
         
         return { items: [], totalPages: 1 };
@@ -255,7 +288,6 @@ const API = {
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('anilibria_', '');
         
-        // Пробуем Anilibria
         try {
             const data = await this._fetch(`${this.ANILIBRIA_V1}/anime/releases/${cleanId}`);
             if (data?.id) {
@@ -286,7 +318,6 @@ const API = {
             console.log('⚠️ Anilibria детали ошибка');
         }
 
-        // Пробуем Shikimori
         try {
             const data = await this._fetch(`${this.SHIKIMORI}/animes/${cleanId}`);
             if (data?.id) {
@@ -345,4 +376,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль загружен (Anilibria V1 + глубокий поиск)');
+console.log('✅ API модуль загружен (с синонимами)');
