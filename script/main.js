@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ANILIBRIA V1+V2+V3)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ПОЛНОЦЕННЫЙ ПОИСК)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -173,14 +173,14 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (ANILIBRIA V1+V2+V3)
+// КАТАЛОГ (ПОЛНОЦЕННЫЙ ПОИСК)
 // ============================================
 
 async function loadCatalog() {
     const grid = document.getElementById('grid');
     if (!grid) return;
     
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Поиск...</div>';
     
     try {
         const result = await API.searchAll(query, genre, page);
@@ -193,14 +193,23 @@ async function loadCatalog() {
                 allData[item.mal_id] = item;
             });
             
+            const titleEl = document.getElementById('title');
+            if (titleEl && query && query.length > 1) {
+                titleEl.textContent = `🔍 Результаты поиска: "${query}" (${result.items.length})`;
+            }
+            
             renderCatalog(result.items);
             renderPagination();
             loadSchedule();
         } else {
-            showError('🔍 Ничего не найдено');
+            if (query && query.length > 1) {
+                showError(`🔍 По запросу "${query}" ничего не найдено`);
+            } else {
+                showError('📚 Каталог пуст');
+            }
         }
     } catch (error) {
-        console.error('❌ Ошибка загрузки каталога:', error);
+        console.error('❌ Ошибка загрузки:', error);
         showError('⚠️ Ошибка загрузки');
     }
 }
