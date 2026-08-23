@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (SHIKIMORI)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (SHIKIMORI GRAPHQL)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -172,7 +172,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (SHIKIMORI)
+// КАТАЛОГ (SHIKIMORI GRAPHQL)
 // ============================================
 
 async function loadCatalog() {
@@ -196,6 +196,12 @@ async function loadCatalog() {
             const titleEl = document.getElementById('title');
             if (titleEl && query && query.length > 1) {
                 titleEl.textContent = `🔍 Результаты поиска: "${query}" (${result.items.length})`;
+            } else if (titleEl && genre) {
+                const genreNames = {
+                    '1': 'Экшен', '8': 'Драма', '21': 'Комедия',
+                    '10': 'Фэнтези', '22': 'Романтика'
+                };
+                titleEl.textContent = `🎭 ${genreNames[genre] || 'Жанр'}`;
             } else {
                 titleEl.textContent = '✨ Популярное аниме';
             }
