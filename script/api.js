@@ -26,158 +26,66 @@ const API = {
     },
 
     // ============================================
-    // ПОИСК ПО ВСЕМ РЕЛИЗАМ (/app/search/releases)
+    // КАТАЛОГ С ПОИСКОМ (/anime/catalog/releases)
     // ============================================
-    async searchReleases(query, genre = null, page = 1) {
-        const isSearch = query && query.length > 1;
-        
-        let url = `${this.ANILIBRIA}/app/search/releases?page=${page}&limit=24`;
-        
-        if (isSearch) {
-            url += `&query=${encodeURIComponent(query)}`;
-        }
-        if (genre) {
-            url += `&genre=${parseInt(genre)}`;
-        }
-
-        console.log('🔍 Anilibria поиск:', url);
-        const data = await this._fetch(url);
-        
-        if (data?.list?.length > 0) {
-            console.log('✅ Anilibria поиск найдено:', data.list.length);
-            return {
-                items: data.list.map(item => {
-                    let img = '';
-                    if (item.poster) {
-                        const poster = item.poster.optimized || item.poster;
-                        img = poster.src || poster.preview || poster.thumbnail || '';
-                        if (img && img.startsWith('/')) {
-                            img = 'https://anilibria.top' + img;
-                        }
-                    }
-                    return {
-                        mal_id: 'anilibria_' + item.id,
-                        id: item.id,
-                        title: item.name?.main || item.name?.english || item.name?.alternative || 'Без названия',
-                        title_russian: item.name?.main || '',
-                        title_english: item.name?.english || '',
-                        year: item.year || '--',
-                        episodes: item.episodes_total || '?',
-                        images: { jpg: { image_url: img || '' } },
-                        synopsis: item.description || 'Описание отсутствует',
-                        genres: item.genres || [],
-                        score: item.rating || 0,
-                        russian: item.name?.main || '',
-                        source: 'Anilibria'
-                    };
-                }),
-                totalPages: data.pagination?.total_pages || 1
-            };
-        }
-        return null;
-    },
-
-    // ============================================
-    // КАТАЛОГ (/anime/catalog/releases)
-    // ============================================
-    async getCatalog(page = 1, genre = null) {
+    async getCatalog(page = 1, genre = null, search = '') {
         let url = `${this.ANILIBRIA}/anime/catalog/releases?page=${page}&limit=24`;
+        
+        if (search && search.length > 1) {
+            url += `&f[search]=${encodeURIComponent(search)}`;
+        }
         if (genre) {
-            url += `&genre=${parseInt(genre)}`;
+            url += `&f[genres]=${parseInt(genre)}`;
         }
 
-        console.log('📚 Anilibria каталог:', url);
+        console.log('📡 Anilibria запрос:', url);
         const data = await this._fetch(url);
         
         if (data?.data?.length > 0) {
+            console.log('✅ Anilibria найдено:', data.data.length);
             return {
-                items: data.data.map(item => {
-                    let img = '';
-                    if (item.poster) {
-                        const poster = item.poster.optimized || item.poster;
-                        img = poster.src || poster.preview || poster.thumbnail || '';
-                        if (img && img.startsWith('/')) {
-                            img = 'https://anilibria.top' + img;
-                        }
-                    }
-                    return {
-                        mal_id: 'anilibria_' + item.id,
-                        id: item.id,
-                        title: item.name?.main || item.name?.english || item.name?.alternative || 'Без названия',
-                        title_russian: item.name?.main || '',
-                        title_english: item.name?.english || '',
-                        year: item.year || '--',
-                        episodes: item.episodes_total || '?',
-                        images: { jpg: { image_url: img || '' } },
-                        synopsis: item.description || 'Описание отсутствует',
-                        genres: item.genres || [],
-                        score: item.rating || 0,
-                        russian: item.name?.main || '',
-                        source: 'Anilibria'
-                    };
-                }),
+                items: data.data.map(item => this._convertItem(item)),
                 totalPages: data.meta?.pagination?.total_pages || 1
             };
         }
+        console.log('❌ Anilibria ничего не нашёл');
         return null;
     },
 
     // ============================================
-    // ГЛУБОКИЙ ПОИСК (ПО ВСЕМ СТРАНИЦАМ)
+    // ПОИСК ПО ВСЕМ СТРАНИЦАМ (ГЛУБОКИЙ ПОИСК)
     // ============================================
-    async searchAllPages(query, maxPages = 20) {
-        if (!query || query.length < 2) {
+    async searchAllPages(search, maxPages = 20) {
+        if (!search || search.length < 2) {
             return { items: [], totalPages: 1 };
         }
         
-        console.log(`🔍 ГЛУБОКИЙ ПОИСК: "${query}" (макс. ${maxPages} стр.)`);
+        console.log(`🔍 ПОИСК ПО ВСЕМ СТРАНИЦАМ: "${search}" (макс. ${maxPages} стр.)`);
         
         let allItems = [];
         const seenIds = new Set();
         
         for (let page = 1; page <= maxPages; page++) {
             try {
-                let url = `${this.ANILIBRIA}/app/search/releases?page=${page}&limit=50&query=${encodeURIComponent(query)}`;
+                const url = `${this.ANILIBRIA}/anime/catalog/releases?page=${page}&limit=100&f[search]=${encodeURIComponent(search)}`;
                 const data = await this._fetch(url);
                 
-                if (!data?.list?.length) {
+                if (!data?.data?.length) {
                     console.log(`📄 Страница ${page} пуста, завершаем`);
                     break;
                 }
                 
-                console.log(`📄 Страница ${page}: ${data.list.length} результатов`);
+                console.log(`📄 Страница ${page}: ${data.data.length} результатов`);
                 
-                for (const item of data.list) {
+                for (const item of data.data) {
                     if (!seenIds.has(item.id)) {
                         seenIds.add(item.id);
-                        let img = '';
-                        if (item.poster) {
-                            const poster = item.poster.optimized || item.poster;
-                            img = poster.src || poster.preview || poster.thumbnail || '';
-                            if (img && img.startsWith('/')) {
-                                img = 'https://anilibria.top' + img;
-                            }
-                        }
-                        allItems.push({
-                            mal_id: 'anilibria_' + item.id,
-                            id: item.id,
-                            title: item.name?.main || item.name?.english || 'Без названия',
-                            title_russian: item.name?.main || '',
-                            title_english: item.name?.english || '',
-                            year: item.year || '--',
-                            episodes: item.episodes_total || '?',
-                            images: { jpg: { image_url: img || '' } },
-                            synopsis: item.description || 'Описание отсутствует',
-                            genres: item.genres || [],
-                            score: item.rating || 0,
-                            russian: item.name?.main || '',
-                            source: 'Anilibria'
-                        });
+                        allItems.push(this._convertItem(item));
                     }
                 }
                 
-                if (data.list.length < 50) {
-                    console.log(`📄 Страница ${page} последняя (меньше 50 записей)`);
+                if (data.data.length < 100) {
+                    console.log(`📄 Страница ${page} последняя (меньше 100 записей)`);
                     break;
                 }
                 
@@ -196,6 +104,78 @@ const API = {
     },
 
     // ============================================
+    // ПОСЛЕДНИЕ РЕЛИЗЫ (/anime/releases/latest)
+    // ============================================
+    async getLatestReleases(limit = 14) {
+        const url = `${this.ANILIBRIA}/anime/releases/latest?limit=${limit}`;
+        const data = await this._fetch(url);
+        if (data?.length > 0) {
+            return data.map(item => this._convertItem(item));
+        }
+        return [];
+    },
+
+    // ============================================
+    // РЕКОМЕНДОВАННЫЕ (/anime/releases/recommended)
+    // ============================================
+    async getRecommended(limit = 5, releaseId = null) {
+        let url = `${this.ANILIBRIA}/anime/releases/recommended?limit=${limit}`;
+        if (releaseId) {
+            url += `&release_id=${releaseId}`;
+        }
+        const data = await this._fetch(url);
+        if (data?.length > 0) {
+            return data.map(item => this._convertItem(item));
+        }
+        return [];
+    },
+
+    // ============================================
+    // СПИСОК ЖАНРОВ (/anime/genres)
+    // ============================================
+    async getGenres() {
+        const url = `${this.ANILIBRIA}/anime/genres`;
+        const data = await this._fetch(url);
+        if (data?.length > 0) {
+            return data.map(item => ({
+                id: item.id,
+                name: item.name,
+                total_releases: item.total_releases
+            }));
+        }
+        return [];
+    },
+
+    // ============================================
+    // КОНВЕРТАЦИЯ ЭЛЕМЕНТА
+    // ============================================
+    _convertItem(item) {
+        let img = '';
+        if (item.poster) {
+            const poster = item.poster.optimized || item.poster;
+            img = poster.src || poster.preview || poster.thumbnail || '';
+            if (img && img.startsWith('/')) {
+                img = 'https://anilibria.top' + img;
+            }
+        }
+        return {
+            mal_id: 'anilibria_' + item.id,
+            id: item.id,
+            title: item.name?.main || item.name?.english || item.name?.alternative || 'Без названия',
+            title_russian: item.name?.main || '',
+            title_english: item.name?.english || '',
+            year: item.year || '--',
+            episodes: item.episodes_total || '?',
+            images: { jpg: { image_url: img || '' } },
+            synopsis: item.description || 'Описание отсутствует',
+            genres: item.genres || [],
+            score: item.rating || 0,
+            russian: item.name?.main || '',
+            source: 'Anilibria'
+        };
+    },
+
+    // ============================================
     // ОСНОВНАЯ ФУНКЦИЯ
     // ============================================
     async searchAll(query, genre = null, page = 1) {
@@ -204,6 +184,7 @@ const API = {
         if (isSearch) {
             console.log('🔍 ПОИСК:', query);
             
+            // Глубокий поиск по всем страницам
             try {
                 const result = await this.searchAllPages(query);
                 if (result?.items?.length > 0) {
@@ -220,8 +201,9 @@ const API = {
                 console.log('⚠️ Глубокий поиск ошибка:', e.message);
             }
             
+            // Обычный поиск
             try {
-                const result = await this.searchReleases(query, genre, page);
+                const result = await this.getCatalog(page, genre, query);
                 if (result?.items?.length > 0) {
                     console.log('✅ Обычный поиск:', result.items.length);
                     return result;
@@ -231,6 +213,7 @@ const API = {
             }
         }
         
+        // Каталог
         console.log('📚 КАТАЛОГ');
         try {
             const result = await this.getCatalog(page, genre);
