@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ПОЛНОЦЕННЫЙ ПОИСК)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (SHIKIMORI)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -93,9 +93,8 @@ function updateUI() {
             </a>
         `;
         footer.innerHTML = `
-            <div class="sidebar-user-info" onclick="openPetModal()" style="cursor:pointer;">
+            <div class="sidebar-user-info">
                 🌟 ${user.name}
-                <span class="pet-icon-inline" id="petIcon">🐱</span>
             </div>
         `;
     } else {
@@ -173,16 +172,17 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (ПОЛНОЦЕННЫЙ ПОИСК)
+// КАТАЛОГ (SHIKIMORI)
 // ============================================
 
 async function loadCatalog() {
     const grid = document.getElementById('grid');
     if (!grid) return;
     
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Поиск...</div>';
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка из Shikimori...</div>';
     
     try {
+        console.log('🔍 Поисковый запрос:', query);
         const result = await API.searchAll(query, genre, page);
         
         if (result && result.items && result.items.length > 0) {
@@ -196,6 +196,8 @@ async function loadCatalog() {
             const titleEl = document.getElementById('title');
             if (titleEl && query && query.length > 1) {
                 titleEl.textContent = `🔍 Результаты поиска: "${query}" (${result.items.length})`;
+            } else {
+                titleEl.textContent = '✨ Популярное аниме';
             }
             
             renderCatalog(result.items);
@@ -1960,9 +1962,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const user = DB.get('currentUser');
     if (user) {
         startOnlineTracking();
-        if (typeof initPet === 'function') {
-            initPet();
-        }
     }
     
     console.log('✅ OnikaAnime готов!');
@@ -1980,117 +1979,3 @@ window.playWithShikimori = playWithShikimori;
 window.currentPlayer = currentPlayer;
 window.allData = allData;
 window.showManualVideoInput = showManualVideoInput;
-
-// ============================================
-// ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ПИТОМЦА
-// ============================================
-
-// Ручное добавление очков (для теста)
-window.addTestPetExp = function() {
-    const user = DB.get('currentUser');
-    if (user) {
-        DB.addPetExp(user.name, 50);
-        if (typeof renderPetModal === 'function') {
-            renderPetModal();
-        }
-        if (typeof updatePetIcon === 'function') {
-            updatePetIcon(user.name);
-        }
-        showToast('🧪 +50 тестовых очков! 🐱', 'success');
-    } else {
-        showToast('❌ Войдите в аккаунт!', 'error');
-    }
-};
-
-// Проверка статуса питомца
-window.checkPetStatus = function() {
-    const user = DB.get('currentUser');
-    if (!user) {
-        console.log('❌ Пользователь не авторизован');
-        return;
-    }
-    const pet = DB.getPet(user.name);
-    const progress = DB.getPetProgress(user.name);
-    console.log('🐱 СТАТУС ПИТОМЦА:');
-    console.log('  Очки:', pet.exp);
-    console.log('  Облик:', DB._data.petSkins[pet.skin].name);
-    console.log('  Дней:', pet.days);
-    console.log('  Прогресс:', progress.percent + '%');
-    console.log('  Следующий облик:', progress.nextSkin ? progress.nextSkin.name : 'Максимум');
-    return { pet, progress };
-};
-
-// Автоматическое добавление очков при просмотре
-document.addEventListener('DOMContentLoaded', function() {
-    // Добавляем обработчик на окончание серии в плеере
-    const originalPlay = window.playWithShikimori;
-    if (originalPlay) {
-        window.playWithShikimori = async function(animeId, episode) {
-            await originalPlay(animeId, episode);
-            
-            // Добавляем обработчик на окончание видео
-            setTimeout(() => {
-                const video = document.querySelector('.onika-player-video');
-                if (video) {
-                    video.addEventListener('ended', function() {
-                        const user = DB.get('currentUser');
-                        if (user) {
-                            DB.addPetExp(user.name, 10);
-                            if (typeof renderPetModal === 'function') {
-                                renderPetModal();
-                            }
-                            if (typeof updatePetIcon === 'function') {
-                                updatePetIcon(user.name);
-                            }
-                            console.log('🐱 +10 очков за просмотр!');
-                        }
-                    });
-                }
-            }, 1000);
-        };
-    }
-});
-
-// Проверка питомца при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        const user = DB.get('currentUser');
-        if (user && typeof initPet === 'function') {
-            initPet();
-            console.log('🐱 Питомец инициализирован принудительно');
-        }
-    }, 1000);
-});
-
-// Тестовая функция для добавления очков
-window.addTestPoints = function() {
-    const user = DB.get('currentUser');
-    if (user) {
-        DB.addPetExp(user.name, 50);
-        if (typeof renderPetModal === 'function') {
-            renderPetModal();
-        }
-        if (typeof updatePetIcon === 'function') {
-            updatePetIcon(user.name);
-        }
-        showToast('🧪 +50 тестовых очков!', 'success');
-    } else {
-        showToast('❌ Войдите в аккаунт!', 'error');
-    }
-};
-
-// Проверка статуса
-window.checkPet = function() {
-    const user = DB.get('currentUser');
-    if (!user) {
-        console.log('❌ Нет пользователя');
-        return;
-    }
-    const pet = DB.getPet(user.name);
-    console.log('🐱 ПИТОМЕЦ:');
-    console.log('Имя:', pet.name);
-    console.log('Очки:', pet.exp);
-    console.log('Облик:', DB._data.petSkins[pet.skin].name);
-    console.log('Дней:', pet.days);
-    console.log('Разблокировано:', pet.unlockedSkins.length + '/' + Object.keys(DB._data.petSkins).length);
-};
