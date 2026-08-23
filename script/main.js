@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (SHIKIMORI GRAPHQL)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ANILIBRIA)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -172,14 +172,14 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (SHIKIMORI GRAPHQL)
+// КАТАЛОГ (ANILIBRIA)
 // ============================================
 
 async function loadCatalog() {
     const grid = document.getElementById('grid');
     if (!grid) return;
     
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка из Shikimori...</div>';
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка из Anilibria...</div>';
     
     try {
         console.log('🔍 Поисковый запрос:', query);
