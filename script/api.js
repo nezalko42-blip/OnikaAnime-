@@ -1,267 +1,216 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (ПОЛНОЦЕННЫЙ ПОИСК)
+// API МОДУЛЬ ONIKAANIME (LOCAL DB + SHIKIMORI GRAPHQL)
 // ============================================
 
 const API = {
+    SHIKIMORI_GRAPHQL: 'https://shikimori.one/api/graphql',
     ANILIBRIA_V1: 'https://anilibria.top/api/v1',
     ANILIBRIA_V2: 'https://api.anilibria.tv/v2',
     ANILIBRIA_V3: 'https://api.anilibria.tv/v3',
     
     _cache: new Map(),
     _cacheTTL: 5 * 60 * 1000,
+    _localAnime: null,
 
-    async _fetch(url, options = {}) {
-        const headers = {
-            'User-Agent': 'OnikaAnime/2.0',
-            'Accept': 'application/json',
-            ...options.headers
+    // ============================================
+    // ЗАГРУЗКА ЛОКАЛЬНОЙ БД
+    // ============================================
+    async loadLocalDB() {
+        if (this._localAnime) return this._localAnime;
+        
+        try {
+            const response = await fetch('/data/anime.json');
+            if (!response.ok) throw new Error('Не удалось загрузить локальную БД');
+            const data = await response.json();
+            this._localAnime = data.anime || [];
+            console.log('📚 Локальная БД загружена:', this._localAnime.length, 'аниме');
+            return this._localAnime;
+        } catch (error) {
+            console.error('❌ Ошибка загрузки локальной БД:', error);
+            this._localAnime = this._getFallbackData();
+            return this._localAnime;
+        }
+    },
+
+    _getFallbackData() {
+        return [
+            { id: 1, title: 'Атака Титанов', title_russian: 'Атака Титанов', title_english: 'Attack on Titan', year: 2013, episodes: 25, image: '', genres: ['Экшен', 'Драма'], score: 8.7, description: 'Описание отсутствует' },
+            { id: 2, title: 'Наруто', title_russian: 'Наруто', title_english: 'Naruto', year: 2002, episodes: 220, image: '', genres: ['Экшен', 'Приключения'], score: 8.5, description: 'Описание отсутствует' },
+            { id: 3, title: 'Ван Пис', title_russian: 'Ван Пис', title_english: 'One Piece', year: 1999, episodes: 1000, image: '', genres: ['Экшен', 'Приключения'], score: 8.8, description: 'Описание отсутствует' }
+        ];
+    },
+
+    // ============================================
+    // SHIKIMORI GRAPHQL — ПОИСК
+    // ============================================
+    async searchShikimoriGraphQL(query, page = 1, limit = 12) {
+        const gqlQuery = `
+            query SearchAnime($search: String!, $page: Int!, $limit: Int!) {
+                animes(search: $search, page: $page, limit: $limit, kind: "!special") {
+                    id
+                    malId
+                    name
+                    russian
+                    english
+                    japanese
+                    synonyms
+                    kind
+                    rating
+                    score
+                    status
+                    episodes
+                    episodesAired
+                    duration
+                    airedOn { year month day date }
+                    releasedOn { year month day date }
+                    url
+                    season
+                    poster { id originalUrl mainUrl }
+                    genres { id name russian kind }
+                    studios { id name imageUrl }
+                    description
+                    descriptionHtml
+                    descriptionSource
+                    videos { id url name kind playerUrl imageUrl }
+                    screenshots { id originalUrl x166Url x332Url }
+                    scoresStats { score count }
+                    statusesStats { status count }
+                    createdAt
+                    updatedAt
+                    nextEpisodeAt
+                    isCensored
+                }
+            }
+        `;
+
+        const variables = {
+            search: query,
+            page: page,
+            limit: limit
         };
 
         try {
-            const response = await fetch(url, { ...options, headers });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return await response.json();
+            const response = await fetch(this.SHIKIMORI_GRAPHQL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'OnikaAnime/2.0'
+                },
+                body: JSON.stringify({ query: gqlQuery, variables })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data?.data?.animes?.length > 0) {
+                return {
+                    items: data.data.animes.map(item => ({
+                        mal_id: item.id,
+                        id: item.id,
+                        title: item.russian || item.name || 'Без названия',
+                        title_russian: item.russian || '',
+                        title_english: item.name || '',
+                        year: item.airedOn?.year || '--',
+                        episodes: item.episodes || '?',
+                        images: { jpg: { image_url: item.poster?.originalUrl || '' } },
+                        synopsis: item.description || 'Описание отсутствует',
+                        genres: item.genres?.map(g => g.russian || g.name) || [],
+                        score: item.score || 0,
+                        russian: item.russian || '',
+                        source: 'ShikimoriGraphQL'
+                    })),
+                    totalPages: Math.ceil((data.data.animes.length || 0) / limit) + 1
+                };
+            }
+            return null;
         } catch (error) {
-            console.error('❌ API Error:', error.message);
+            console.error('❌ Shikimori GraphQL ошибка:', error.message);
             return null;
         }
     },
 
     // ============================================
-    // ПОИСК В V1 (ПРЯМОЙ ПОИСК)
+    // ПОИСК В ЛОКАЛЬНОЙ БД
     // ============================================
-    async searchV1(query, page = 1) {
-        const url = `${this.ANILIBRIA_V1}/anime/catalog/releases?search=${encodeURIComponent(query)}&page=${page}&limit=50`;
-        const data = await this._fetch(url);
+    async searchLocal(query, genre = null, page = 1) {
+        const animeList = await this.loadLocalDB();
+        let results = [...animeList];
         
-        if (data?.data?.length > 0) {
-            return data.data.map(item => this._convertItem(item, 'V1'));
+        if (query && query.length > 1) {
+            const q = query.toLowerCase().trim();
+            results = results.filter(item => {
+                const title = (item.title || '').toLowerCase();
+                const titleRu = (item.title_russian || '').toLowerCase();
+                const titleEn = (item.title_english || '').toLowerCase();
+                return title.includes(q) || titleRu.includes(q) || titleEn.includes(q);
+            });
         }
-        return [];
-    },
-
-    // ============================================
-    // ПОИСК В V2 (ПРЯМОЙ ПОИСК)
-    // ============================================
-    async searchV2(query, page = 1) {
-        const url = `${this.ANILIBRIA_V2}/getReleases?search=${encodeURIComponent(query)}&page=${page}&limit=50`;
-        const data = await this._fetch(url);
         
-        if (data?.list?.length > 0) {
-            return data.list.map(item => this._convertItem(item, 'V2'));
+        if (genre) {
+            const genreMap = {
+                '1': 'экшен', '8': 'драма', '21': 'комедия',
+                '10': 'фэнтези', '22': 'романтика'
+            };
+            const g = genreMap[genre] || genre;
+            results = results.filter(item => {
+                const genres = item.genres || [];
+                return genres.some(gen => gen.toLowerCase().includes(g.toLowerCase()));
+            });
         }
-        return [];
-    },
-
-    // ============================================
-    // ПОИСК В V3 (ПРЯМОЙ ПОИСК)
-    // ============================================
-    async searchV3(query, page = 1) {
-        const body = { 
-            page: page, 
-            limit: 50,
-            f: { 
-                sorting: 'FRESH_AT_DESC',
-                search: query
-            } 
-        };
-
-        const data = await this._fetch(
-            this.ANILIBRIA_V3 + '/anime/catalog/releases',
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            }
-        );
-
-        if (data?.data?.length > 0) {
-            return data.data.map(item => this._convertItem(item, 'V3'));
-        }
-        return [];
-    },
-
-    // ============================================
-    // КОНВЕРТАЦИЯ
-    // ============================================
-    _convertItem(item, version) {
-        let img = '';
-        let id = item.id || item.code;
-        let name = item.name?.main || item.name?.english || item.name || 'Без названия';
-        let russian = item.name?.main || item.russian || '';
-        let english = item.name?.english || item.english || '';
-        let year = item.year || '--';
-        let episodes = item.episodes_total || item.episodes || '?';
-        let genres = item.genres || [];
-        let score = item.rating || item.score || 0;
-        let description = item.description || item.synopsis || 'Описание отсутствует';
         
-        if (item.poster) {
-            const poster = item.poster.optimized || item.poster;
-            if (typeof poster === 'string') {
-                img = poster;
-            } else {
-                img = poster.src || poster.preview || poster.thumbnail || poster.url || '';
-            }
-            if (img && img.startsWith('/')) {
-                img = 'https://anilibria.top' + img;
-            }
-        }
-
-        return {
-            mal_id: 'anilibria_' + id,
-            id: id,
-            title: name,
-            title_russian: russian,
-            title_english: english,
-            year: year,
-            episodes: episodes,
-            images: { jpg: { image_url: img || '' } },
-            synopsis: description,
-            genres: genres,
-            score: score,
-            russian: russian,
-            source: 'Anilibria' + version,
-            version: version
-        };
-    },
-
-    // ============================================
-    // ГЛАВНАЯ ФУНКЦИЯ ПОИСКА
-    // ============================================
-    async searchAll(query, genre = null, page = 1) {
-        // Если это не поиск — показываем каталог
-        if (!query || query.length < 2) {
-            console.log('📚 Каталог Anilibria');
-            return await this.getCatalog(page, genre);
-        }
-
-        console.log(`🔍 ПОИСК: "${query}"`);
-
-        let allResults = [];
-        const seenIds = new Set();
-
-        // 1. Пробуем V1
-        console.log('  ⏳ V1...');
-        try {
-            const items = await this.searchV1(query, page);
-            if (items.length > 0) {
-                console.log(`  ✅ V1: ${items.length} результатов`);
-                for (const item of items) {
-                    if (!seenIds.has(item.id)) {
-                        seenIds.add(item.id);
-                        allResults.push(item);
-                    }
-                }
-            } else {
-                console.log('  ❌ V1: ничего не найдено');
-            }
-        } catch (e) {
-            console.log('  ⚠️ V1 ошибка:', e.message);
-        }
-
-        // 2. Пробуем V2
-        console.log('  ⏳ V2...');
-        try {
-            const items = await this.searchV2(query, page);
-            if (items.length > 0) {
-                console.log(`  ✅ V2: ${items.length} результатов`);
-                for (const item of items) {
-                    if (!seenIds.has(item.id)) {
-                        seenIds.add(item.id);
-                        allResults.push(item);
-                    }
-                }
-            } else {
-                console.log('  ❌ V2: ничего не найдено');
-            }
-        } catch (e) {
-            console.log('  ⚠️ V2 ошибка:', e.message);
-        }
-
-        // 3. Пробуем V3
-        console.log('  ⏳ V3...');
-        try {
-            const items = await this.searchV3(query, page);
-            if (items.length > 0) {
-                console.log(`  ✅ V3: ${items.length} результатов`);
-                for (const item of items) {
-                    if (!seenIds.has(item.id)) {
-                        seenIds.add(item.id);
-                        allResults.push(item);
-                    }
-                }
-            } else {
-                console.log('  ❌ V3: ничего не найдено');
-            }
-        } catch (e) {
-            console.log('  ⚠️ V3 ошибка:', e.message);
-        }
-
-        // ФИЛЬТРУЕМ РЕЗУЛЬТАТЫ — оставляем только релевантные
-        const searchLower = query.toLowerCase().trim();
-        const filteredResults = allResults.filter(item => {
-            const title = (item.title_russian || item.title || '').toLowerCase();
-            const titleEn = (item.title_english || '').toLowerCase();
-            const name = (item.russian || '').toLowerCase();
-            
-            // Проверяем все возможные поля
-            return title.includes(searchLower) || 
-                   titleEn.includes(searchLower) || 
-                   name.includes(searchLower);
-        });
-
-        console.log(`📊 ВСЕГО НАЙДЕНО: ${allResults.length}, ПОСЛЕ ФИЛЬТРАЦИИ: ${filteredResults.length}`);
-
-        if (filteredResults.length === 0) {
-            console.log('❌ По вашему запросу ничего не найдено');
-            return { items: [], totalPages: 1 };
-        }
-
-        // Пагинация (12 на страницу)
+        const totalPages = Math.ceil(results.length / 12);
         const start = (page - 1) * 12;
-        const paginatedItems = filteredResults.slice(start, start + 12);
-        const totalPages = Math.ceil(filteredResults.length / 12);
-
+        const paginated = results.slice(start, start + 12);
+        
+        console.log(`📊 Локальный поиск: найдено ${results.length} результатов`);
+        
         return {
-            items: paginatedItems,
+            items: paginated.map(item => ({
+                mal_id: 'local_' + item.id,
+                id: item.id,
+                title: item.title || item.title_russian || 'Без названия',
+                title_russian: item.title_russian || '',
+                title_english: item.title_english || '',
+                year: item.year || '--',
+                episodes: item.episodes || '?',
+                images: { jpg: { image_url: item.image || '' } },
+                synopsis: item.description || 'Описание отсутствует',
+                genres: item.genres || [],
+                score: item.score || 0,
+                russian: item.title_russian || '',
+                source: 'LocalDB'
+            })),
             totalPages: Math.max(totalPages, 1)
         };
     },
 
     // ============================================
-    // КАТАЛОГ (БЕЗ ПОИСКА)
+    // ОСНОВНАЯ ФУНКЦИЯ
     // ============================================
-    async getCatalog(page = 1, genre = null) {
-        let url = `${this.ANILIBRIA_V1}/anime/catalog/releases?page=${page}&limit=24`;
-        if (genre) {
-            url += `&genre=${parseInt(genre)}`;
-        }
-
-        const data = await this._fetch(url);
+    async searchAll(query, genre = null, page = 1) {
+        // 1. Сначала локальная БД
+        console.log('🔍 Поиск в локальной БД:', query || 'все');
+        const localResult = await this.searchLocal(query, genre, page);
         
-        if (data?.data?.length > 0) {
-            return {
-                items: data.data.map(item => this._convertItem(item, 'V1')),
-                totalPages: data.meta?.pagination?.total_pages || 1
-            };
+        if (localResult.items.length > 0) {
+            console.log('✅ Локальная БД:', localResult.items.length, 'результатов');
+            return localResult;
         }
-
-        // Если V1 не работает — пробуем V2
-        try {
-            let url2 = `${this.ANILIBRIA_V2}/getReleases?page=${page}&limit=24`;
-            if (genre) {
-                url2 += `&genre=${parseInt(genre)}`;
+        
+        // 2. Если в локальной БД ничего нет — пробуем Shikimori GraphQL
+        if (query && query.length > 1) {
+            console.log('🔄 Пробуем Shikimori GraphQL...');
+            const graphqlResult = await this.searchShikimoriGraphQL(query, page, 24);
+            if (graphqlResult?.items?.length > 0) {
+                console.log('✅ Shikimori GraphQL:', graphqlResult.items.length, 'результатов');
+                return graphqlResult;
             }
-            const data2 = await this._fetch(url2);
-            if (data2?.list?.length > 0) {
-                return {
-                    items: data2.list.map(item => this._convertItem(item, 'V2')),
-                    totalPages: data2.meta?.pagination?.total_pages || 1
-                };
-            }
-        } catch (e) {}
-
+        }
+        
+        console.log('❌ Ничего не найдено');
         return { items: [], totalPages: 1 };
     },
 
@@ -269,53 +218,102 @@ const API = {
     // ДЕТАЛИ АНИМЕ
     // ============================================
     async getAnimeDetails(id) {
-        const cleanId = id.toString().replace('anilibria_', '');
+        const cleanId = id.toString().replace('local_', '');
         
-        // Пробуем V1
+        // Локальная БД
+        const animeList = await this.loadLocalDB();
+        const localItem = animeList.find(item => item.id == cleanId);
+        if (localItem) {
+            return {
+                mal_id: 'local_' + localItem.id,
+                id: localItem.id,
+                title: localItem.title || localItem.title_russian || 'Без названия',
+                title_russian: localItem.title_russian || '',
+                title_english: localItem.title_english || '',
+                year: localItem.year || '--',
+                episodes: localItem.episodes || '?',
+                images: { jpg: { image_url: localItem.image || '' } },
+                synopsis: localItem.description || 'Описание отсутствует',
+                genres: localItem.genres || [],
+                score: localItem.score || 0,
+                russian: localItem.title_russian || '',
+                source: 'LocalDB'
+            };
+        }
+        
+        // Shikimori GraphQL
         try {
-            const data = await this._fetch(`${this.ANILIBRIA_V1}/anime/releases/${cleanId}`);
-            if (data?.id) return this._convertItem(data, 'V1');
-        } catch (e) {}
-
-        // Пробуем V2
-        try {
-            const data = await this._fetch(`${this.ANILIBRIA_V2}/getRelease?id=${cleanId}`);
-            if (data?.id) return this._convertItem(data, 'V2');
-        } catch (e) {}
-
-        // Пробуем V3
-        try {
-            const data = await this._fetch(`${this.ANILIBRIA_V3}/title/${cleanId}`);
-            if (data?.id) return this._convertItem(data, 'V3');
-        } catch (e) {}
-
-        return null;
-    },
-
-    // ============================================
-    // ПОИСК ВИДЕО В KODIK
-    // ============================================
-    async searchKodik(animeTitle, episode = 1) {
-        if (!animeTitle) throw new Error('Название не указано');
-
-        const url = `https://kodikapi.com/search?with_material_data=true&types=anime&title=${encodeURIComponent(animeTitle)}&limit=5`;
-        const data = await this._fetch(url);
-
-        if (data?.results?.length > 0) {
-            const found = data.results[0];
-            if (found?.link) {
-                if (episode && found.seasons) {
-                    for (const season of found.seasons) {
-                        if (season.episodes) {
-                            const ep = season.episodes.find(e => e.number === episode);
-                            if (ep?.link) return ep.link;
-                        }
+            const gqlQuery = `
+                query GetAnime($id: ID!) {
+                    animes(id: $id) {
+                        id
+                        malId
+                        name
+                        russian
+                        english
+                        japanese
+                        synonyms
+                        kind
+                        rating
+                        score
+                        status
+                        episodes
+                        episodesAired
+                        duration
+                        airedOn { year month day date }
+                        releasedOn { year month day date }
+                        url
+                        season
+                        poster { id originalUrl mainUrl }
+                        genres { id name russian kind }
+                        studios { id name imageUrl }
+                        description
+                        descriptionHtml
+                        descriptionSource
+                        videos { id url name kind playerUrl imageUrl }
+                        screenshots { id originalUrl x166Url x332Url }
                     }
                 }
-                return found.link;
+            `;
+            
+            const response = await fetch(this.SHIKIMORI_GRAPHQL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'OnikaAnime/2.0'
+                },
+                body: JSON.stringify({
+                    query: gqlQuery,
+                    variables: { id: cleanId }
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const item = data?.data?.animes?.[0];
+                if (item) {
+                    return {
+                        mal_id: item.id,
+                        id: item.id,
+                        title: item.russian || item.name || 'Без названия',
+                        title_russian: item.russian || '',
+                        title_english: item.name || '',
+                        year: item.airedOn?.year || '--',
+                        episodes: item.episodes || '?',
+                        images: { jpg: { image_url: item.poster?.originalUrl || '' } },
+                        synopsis: item.description || 'Описание отсутствует',
+                        genres: item.genres?.map(g => g.russian || g.name) || [],
+                        score: item.score || 0,
+                        russian: item.russian || '',
+                        source: 'ShikimoriGraphQL'
+                    };
+                }
             }
+        } catch (e) {
+            console.log('⚠️ Shikimori GraphQL детали ошибка');
         }
-        throw new Error('Видео не найдено в Kodik');
+        
+        return null;
     },
 
     clearCache() {
@@ -325,4 +323,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль загружен (полноценный поиск)');
+console.log('✅ API модуль загружен (локальная БД + Shikimori GraphQL)');
