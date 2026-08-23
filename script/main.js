@@ -16,6 +16,10 @@ let currentPlayer = null;
 let currentAnimeId = null;
 let activeFilters = {};
 
+// ===== КЭШ ДЛЯ РАСПИСАНИЯ =====
+let scheduleCache = null;
+let scheduleCacheTime = 0;
+
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
     { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель' },
@@ -175,137 +179,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// 1. РАСШИРЕННЫЕ ФИЛЬТРЫ
-// ============================================
-async function loadFilterReferences() {
-    try {
-        const [genres, types, seasons, years, pubStatuses, prodStatuses, ageRatings] = await Promise.all([
-            API.getGenres(),
-            API.getTypes(),
-            API.getSeasons(),
-            API.getYears(),
-            API.getPublishStatuses(),
-            API.getProductionStatuses(),
-            API.getAgeRatings()
-        ]);
-
-        const genreContainer = document.getElementById('filterGenres');
-        if (genreContainer && genres.length) {
-            genreContainer.innerHTML = genres.map(g => 
-                `<label><input type="checkbox" value="${g.id}" onchange="applyFilters()"> ${g.name}</label>`
-            ).join('');
-        }
-
-        const typeContainer = document.getElementById('filterTypes');
-        if (typeContainer && types.length) {
-            typeContainer.innerHTML = types.map(t => 
-                `<label><input type="checkbox" value="${t.value}" onchange="applyFilters()"> ${t.description}</label>`
-            ).join('');
-        }
-
-        const seasonContainer = document.getElementById('filterSeasons');
-        if (seasonContainer && seasons.length) {
-            seasonContainer.innerHTML = seasons.map(s => 
-                `<label><input type="checkbox" value="${s.value}" onchange="applyFilters()"> ${s.description}</label>`
-            ).join('');
-        }
-
-        const yearFrom = document.getElementById('filterYearFrom');
-        const yearTo = document.getElementById('filterYearTo');
-        if (yearFrom && years.length) {
-            const yearOptions = years.map(y => `<option value="${y}">${y}</option>`).join('');
-            yearFrom.innerHTML = `<option value="">От</option>${yearOptions}`;
-            yearTo.innerHTML = `<option value="">До</option>${yearOptions}`;
-        }
-
-        const pubContainer = document.getElementById('filterPublishStatuses');
-        if (pubContainer && pubStatuses.length) {
-            pubContainer.innerHTML = pubStatuses.map(s => 
-                `<label><input type="checkbox" value="${s.value}" onchange="applyFilters()"> ${s.description}</label>`
-            ).join('');
-        }
-
-        const prodContainer = document.getElementById('filterProductionStatuses');
-        if (prodContainer && prodStatuses.length) {
-            prodContainer.innerHTML = prodStatuses.map(s => 
-                `<label><input type="checkbox" value="${s.value}" onchange="applyFilters()"> ${s.description}</label>`
-            ).join('');
-        }
-
-        const ageContainer = document.getElementById('filterAgeRatings');
-        if (ageContainer && ageRatings.length) {
-            ageContainer.innerHTML = ageRatings.map(a => 
-                `<label><input type="checkbox" value="${a.value}" onchange="applyFilters()"> ${a.label}</label>`
-            ).join('');
-        }
-
-        console.log('✅ Фильтры загружены');
-    } catch (e) {
-        console.error('❌ Ошибка загрузки фильтров:', e);
-    }
-}
-
-function applyFilters() {
-    const filters = {};
-
-    const genreChecks = document.querySelectorAll('#filterGenres input:checked');
-    if (genreChecks.length) {
-        filters.genres = Array.from(genreChecks).map(cb => parseInt(cb.value));
-    }
-
-    const typeChecks = document.querySelectorAll('#filterTypes input:checked');
-    if (typeChecks.length) {
-        filters.types = Array.from(typeChecks).map(cb => cb.value);
-    }
-
-    const seasonChecks = document.querySelectorAll('#filterSeasons input:checked');
-    if (seasonChecks.length) {
-        filters.seasons = Array.from(seasonChecks).map(cb => cb.value);
-    }
-
-    const yearFrom = document.getElementById('filterYearFrom').value;
-    const yearTo = document.getElementById('filterYearTo').value;
-    if (yearFrom || yearTo) {
-        filters.years = {};
-        if (yearFrom) filters.years.from = parseInt(yearFrom);
-        if (yearTo) filters.years.to = parseInt(yearTo);
-    }
-
-    const pubChecks = document.querySelectorAll('#filterPublishStatuses input:checked');
-    if (pubChecks.length) {
-        filters.publish_statuses = Array.from(pubChecks).map(cb => cb.value);
-    }
-
-    const prodChecks = document.querySelectorAll('#filterProductionStatuses input:checked');
-    if (prodChecks.length) {
-        filters.production_statuses = Array.from(prodChecks).map(cb => cb.value);
-    }
-
-    const ageChecks = document.querySelectorAll('#filterAgeRatings input:checked');
-    if (ageChecks.length) {
-        filters.age_ratings = Array.from(ageChecks).map(cb => cb.value);
-    }
-
-    const sortSelect = document.getElementById('filterSorting');
-    if (sortSelect && sortSelect.value) {
-        filters.sorting = sortSelect.value;
-    }
-
-    activeFilters = filters;
-    page = 1;
-    loadCatalog();
-}
-
-function resetFilters() {
-    document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
-    document.querySelectorAll('#filterPanel select').forEach(sel => sel.value = '');
-    activeFilters = {};
-    page = 1;
-    loadCatalog();
-}
-
-// ============================================
-// 2. КАТАЛОГ
+// 1. КАТАЛОГ (сортировка по новизне)
 // ============================================
 async function loadCatalog() {
     const grid = document.getElementById('grid');
@@ -314,7 +188,9 @@ async function loadCatalog() {
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка из Anilibria...</div>';
     
     try {
-        const result = await API.searchAll(query, genre, page, activeFilters);
+        // Явно задаём сортировку по новизне
+        const filters = { ...activeFilters, sorting: 'FRESH_AT_DESC' };
+        const result = await API.searchAll(query, genre, page, filters);
         
         if (result && result.items && result.items.length > 0) {
             totalPages = result.totalPages || 1;
@@ -334,7 +210,7 @@ async function loadCatalog() {
                 };
                 titleEl.textContent = `🎭 ${genreNames[genre] || 'Жанр'}`;
             } else {
-                titleEl.textContent = '✨ Популярное аниме';
+                titleEl.textContent = '✨ Новинки аниме';
             }
             
             renderCatalog(result.items);
@@ -426,8 +302,83 @@ function goToPage(p) {
 }
 
 // ============================================
-// 3. РАСПИСАНИЕ (страница)
+// 2. РАСПИСАНИЕ (через API с кэшем)
 // ============================================
+async function loadSchedule() {
+    const container = document.getElementById('scheduleGrid');
+    if (!container) return;
+
+    // Если есть кэш и он не старше 5 минут — используем
+    if (scheduleCache && Date.now() - scheduleCacheTime < 300000) {
+        renderSchedule(scheduleCache);
+        return;
+    }
+
+    container.innerHTML = '<div class="schedule-loading">⏳ Загрузка расписания...</div>';
+
+    try {
+        const data = await API.getSchedule();
+        if (data && data.length) {
+            scheduleCache = data;
+            scheduleCacheTime = Date.now();
+            renderSchedule(data);
+        } else {
+            container.innerHTML = '<div class="schedule-loading">📅 Расписание временно недоступно</div>';
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки расписания:', e);
+        container.innerHTML = '<div class="schedule-loading">⚠️ Ошибка загрузки расписания</div>';
+    }
+}
+
+function renderSchedule(schedule) {
+    const container = document.getElementById('scheduleGrid');
+    if (!container) return;
+
+    const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+    const dayClasses = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const today = new Date().getDay();
+    const currentDayIndex = today === 0 ? 6 : today - 1;
+
+    // Группируем по дням
+    const grouped = {};
+    schedule.forEach(item => {
+        const dayIndex = item.publish_day?.value || 0;
+        const dayName = days[dayIndex] || 'Неизвестно';
+        if (!grouped[dayName]) grouped[dayName] = [];
+        grouped[dayName].push(item);
+    });
+
+    let html = '';
+    // Берём первые 7 дней (или сколько есть)
+    const orderedDays = Object.keys(grouped).slice(0, 7);
+    orderedDays.forEach(day => {
+        const items = grouped[day];
+        const dayIndex = days.indexOf(day);
+        const isToday = dayIndex === currentDayIndex;
+        const dayClass = dayClasses[dayIndex] || '';
+
+        items.forEach(item => {
+            const title = item.name?.main || item.name?.english || 'Без названия';
+            const time = item.publish_time || '20:00';
+            const id = item.id;
+            html += `
+                <div class="schedule-item ${dayClass}${isToday ? ' today' : ''}" onclick="openDetail('${id}')">
+                    <div class="s-day">${day}</div>
+                    <div class="s-title">${title}</div>
+                    <div class="s-time">🕐 ${time}</div>
+                </div>
+            `;
+        });
+    });
+
+    if (!html) {
+        html = '<div class="schedule-loading">📅 Расписание не найдено</div>';
+    }
+    container.innerHTML = html;
+}
+
+// ===== СТРАНИЦА РАСПИСАНИЯ (полная версия) =====
 async function renderSchedulePage() {
     const container = document.getElementById('schedulePageContent');
     if (!container) return;
@@ -476,7 +427,7 @@ async function renderSchedulePage() {
 }
 
 // ============================================
-// 4. РЕКОМЕНДАЦИИ
+// 3. РЕКОМЕНДАЦИИ
 // ============================================
 async function loadRecommendations() {
     const container = document.getElementById('recommendationsGrid');
@@ -511,7 +462,7 @@ async function loadRecommendations() {
 }
 
 // ============================================
-// 5. СЛУЧАЙНОЕ АНИМЕ (через API)
+// 4. СЛУЧАЙНОЕ АНИМЕ
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
@@ -549,7 +500,7 @@ async function randomAnime() {
 }
 
 // ============================================
-// 6. АВТОДОПОЛНЕНИЕ ПОИСКА
+// 5. АВТОДОПОЛНЕНИЕ ПОИСКА
 // ============================================
 let autocompleteTimeout = null;
 const searchInput = document.getElementById('searchInput');
@@ -616,7 +567,7 @@ function selectAutocomplete(id) {
 }
 
 // ============================================
-// ДЕТАЛЬНАЯ СТРАНИЦА
+// ДЕТАЛЬНАЯ СТРАНИЦА (без изменений)
 // ============================================
 async function openDetail(id) {
     if (!id) {
@@ -754,7 +705,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// ПЛЕЕР SHIKIMORI
+// ПЛЕЕР SHIKIMORI (без изменений)
 // ============================================
 async function playWithShikimori(animeId, episode = 1) {
     const wrapper = document.getElementById('playerWrapper');
@@ -876,7 +827,7 @@ function updateEpisodeButtons(animeId, currentEpisode) {
 }
 
 // ============================================
-// КОММЕНТАРИИ
+// КОММЕНТАРИИ (без изменений)
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -988,7 +939,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// МОИ КОММЕНТАРИИ
+// МОИ КОММЕНТАРИИ (без изменений)
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -1049,7 +1000,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// ИЗБРАННОЕ
+// ИЗБРАННОЕ (без изменений)
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1123,7 +1074,7 @@ function renderFavorites() {
 }
 
 // ============================================
-// ДОСТИЖЕНИЯ
+// ДОСТИЖЕНИЯ (без изменений)
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1288,7 +1239,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// ПРОФИЛЬ
+// ПРОФИЛЬ (без изменений)
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1386,7 +1337,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// ТОП ПОЛЬЗОВАТЕЛЕЙ
+// ТОП ПОЛЬЗОВАТЕЛЕЙ (без изменений)
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1540,7 +1491,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// АВАТАР
+// АВАТАР (без изменений)
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1588,7 +1539,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// TOAST
+// TOAST (без изменений)
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1631,7 +1582,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// МОДАЛЬНЫЕ ОКНА
+// МОДАЛЬНЫЕ ОКНА (без изменений)
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1696,7 +1647,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// РЕДАКТИРОВАНИЕ ПРОФИЛЯ (без изменений)
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1824,7 +1775,7 @@ function saveEdit() {
 }
 
 // ============================================
-// ВОССТАНОВЛЕНИЕ ДАННЫХ
+// ВОССТАНОВЛЕНИЕ ДАННЫХ (без изменений)
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -1861,7 +1812,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ (без изменений)
 // ============================================
 function updateSocialStats() {
     console.log('🔄 Обновление статистики соцсетей...');
@@ -1907,7 +1858,6 @@ document.addEventListener('DOMContentLoaded', function() {
     restoreAllData();
     updateUI();
     navigate('catalog');
-    loadFilterReferences();
     const user = DB.get('currentUser');
     if (user) {
         startOnlineTracking();
@@ -1922,10 +1872,6 @@ window.playWithShikimori = playWithShikimori;
 window.currentPlayer = currentPlayer;
 window.allData = allData;
 window.showManualVideoInput = showManualVideoInput;
-window.applyFilters = applyFilters;
-window.resetFilters = resetFilters;
-window.randomAnime = randomAnime;
-window.selectAutocomplete = selectAutocomplete;
 window.openDetail = openDetail;
 window.navigate = navigate;
 window.goBack = goBack;
