@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (v3 API, исправлен)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ДЛЯ API v1)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -14,8 +14,6 @@ let startTime = Date.now();
 let currentPlayer = null;
 let currentAnimeId = null;
 let activeFilters = {};
-
-// ===== КЭШ ДЛЯ РАСПИСАНИЯ =====
 let scheduleCache = null;
 let scheduleCacheTime = 0;
 
@@ -179,7 +177,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// 1. КАТАЛОГ (С НОВИНКАМИ)
+// 1. КАТАЛОГ
 // ============================================
 async function loadCatalog() {
     const grid = document.getElementById('grid');
@@ -302,7 +300,7 @@ function goToPage(p) {
 }
 
 // ============================================
-// 2. РАСПИСАНИЕ (НА ГЛАВНОЙ – 5 ДНЕЙ)
+// 2. РАСПИСАНИЕ
 // ============================================
 async function loadSchedule() {
     const container = document.getElementById('scheduleGrid');
@@ -344,7 +342,6 @@ function renderScheduleCompact(scheduleData) {
     const today = new Date().getDay();
     const currentDayIndex = today === 0 ? 6 : today - 1;
 
-    // Сортируем дни по порядку, начиная с сегодняшнего
     const sortedDays = scheduleData
         .map(dayObj => ({
             dayIndex: dayObj.day,
@@ -371,12 +368,10 @@ function renderScheduleCompact(scheduleData) {
         html += `<div class="schedule-day-block-compact ${dayClass}${isToday ? ' today' : ''}">`;
         html += `<div class="schedule-day-header">${dayName}${isToday ? ' (сегодня)' : ''}</div>`;
         items.forEach(item => {
-            const title = item.names?.ru || item.names?.en || 'Без названия';
-            const time = item.publish_time || '20:00';
+            const title = item.title;
             const id = item.id;
             html += `<div class="schedule-item-compact" onclick="openDetail('${id}')">
                 <span class="s-title">${title}</span>
-                <span class="s-time">🕐 ${time}</span>
             </div>`;
         });
         if (hasMore) {
@@ -388,7 +383,6 @@ function renderScheduleCompact(scheduleData) {
     container.innerHTML = html;
 }
 
-// ===== СТРАНИЦА РАСПИСАНИЯ (полная версия) =====
 async function renderSchedulePage() {
     const container = document.getElementById('schedulePageContent');
     if (!container) return;
@@ -410,13 +404,11 @@ async function renderSchedulePage() {
                 <h3>${dayName}</h3>
                 <ul>`;
             (dayObj.list || []).forEach(item => {
-                const title = item.names?.ru || item.names?.en || 'Без названия';
-                const time = item.publish_time || '--:--';
+                const title = item.title;
                 const id = item.id;
                 html += `
                     <li onclick="openDetail('${id}')" style="cursor:pointer;">
                         <span>${title}</span>
-                        <span class="time">🕐 ${time}</span>
                     </li>
                 `;
             });
@@ -453,7 +445,7 @@ async function loadRecommendations() {
                     </div>
                     <div class="rec-body">
                         <div class="rec-title">${title}</div>
-                        <div class="rec-genres">${item.genres?.slice(0, 3).map(g => g.name).join(', ') || ''}</div>
+                        <div class="rec-genres">${item.genres?.slice(0, 3).join(', ') || ''}</div>
                     </div>
                 </div>
             `;
