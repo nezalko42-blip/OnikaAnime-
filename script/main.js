@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ANILIBRIA)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С УЛУЧШЕНИЯМИ)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -14,6 +14,7 @@ let onlineTimer = null;
 let startTime = Date.now();
 let currentPlayer = null;
 let currentAnimeId = null;
+let activeFilters = {};
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -37,21 +38,24 @@ const ACHIEVEMENTS_LIST = [
 // ============================================
 // НАВИГАЦИЯ
 // ============================================
-
 function navigate(pageName) {
     currentPage = pageName;
-    const pages = ['catalog', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings'];
+    const pages = ['catalog', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings', 'schedule'];
     
     pages.forEach(p => {
         const el = document.getElementById(`page-${p}`);
         if (el) el.style.display = p === pageName ? 'block' : 'none';
     });
     
-    if (pageName === 'catalog') loadCatalog();
+    if (pageName === 'catalog') {
+        loadCatalog();
+        loadRecommendations();
+    }
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
     if (pageName === 'achievements') renderAchievements();
     if (pageName === 'mycomments') renderMyComments();
+    if (pageName === 'schedule') renderSchedulePage();
     
     closeMenu();
 }
@@ -63,7 +67,6 @@ function goBack() {
 // ============================================
 // UI
 // ============================================
-
 function updateUI() {
     const user = DB.get('currentUser');
     const nav = document.getElementById('sidebarNav');
@@ -75,6 +78,9 @@ function updateUI() {
         nav.innerHTML = `
             <a class="active" data-page="catalog" onclick="navigate('catalog'); closeMenu();">
                 <span class="icon">🏠</span> Главная
+            </a>
+            <a data-page="schedule" onclick="navigate('schedule'); closeMenu();">
+                <span class="icon">📅</span> Расписание
             </a>
             <a data-page="favorites" onclick="navigate('favorites'); closeMenu();">
                 <span class="icon">❤️</span> Избранное
@@ -102,6 +108,9 @@ function updateUI() {
             <a class="active" data-page="catalog" onclick="navigate('catalog'); closeMenu();">
                 <span class="icon">🏠</span> Главная
             </a>
+            <a data-page="schedule" onclick="navigate('schedule'); closeMenu();">
+                <span class="icon">📅</span> Расписание
+            </a>
         `;
         footer.innerHTML = `<button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">🚀 Войти</button>`;
     }
@@ -124,29 +133,23 @@ function closeMenu() {
 // ============================================
 // ОТСЛЕЖИВАНИЕ ВРЕМЕНИ
 // ============================================
-
 function startOnlineTracking() {
     const user = DB.get('currentUser');
     if (!user) return;
-    
     startTime = Date.now();
-    
     if (onlineTimer) clearInterval(onlineTimer);
-    
     onlineTimer = setInterval(function() {
         const userNow = DB.get('currentUser');
         if (!userNow) {
             clearInterval(onlineTimer);
             return;
         }
-        
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const totalTime = DB.getUserData(userNow.name, 'onlineTime', 0);
         totalTime += 30;
         DB.setUserData(userNow.name, 'onlineTime', totalTime);
         DB.setUserData(userNow.name, 'lastSeen', Date.now());
         DB.save();
-        
         if (elapsed % 120 === 0) {
             renderTopUsers();
         }
@@ -172,9 +175,138 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// КАТАЛОГ (ANILIBRIA)
+// 1. РАСШИРЕННЫЕ ФИЛЬТРЫ
 // ============================================
+async function loadFilterReferences() {
+    try {
+        const [genres, types, seasons, years, pubStatuses, prodStatuses, ageRatings] = await Promise.all([
+            API.getGenres(),
+            API.getTypes(),
+            API.getSeasons(),
+            API.getYears(),
+            API.getPublishStatuses(),
+            API.getProductionStatuses(),
+            API.getAgeRatings()
+        ]);
 
+        const genreContainer = document.getElementById('filterGenres');
+        if (genreContainer && genres.length) {
+            genreContainer.innerHTML = genres.map(g => 
+                `<label><input type="checkbox" value="${g.id}" onchange="applyFilters()"> ${g.name}</label>`
+            ).join('');
+        }
+
+        const typeContainer = document.getElementById('filterTypes');
+        if (typeContainer && types.length) {
+            typeContainer.innerHTML = types.map(t => 
+                `<label><input type="checkbox" value="${t.value}" onchange="applyFilters()"> ${t.description}</label>`
+            ).join('');
+        }
+
+        const seasonContainer = document.getElementById('filterSeasons');
+        if (seasonContainer && seasons.length) {
+            seasonContainer.innerHTML = seasons.map(s => 
+                `<label><input type="checkbox" value="${s.value}" onchange="applyFilters()"> ${s.description}</label>`
+            ).join('');
+        }
+
+        const yearFrom = document.getElementById('filterYearFrom');
+        const yearTo = document.getElementById('filterYearTo');
+        if (yearFrom && years.length) {
+            const yearOptions = years.map(y => `<option value="${y}">${y}</option>`).join('');
+            yearFrom.innerHTML = `<option value="">От</option>${yearOptions}`;
+            yearTo.innerHTML = `<option value="">До</option>${yearOptions}`;
+        }
+
+        const pubContainer = document.getElementById('filterPublishStatuses');
+        if (pubContainer && pubStatuses.length) {
+            pubContainer.innerHTML = pubStatuses.map(s => 
+                `<label><input type="checkbox" value="${s.value}" onchange="applyFilters()"> ${s.description}</label>`
+            ).join('');
+        }
+
+        const prodContainer = document.getElementById('filterProductionStatuses');
+        if (prodContainer && prodStatuses.length) {
+            prodContainer.innerHTML = prodStatuses.map(s => 
+                `<label><input type="checkbox" value="${s.value}" onchange="applyFilters()"> ${s.description}</label>`
+            ).join('');
+        }
+
+        const ageContainer = document.getElementById('filterAgeRatings');
+        if (ageContainer && ageRatings.length) {
+            ageContainer.innerHTML = ageRatings.map(a => 
+                `<label><input type="checkbox" value="${a.value}" onchange="applyFilters()"> ${a.label}</label>`
+            ).join('');
+        }
+
+        console.log('✅ Фильтры загружены');
+    } catch (e) {
+        console.error('❌ Ошибка загрузки фильтров:', e);
+    }
+}
+
+function applyFilters() {
+    const filters = {};
+
+    const genreChecks = document.querySelectorAll('#filterGenres input:checked');
+    if (genreChecks.length) {
+        filters.genres = Array.from(genreChecks).map(cb => parseInt(cb.value));
+    }
+
+    const typeChecks = document.querySelectorAll('#filterTypes input:checked');
+    if (typeChecks.length) {
+        filters.types = Array.from(typeChecks).map(cb => cb.value);
+    }
+
+    const seasonChecks = document.querySelectorAll('#filterSeasons input:checked');
+    if (seasonChecks.length) {
+        filters.seasons = Array.from(seasonChecks).map(cb => cb.value);
+    }
+
+    const yearFrom = document.getElementById('filterYearFrom').value;
+    const yearTo = document.getElementById('filterYearTo').value;
+    if (yearFrom || yearTo) {
+        filters.years = {};
+        if (yearFrom) filters.years.from = parseInt(yearFrom);
+        if (yearTo) filters.years.to = parseInt(yearTo);
+    }
+
+    const pubChecks = document.querySelectorAll('#filterPublishStatuses input:checked');
+    if (pubChecks.length) {
+        filters.publish_statuses = Array.from(pubChecks).map(cb => cb.value);
+    }
+
+    const prodChecks = document.querySelectorAll('#filterProductionStatuses input:checked');
+    if (prodChecks.length) {
+        filters.production_statuses = Array.from(prodChecks).map(cb => cb.value);
+    }
+
+    const ageChecks = document.querySelectorAll('#filterAgeRatings input:checked');
+    if (ageChecks.length) {
+        filters.age_ratings = Array.from(ageChecks).map(cb => cb.value);
+    }
+
+    const sortSelect = document.getElementById('filterSorting');
+    if (sortSelect && sortSelect.value) {
+        filters.sorting = sortSelect.value;
+    }
+
+    activeFilters = filters;
+    page = 1;
+    loadCatalog();
+}
+
+function resetFilters() {
+    document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#filterPanel select').forEach(sel => sel.value = '');
+    activeFilters = {};
+    page = 1;
+    loadCatalog();
+}
+
+// ============================================
+// 2. КАТАЛОГ
+// ============================================
 async function loadCatalog() {
     const grid = document.getElementById('grid');
     if (!grid) return;
@@ -182,8 +314,7 @@ async function loadCatalog() {
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка из Anilibria...</div>';
     
     try {
-        console.log('🔍 Поисковый запрос:', query);
-        const result = await API.searchAll(query, genre, page);
+        const result = await API.searchAll(query, genre, page, activeFilters);
         
         if (result && result.items && result.items.length > 0) {
             totalPages = result.totalPages || 1;
@@ -208,13 +339,8 @@ async function loadCatalog() {
             
             renderCatalog(result.items);
             renderPagination();
-            loadSchedule();
         } else {
-            if (query && query.length > 1) {
-                showError(`🔍 По запросу "${query}" ничего не найдено`);
-            } else {
-                showError('📚 Каталог пуст');
-            }
+            showError('🔍 Ничего не найдено');
         }
     } catch (error) {
         console.error('❌ Ошибка загрузки:', error);
@@ -229,14 +355,9 @@ function showError(msg) {
     }
 }
 
-// ============================================
-// РЕНДЕРИНГ КАТАЛОГА
-// ============================================
-
 function renderCatalog(list) {
     const grid = document.getElementById('grid');
     if (!grid) return;
-    
     if (!list || list.length === 0) {
         grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">🔍 Ничего не найдено</div>';
         return;
@@ -270,14 +391,9 @@ function renderCatalog(list) {
     grid.innerHTML = html;
 }
 
-// ============================================
-// ПАГИНАЦИЯ
-// ============================================
-
 function renderPagination() {
     const container = document.getElementById('pagination');
     if (!container) return;
-    
     if (totalPages <= 1) {
         container.innerHTML = '';
         return;
@@ -285,26 +401,20 @@ function renderPagination() {
     
     let html = '';
     html += `<button ${page <= 1 ? 'disabled' : ''} onclick="goToPage(${page - 1})">←</button>`;
-    
     const start = Math.max(1, page - 2);
     const end = Math.min(totalPages, page + 2);
-    
     if (start > 1) {
         html += `<button onclick="goToPage(1)">1</button>`;
         if (start > 2) html += `<button disabled>...</button>`;
     }
-    
     for (let i = start; i <= end; i++) {
         html += `<button class="${i === page ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
     }
-    
     if (end < totalPages) {
         if (end < totalPages - 1) html += `<button disabled>...</button>`;
         html += `<button onclick="goToPage(${totalPages})">${totalPages}</button>`;
     }
-    
     html += `<button ${page >= totalPages ? 'disabled' : ''} onclick="goToPage(${page + 1})">→</button>`;
-    
     container.innerHTML = html;
 }
 
@@ -316,180 +426,204 @@ function goToPage(p) {
 }
 
 // ============================================
-// РАСПИСАНИЕ ВЫХОДА
+// 3. РАСПИСАНИЕ (страница)
 // ============================================
-
-function loadSchedule() {
-    const container = document.getElementById('scheduleGrid');
+async function renderSchedulePage() {
+    const container = document.getElementById('schedulePageContent');
     if (!container) return;
-    
-    const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
-    const dayClasses = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const today = new Date().getDay();
-    const currentDayIndex = today === 0 ? 6 : today - 1;
-    
-    const animeList = Object.values(allData);
-    const schedule = [];
-    
-    if (animeList.length > 0) {
-        const shuffled = animeList.sort(function() { return Math.random() - 0.5; });
-        shuffled.slice(0, 7).forEach(function(a, index) {
-            const dayIndex = (currentDayIndex + index) % 7;
-            const title = getRussianTitle(a);
-            const id = a.mal_id || a.id;
-            schedule.push({
-                id: id,
-                title: title,
-                day: days[dayIndex],
-                dayClass: dayClasses[dayIndex],
-                dayIndex: dayIndex,
-                time: '20:00',
-                isToday: dayIndex === currentDayIndex
-            });
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка расписания...</div>';
+
+    try {
+        const schedule = await API.getSchedule();
+        if (!schedule || !schedule.length) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">📅 Расписание не найдено</div>';
+            return;
+        }
+
+        const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+        const grouped = {};
+        schedule.forEach(item => {
+            const dayIndex = item.publish_day?.value || 0;
+            const dayName = days[dayIndex] || 'Неизвестно';
+            if (!grouped[dayName]) grouped[dayName] = [];
+            grouped[dayName].push(item);
         });
-    } else {
-        const demoAnime = [
-            { title: 'Атака Титанов' },
-            { title: 'Наруто' },
-            { title: 'Ван Пис' },
-            { title: 'Магическая битва' },
-            { title: 'Клинок, рассекающий демонов' },
-            { title: 'Моя геройская академия' },
-            { title: 'Токийский гуль' }
-        ];
-        demoAnime.forEach(function(a, index) {
-            const dayIndex = (currentDayIndex + index) % 7;
-            schedule.push({
-                id: null,
-                title: a.title,
-                day: days[dayIndex],
-                dayClass: dayClasses[dayIndex],
-                dayIndex: dayIndex,
-                time: '20:00',
-                isToday: dayIndex === currentDayIndex
+
+        let html = `<div class="schedule-page-grid">`;
+        for (const [day, items] of Object.entries(grouped)) {
+            html += `<div class="schedule-day-block">
+                <h3>${day}</h3>
+                <ul>
+            `;
+            items.forEach(item => {
+                const title = item.name?.main || item.name?.english || 'Без названия';
+                const time = item.publish_time || '--:--';
+                const id = item.id;
+                html += `
+                    <li onclick="openDetail('${id}')" style="cursor:pointer;">
+                        <span>${title}</span>
+                        <span class="time">🕐 ${time}</span>
+                    </li>
+                `;
             });
-        });
+            html += `</ul></div>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⚠️ Ошибка загрузки расписания</div>';
     }
-    
-    schedule.sort(function(a, b) { return a.dayIndex - b.dayIndex; });
-    
-    let html = '';
-    schedule.forEach(function(item) {
-        const todayClass = item.isToday ? ' today' : '';
-        const onclick = item.id ? "openDetail('" + item.id + "')" : "showToast('📺 " + item.title + "', 'info')";
-        html += `
-            <div class="schedule-item ${item.dayClass}${todayClass}" onclick="${onclick}">
-                <div class="s-day">${item.day}</div>
-                <div class="s-title">${item.title}</div>
-                <div class="s-time">🕐 ${item.time}</div>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
 }
 
 // ============================================
-// СЛУЧАЙНОЕ АНИМЕ
+// 4. РЕКОМЕНДАЦИИ
 // ============================================
+async function loadRecommendations() {
+    const container = document.getElementById('recommendationsGrid');
+    if (!container) return;
+    try {
+        const recs = await API.getRecommended(6);
+        if (!recs || !recs.length) {
+            container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">Нет рекомендаций</div>';
+            return;
+        }
+        let html = '';
+        recs.forEach(item => {
+            const img = item.images?.jpg?.image_url || '';
+            const title = item.title;
+            const id = item.id;
+            html += `
+                <div class="rec-card" onclick="openDetail('${id}')">
+                    <div class="rec-img">
+                        ${img ? `<img src="${img}" loading="lazy">` : '<span style="display:flex;align-items:center;justify-content:center;height:100%;font-size:40px;">🎬</span>'}
+                    </div>
+                    <div class="rec-body">
+                        <div class="rec-title">${title}</div>
+                        <div class="rec-genres">${item.genres?.slice(0, 3).map(g => g.name).join(', ') || ''}</div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">Ошибка загрузки</div>';
+    }
+}
 
-function randomAnime() {
+// ============================================
+// 5. СЛУЧАЙНОЕ АНИМЕ (через API)
+// ============================================
+async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
     if (!resultContainer) return;
-    
-    const animeList = Object.values(allData);
-    
-    if (animeList.length === 0) {
-        showToast('📚 Сначала загрузите каталог!', 'warning');
-        return;
-    }
-    
-    const random = animeList[Math.floor(Math.random() * animeList.length)];
-    const title = getRussianTitle(random);
-    const id = random.mal_id || random.id;
-    
-    const img = random.images?.jpg?.image_url || '';
-    const year = random.year || random.seasonYear || '';
-    const episodes = random.episodes || random.episodes_total || '?';
-    
-    resultContainer.innerHTML = `
-        <div class="random-result-card" onclick="openDetail('${id}')">
-            <div class="random-result-img">
-                ${img ? '<img src="' + img + '" alt="' + title + '">' : '<div class="random-no-img">🎬</div>'}
-            </div>
-            <div class="random-result-info">
-                <div class="random-result-title">🎯 ${title}</div>
-                <div class="random-result-meta">${year} • ${episodes} эп.</div>
-                <div class="random-result-hint">👆 Нажмите, чтобы открыть</div>
-            </div>
-        </div>
-    `;
-}
+    resultContainer.innerHTML = '<div style="color:#888;">⏳ Ищем...</div>';
 
-// ============================================
-// ПОИСК (С DEBOUNCE)
-// ============================================
-
-const searchInput = document.getElementById('searchInput');
-if (searchInput) {
-    const debouncedSearch = debounce(function(q) {
-        if (q.length > 1) {
-            query = q;
-            genre = '';
-            page = 1;
-            const titleEl = document.getElementById('title');
-            if (titleEl) titleEl.textContent = '🔍 Поиск: ' + q;
-            loadCatalog();
-        } else if (q.length === 0) {
-            query = '';
-            const titleEl = document.getElementById('title');
-            if (titleEl) titleEl.textContent = '✨ Популярное аниме';
-            loadCatalog();
+    try {
+        const items = await API.getRandomReleases(1);
+        if (!items || !items.length) {
+            resultContainer.innerHTML = '<div style="color:#888;">😅 Не удалось найти случайное аниме</div>';
+            return;
         }
-    }, 400);
-    
-    searchInput.addEventListener('input', function() {
-        debouncedSearch(this.value.trim());
-    });
+        const random = items[0];
+        const title = random.title;
+        const id = random.id;
+        const img = random.images?.jpg?.image_url || '';
+        const year = random.year || '--';
+        const episodes = random.episodes || '?';
+
+        resultContainer.innerHTML = `
+            <div class="random-result-card" onclick="openDetail('${id}')">
+                <div class="random-result-img">
+                    ${img ? '<img src="' + img + '" alt="' + title + '">' : '<div class="random-no-img">🎬</div>'}
+                </div>
+                <div class="random-result-info">
+                    <div class="random-result-title">🎯 ${title}</div>
+                    <div class="random-result-meta">${year} • ${episodes} эп.</div>
+                    <div class="random-result-hint">👆 Нажмите, чтобы открыть</div>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        resultContainer.innerHTML = '<div style="color:#888;">⚠️ Ошибка</div>';
+    }
 }
 
 // ============================================
-// ЖАНРЫ
+// 6. АВТОДОПОЛНЕНИЕ ПОИСКА
 // ============================================
+let autocompleteTimeout = null;
+const searchInput = document.getElementById('searchInput');
+const autocompleteList = document.createElement('div');
+autocompleteList.className = 'autocomplete-list';
+autocompleteList.style.cssText = `
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-radius: 10px;
+    border: 1px solid rgba(108,92,231,0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+`;
+searchInput?.parentNode?.appendChild(autocompleteList);
 
-function setGenre(genreId, btn) {
-    document.querySelectorAll('.genres a').forEach(function(el) {
-        el.classList.remove('active');
-    });
-    if (btn) btn.classList.add('active');
-    
-    window.genre = genreId;
-    window.query = '';
-    window.page = 1;
-    
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) searchInput.value = '';
-    
-    const titleEl = document.getElementById('title');
-    if (titleEl) {
-        titleEl.textContent = genreId ? btn.textContent : '✨ Популярное аниме';
+searchInput?.addEventListener('input', function(e) {
+    const value = this.value.trim();
+    clearTimeout(autocompleteTimeout);
+    autocompleteList.style.display = 'none';
+
+    if (value.length < 2) return;
+
+    autocompleteTimeout = setTimeout(async () => {
+        try {
+            const suggestions = await API.searchAutocomplete(value, 5);
+            if (!suggestions.length) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+
+            let html = '';
+            suggestions.forEach(item => {
+                html += `
+                    <div class="autocomplete-item" onclick="selectAutocomplete('${item.id}')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);">
+                        ${item.poster ? `<img src="${item.poster}" style="width:30px;height:40px;object-fit:cover;border-radius:4px;">` : '<span style="font-size:20px;">🎬</span>'}
+                        <span>${item.title}</span>
+                    </div>
+                `;
+            });
+            autocompleteList.innerHTML = html;
+            autocompleteList.style.display = 'block';
+        } catch (e) {
+            console.error('Автодополнение ошибка:', e);
+        }
+    }, 300);
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-wrapper')) {
+        autocompleteList.style.display = 'none';
     }
-    
-    loadCatalog();
+});
+
+function selectAutocomplete(id) {
+    autocompleteList.style.display = 'none';
+    openDetail(id);
 }
 
 // ============================================
 // ДЕТАЛЬНАЯ СТРАНИЦА
 // ============================================
-
 async function openDetail(id) {
     if (!id) {
         showToast('Ошибка: ID не указан', 'error');
         return;
     }
-    
     navigate('detail');
-    
     const titleEl = document.getElementById('detailTitle');
     if (titleEl) titleEl.textContent = 'Загрузка...';
     
@@ -522,13 +656,8 @@ async function openDetail(id) {
     }
 }
 
-// ============================================
-// ОТОБРАЖЕНИЕ ДЕТАЛЕЙ
-// ============================================
-
 function showDetail(anime) {
     const img = anime.images?.jpg?.image_url || '';
-    
     const posterEl = document.getElementById('detailPoster');
     if (posterEl) {
         posterEl.src = img || '';
@@ -561,7 +690,6 @@ function showDetail(anime) {
         descText = tempDiv.textContent || descText;
         descEl.textContent = descText;
         descEl.classList.remove('expanded');
-        
         const toggleBtn = document.getElementById('descToggle');
         if (toggleBtn) {
             if (descText.length > 200) {
@@ -628,18 +756,14 @@ function showDetail(anime) {
 // ============================================
 // ПЛЕЕР SHIKIMORI
 // ============================================
-
 async function playWithShikimori(animeId, episode = 1) {
     const wrapper = document.getElementById('playerWrapper');
     if (!wrapper) {
         console.error('❌ playerWrapper не найден');
         return;
     }
-    
     wrapper.innerHTML = '';
-    
     currentAnimeId = animeId;
-    
     const anime = allData[animeId];
     const title = anime ? getRussianTitle(anime) : 'Аниме';
     const totalEp = parseInt(anime?.episodes) || 0;
@@ -675,7 +799,6 @@ async function playWithShikimori(animeId, episode = 1) {
         console.error('❌ Ошибка загрузки:', error);
         showManualVideoButton(wrapper, title, episode, animeId);
     }
-    
     updateEpisodeButtons(animeId, episode);
 }
 
@@ -738,33 +861,26 @@ function showManualVideoInput(animeTitle) {
 function updateEpisodeButtons(animeId, currentEpisode) {
     const container = document.getElementById('episodeBtns');
     if (!container) return;
-    
     const anime = allData[animeId];
     const totalEp = parseInt(anime?.episodes) || 12;
-    
     let html = '';
     const maxShow = Math.min(totalEp, 24);
-    
     for (let i = 1; i <= maxShow; i++) {
         const active = i === currentEpisode ? 'active' : '';
         html += `<button class="ep-btn ${active}" onclick="playWithShikimori(${animeId}, ${i})">${i}</button>`;
     }
-    
     if (totalEp > 24) {
         html += `<button class="ep-btn" onclick="showToast('📺 Всего ${totalEp} серий', 'info')">...</button>`;
     }
-    
     container.innerHTML = html;
 }
 
 // ============================================
 // КОММЕНТАРИИ
 // ============================================
-
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
     if (!container) return;
-    
     fetch('/api/comments/' + encodeURIComponent(animeName))
         .then(function(res) { return res.json(); })
         .then(function(comments) {
@@ -772,10 +888,8 @@ function renderComments(animeName) {
                 container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев. Будьте первым!</div>';
                 return;
             }
-            
             const user = DB.get('currentUser');
             let html = '';
-            
             comments.forEach(function(c) {
                 const canDelete = user && c.user_name === user.name;
                 html += `
@@ -787,7 +901,6 @@ function renderComments(animeName) {
                     </div>
                 `;
             });
-            
             container.innerHTML = html;
         })
         .catch(function() {
@@ -801,27 +914,22 @@ function addComment() {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
-    
     const input = document.getElementById('commentInput');
     if (!input) return;
-    
     const text = input.value.trim();
     if (!text) {
         showToast('Напишите что-нибудь!', 'warning');
         return;
     }
-    
     const titleEl = document.getElementById('detailTitle');
     const title = titleEl ? titleEl.textContent : '';
     if (!title || title === 'Загрузка...' || title === 'Без названия') {
         showToast('Ошибка: аниме не загружено', 'error');
         return;
     }
-    
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/comments');
     xhr.setRequestHeader('Content-Type', 'application/json');
-    
     xhr.onload = function() {
         try {
             const data = JSON.parse(xhr.responseText);
@@ -837,11 +945,9 @@ function addComment() {
             showToast('Ошибка сервера', 'error');
         }
     };
-    
     xhr.onerror = function() {
         showToast('Ошибка сети', 'error');
     };
-    
     xhr.send(JSON.stringify({
         anime: title,
         user_name: user.name,
@@ -855,12 +961,10 @@ function deleteComment(id) {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
-    
     showConfirmModal('🗑️ Удалить комментарий', 'Вы уверены?', function() {
         const xhr = new XMLHttpRequest();
         xhr.open('DELETE', '/api/comments/' + id);
         xhr.setRequestHeader('Content-Type', 'application/json');
-        
         xhr.onload = function() {
             try {
                 const data = JSON.parse(xhr.responseText);
@@ -876,11 +980,9 @@ function deleteComment(id) {
                 showToast('Ошибка сервера', 'error');
             }
         };
-        
         xhr.onerror = function() {
             showToast('Ошибка сети', 'error');
         };
-        
         xhr.send(JSON.stringify({ user_name: user.name }));
     });
 }
@@ -888,38 +990,31 @@ function deleteComment(id) {
 // ============================================
 // МОИ КОММЕНТАРИИ
 // ============================================
-
 function renderMyComments() {
     const user = DB.get('currentUser');
     const container = document.getElementById('myCommentsList');
     if (!container) return;
-    
     if (!user) {
         container.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
         const countEl = document.getElementById('myCommentsCount');
         if (countEl) countEl.textContent = '0 комментариев';
         return;
     }
-    
     fetch('/api/comments/all')
         .then(function(res) { return res.json(); })
         .then(function(comments) {
             const myComments = comments.filter(function(c) {
                 return c.user_name === user.name;
             });
-            
             myComments.sort(function(a, b) {
                 return b.date.localeCompare(a.date);
             });
-            
             const countEl = document.getElementById('myCommentsCount');
             if (countEl) countEl.textContent = myComments.length + ' комментариев';
-            
             if (myComments.length === 0) {
                 container.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>';
                 return;
             }
-            
             let html = '';
             myComments.forEach(function(c) {
                 html += `
@@ -933,7 +1028,6 @@ function renderMyComments() {
                     </div>
                 `;
             });
-            
             container.innerHTML = html;
         })
         .catch(function() {
@@ -946,13 +1040,10 @@ function searchAndOpen(name) {
     query = name;
     page = 1;
     genre = '';
-    
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = name;
-    
     const titleEl = document.getElementById('title');
     if (titleEl) titleEl.textContent = '🔍 Поиск: ' + name;
-    
     navigate('catalog');
     loadCatalog();
 }
@@ -960,7 +1051,6 @@ function searchAndOpen(name) {
 // ============================================
 // ИЗБРАННОЕ
 // ============================================
-
 function toggleFav(name) {
     const user = DB.get('currentUser');
     if (!user) {
@@ -979,14 +1069,12 @@ function toggleFav(name) {
     }
     DB.setUserData(user.name, 'favorites', favs);
     DB.save();
-    
     const btn = document.getElementById('favBtn');
     if (btn) {
         const isFav = favs.indexOf(name) > -1;
         btn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
         btn.className = 'fav-btn' + (isFav ? ' active' : '');
     }
-    
     if (currentPage === 'favorites') {
         renderFavorites();
     }
@@ -996,28 +1084,22 @@ function renderFavorites() {
     const user = DB.get('currentUser');
     const grid = document.getElementById('favGrid');
     if (!grid) return;
-    
     if (!user) {
         grid.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
         return;
     }
-    
     const favs = DB.getUserData(user.name, 'favorites', []);
     const countEl = document.getElementById('favCount');
     if (countEl) countEl.textContent = favs.length + ' аниме';
-    
     if (favs.length === 0) {
         grid.innerHTML = '<div class="empty-state"><span class="empty-icon">💔</span><p>Пусто</p></div>';
         return;
     }
-    
     const colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
     let html = '';
-    
     favs.forEach(function(name, index) {
         let img = '';
         const color = colors[index % colors.length];
-        
         for (const id in allData) {
             const a = allData[id];
             const title = getRussianTitle(a);
@@ -1026,7 +1108,6 @@ function renderFavorites() {
                 break;
             }
         }
-        
         html += `
             <div class="card" onclick="searchAndOpen('${name}')">
                 <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:40px;' : ''}">
@@ -1038,41 +1119,33 @@ function renderFavorites() {
             </div>
         `;
     });
-    
     grid.innerHTML = html;
 }
 
 // ============================================
 // ДОСТИЖЕНИЯ
 // ============================================
-
 function renderAchievements() {
     const user = DB.get('currentUser');
     const grid = document.getElementById('achievementsGrid');
     if (!grid) return;
-    
     if (!user) {
         grid.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
         updateAchievementStats([], ACHIEVEMENTS_LIST.length);
         return;
     }
-    
     const earned = DB.getAchievements(user.name);
     const total = ACHIEVEMENTS_LIST.length;
     const activeTitle = DB.getActiveTitle(user.name);
-    
     updateAchievementStats(earned, total);
-    
     if (ACHIEVEMENTS_LIST.length === 0) {
         grid.innerHTML = '<div class="empty-state"><p>🏆 Достижения временно недоступны</p></div>';
         return;
     }
-    
     let html = '';
     ACHIEVEMENTS_LIST.forEach(function(ach) {
         const isEarned = earned.indexOf(ach.id) !== -1;
         const isActive = activeTitle === ach.id;
-        
         html += `
             <div class="ach-card ${isEarned ? 'earned' : 'locked'}">
                 <div class="ach-icon">${ach.icon}</div>
@@ -1088,7 +1161,6 @@ function renderAchievements() {
             </div>
         `;
     });
-    
     grid.innerHTML = html;
 }
 
@@ -1097,7 +1169,6 @@ function updateAchievementStats(earned, total) {
     const totalEl = document.getElementById('achTotalCount');
     const progressEl = document.getElementById('achProgress');
     const fillEl = document.getElementById('achProgressFill');
-    
     if (earnedEl) earnedEl.textContent = earned.length;
     if (totalEl) totalEl.textContent = total;
     if (progressEl) progressEl.textContent = total > 0 ? Math.round((earned.length / total) * 100) + '%' : '0%';
@@ -1110,13 +1181,11 @@ function setActiveTitle(achId) {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
-    
     const earned = DB.getAchievements(user.name);
     if (earned.indexOf(achId) === -1) {
         showToast('❌ Достижение не получено!', 'error');
         return;
     }
-    
     DB.setActiveTitle(user.name, achId);
     renderAchievements();
     renderProfile();
@@ -1126,9 +1195,7 @@ function setActiveTitle(achId) {
 function checkAchievements(animeName) {
     const user = DB.get('currentUser');
     if (!user) return;
-    
     const earned = DB.getAchievements(user.name);
-    
     const allComments = DB.get('comments', {});
     let commentCount = 0;
     for (const k in allComments) {
@@ -1136,10 +1203,8 @@ function checkAchievements(animeName) {
             if (c.user === user.name) commentCount++;
         });
     }
-    
     const favs = DB.getUserData(user.name, 'favorites', []);
     const favCount = favs.length;
-    
     const history = DB.getUserData(user.name, 'history', []);
     const continueData = DB.getUserData(user.name, 'continueWatching', {});
     let episodeCount = 0;
@@ -1151,11 +1216,9 @@ function checkAchievements(animeName) {
     if (episodeCount === 0) {
         episodeCount = history.length * 12;
     }
-    
     const newAchievements = [];
     ACHIEVEMENTS_LIST.forEach(function(ach) {
         if (earned.indexOf(ach.id) !== -1) return;
-        
         let unlocked = false;
         if (ach.id === 'ep100' && episodeCount >= 100) unlocked = true;
         else if (ach.id === 'ep200' && episodeCount >= 200) unlocked = true;
@@ -1172,17 +1235,14 @@ function checkAchievements(animeName) {
         else if (ach.id === 'fv500' && favCount >= 500) unlocked = true;
         else if (ach.id === 'fv750' && favCount >= 750) unlocked = true;
         else if (ach.id === 'fv1000' && favCount >= 1000) unlocked = true;
-        
         if (unlocked) {
             DB.addAchievement(user.name, ach.id);
             newAchievements.push(ach);
         }
     });
-    
     newAchievements.forEach(function(ach) {
         showAchievementPopup(ach);
     });
-    
     if (newAchievements.length > 0) {
         renderAchievements();
         renderProfile();
@@ -1192,15 +1252,12 @@ function checkAchievements(animeName) {
 function showAchievementPopup(ach) {
     const popup = document.getElementById('achievementPopup');
     if (!popup) return;
-    
     document.getElementById('popupIcon').textContent = ach.icon;
     document.getElementById('popupName').textContent = ach.name;
     document.getElementById('popupDesc').textContent = ach.desc;
     document.getElementById('popupBadge').textContent = '🎖️ ' + (ach.title || 'Новое достижение!');
-    
     popup.classList.add('show');
     spawnConfetti();
-    
     clearTimeout(window._popupTimer);
     window._popupTimer = setTimeout(function() {
         popup.classList.remove('show');
@@ -1214,22 +1271,18 @@ function hidePopup() {
 function spawnConfetti() {
     const container = document.getElementById('confetti');
     if (!container) return;
-    
     const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#a29bfe', '#fd79a8'];
     let html = '';
-    
     for (let i = 0; i < 30; i++) {
         const x = Math.random() * 100;
         const size = 4 + Math.random() * 8;
         const color = colors[Math.floor(Math.random() * colors.length)];
         const duration = 1.5 + Math.random() * 2;
         const delay = Math.random() * 1.5;
-        
         html += `
             <div style="position:absolute;left:${x}vw;top:-20px;width:${size}px;height:${size}px;background:${color};border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation:confettiFall ${duration}s ease-out forwards;animation-delay:${delay}s;transform:rotate(${Math.random() * 360}deg);"></div>
         `;
     }
-    
     container.innerHTML = html;
     setTimeout(function() { container.innerHTML = ''; }, 4000);
 }
@@ -1237,7 +1290,6 @@ function spawnConfetti() {
 // ============================================
 // ПРОФИЛЬ
 // ============================================
-
 function renderProfile() {
     const user = DB.get('currentUser');
     if (!user) {
@@ -1245,31 +1297,20 @@ function renderProfile() {
         navigate('catalog');
         return;
     }
-    
     const profiles = DB.get('profiles', {});
     const profile = profiles[user.name] || { bio: '', avatar: '' };
-    
     document.getElementById('profileName').textContent = user.name;
     document.getElementById('profileEmail').textContent = '📧 ' + user.email;
     document.getElementById('profileBio').textContent = profile.bio || 'Нажмите чтобы добавить описание';
-    
-    const profileIdEl = document.getElementById('profileId');
-    if (profileIdEl) {
-        profileIdEl.textContent = '🆔 ID: ' + user.id;
-    }
-    
     const img = document.getElementById('avatarImg');
     const letter = document.getElementById('avatarLetter');
-    
     let avatarFound = false;
-    
     if (profile.avatar && profile.avatar.length > 100) {
         img.src = profile.avatar;
         img.style.display = 'block';
         if (letter) letter.style.display = 'none';
         avatarFound = true;
     }
-    
     if (!avatarFound) {
         const backupAvatar = localStorage.getItem('avatar_' + user.name);
         if (backupAvatar && backupAvatar.length > 100) {
@@ -1283,7 +1324,6 @@ function renderProfile() {
             avatarFound = true;
         }
     }
-    
     if (!avatarFound) {
         img.style.display = 'none';
         if (letter) {
@@ -1291,10 +1331,8 @@ function renderProfile() {
             letter.textContent = user.name[0].toUpperCase();
         }
     }
-    
     const favs = DB.getUserData(user.name, 'favorites', []);
     document.getElementById('statFav').textContent = favs.length;
-    
     const comments = DB.get('comments', {});
     let count = 0;
     for (const k in comments) {
@@ -1304,7 +1342,6 @@ function renderProfile() {
     }
     document.getElementById('statComments').textContent = count;
     document.getElementById('statAchievements').textContent = DB.getAchievements(user.name).length;
-    
     const activeTitle = DB.getActiveTitle(user.name);
     const titleBadge = document.getElementById('profileTitle');
     if (titleBadge && activeTitle) {
@@ -1319,7 +1356,6 @@ function renderProfile() {
     } else if (titleBadge) {
         titleBadge.style.display = 'none';
     }
-    
     renderProfileAchievements(user.name);
     renderTopUsers();
 }
@@ -1327,15 +1363,12 @@ function renderProfile() {
 function renderProfileAchievements(user) {
     const grid = document.getElementById('profileAchievementsGrid');
     if (!grid) return;
-    
     const earned = DB.getAchievements(user);
     const recent = earned.slice(-3).reverse();
-    
     if (recent.length === 0) {
         grid.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Нет достижений</div>';
         return;
     }
-    
     let html = '';
     recent.forEach(function(id) {
         const ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === id; });
@@ -1355,27 +1388,22 @@ function renderProfileAchievements(user) {
 // ============================================
 // ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
-
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
     if (!container) return;
-    
     const users = DB.get('users', {});
     const allData = {};
-    
     for (const u in users) {
         const onlineTime = DB.getUserData(u, 'onlineTime', 0);
         const lastSeen = DB.getUserData(u, 'lastSeen', 0);
         const favs = DB.getUserData(u, 'favorites', []);
         const comments = DB.get('comments', {});
         let commentCount = 0;
-        
         for (const k in comments) {
             comments[k].forEach(function(c) {
                 if (c.user === u) commentCount++;
             });
         }
-        
         const earned = DB.getAchievements(u);
         const activeTitle = DB.getActiveTitle(u);
         let titleName = '';
@@ -1383,9 +1411,7 @@ function renderTopUsers() {
             const ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === activeTitle; });
             if (ach) titleName = ach.title;
         }
-        
         const xp = favs.length * 10 + commentCount * 5 + earned.length * 20 + Math.floor(onlineTime / 60);
-        
         allData[u] = {
             name: u,
             email: users[u] || '',
@@ -1399,11 +1425,9 @@ function renderTopUsers() {
             isOnline: (Date.now() - lastSeen) < 300000
         };
     }
-    
     const sorted = Object.values(allData).sort(function(a, b) {
         return b.xp - a.xp;
     }).slice(0, 20);
-    
     if (sorted.length === 0) {
         container.innerHTML = `
             <div style="color:var(--text-muted);text-align:center;padding:30px;">
@@ -1414,19 +1438,16 @@ function renderTopUsers() {
         `;
         return;
     }
-    
     const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
     const avatarGradients = ['avatar-gradient-1', 'avatar-gradient-2', 'avatar-gradient-3', 
                            'avatar-gradient-4', 'avatar-gradient-5', 'avatar-gradient-6',
                            'avatar-gradient-7', 'avatar-gradient-8', 'avatar-gradient-9', 'avatar-gradient-10'];
-    
     let html = `
         <div class="top-users-wrapper">
             <div class="top-users-header">
                 <h3>👑 Топ пользователей</h3>
                 <span class="top-update-time">🔄 Обновлено: ${new Date().toLocaleTimeString()}</span>
             </div>
-            
             <div style="overflow-x:auto;">
                 <table class="top-users-table">
                     <thead>
@@ -1442,18 +1463,13 @@ function renderTopUsers() {
                     </thead>
                     <tbody>
     `;
-    
     const maxXP = sorted.length > 0 ? sorted[0].xp : 1;
-    
     sorted.forEach(function(user, index) {
         const rankClass = index === 0 ? 'rank-1' : (index === 1 ? 'rank-2' : (index === 2 ? 'rank-3' : ''));
         const medal = index < 10 ? medals[index] : '#' + (index + 1);
         const avatarGrad = avatarGradients[index % avatarGradients.length];
         const initial = user.name[0].toUpperCase();
-        
         const xpPercent = Math.min((user.xp / maxXP) * 100, 100);
-        const statusDot = user.isOnline ? '🟢' : (user.lastSeen > 0 ? '🟡' : '⚪');
-        
         html += `
             <tr class="${rankClass}">
                 <td class="rank-cell">${medal}</td>
@@ -1466,7 +1482,7 @@ function renderTopUsers() {
                             <div class="user-name-cell">
                                 ${user.name} 
                                 <span style="font-size:11px;color:${user.isOnline ? '#2ecc71' : '#666'};">
-                                    ${statusDot}
+                                    ${user.isOnline ? '🟢' : '🟡'}
                                 </span>
                             </div>
                             ${user.title ? `<div class="user-title-cell">🎖️ ${user.title}</div>` : ''}
@@ -1500,12 +1516,10 @@ function renderTopUsers() {
             </tr>
         `;
     });
-    
     html += `
                     </tbody>
                 </table>
             </div>
-            
             <div class="status-legend">
                 <span class="status-legend-item">
                     <span class="dot dot-online"></span> Онлайн
@@ -1522,52 +1536,42 @@ function renderTopUsers() {
             </div>
         </div>
     `;
-    
     container.innerHTML = html;
 }
 
 // ============================================
 // АВАТАР
 // ============================================
-
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
         showToast('Выберите файл!', 'error');
         return;
     }
-    
     const user = DB.get('currentUser');
     if (!user) {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
-    
     const file = input.files[0];
-    
     if (file.size > 20 * 1024 * 1024) {
         showToast('Файл слишком большой! Максимум 20MB', 'error');
         return;
     }
-    
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
     if (validTypes.indexOf(file.type) === -1) {
         showToast('Поддерживаются только изображения', 'error');
         return;
     }
-    
     showToast('⏳ Загрузка...', 'info');
-    
     const reader = new FileReader();
     reader.onload = function(e) {
         const avatarData = e.target.result;
         const profiles = DB.get('profiles', {});
         if (!profiles[user.name]) profiles[user.name] = {};
-        
         profiles[user.name].avatar = avatarData;
         DB.set('profiles', profiles);
         localStorage.setItem('avatar_' + user.name, avatarData);
         DB.save();
-        
         const img = document.getElementById('avatarImg');
         const letter = document.getElementById('avatarLetter');
         if (img) {
@@ -1575,7 +1579,6 @@ function uploadAvatar(input) {
             img.style.display = 'block';
         }
         if (letter) letter.style.display = 'none';
-        
         showToast('✅ Аватар обновлен!', 'success');
     };
     reader.onerror = function() {
@@ -1587,18 +1590,15 @@ function uploadAvatar(input) {
 // ============================================
 // TOAST
 // ============================================
-
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
     if (old) old.remove();
-    
     const colors = {
         success: '#2ecc71',
         error: '#e74c3c',
         warning: '#f39c12',
         info: 'rgba(20,20,50,0.95)'
     };
-    
     const toast = document.createElement('div');
     toast.className = 'toast-message';
     toast.textContent = message;
@@ -1622,7 +1622,6 @@ function showToast(message, type) {
         box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     `;
     document.body.appendChild(toast);
-    
     setTimeout(function() {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(-50%) translateY(20px)';
@@ -1634,21 +1633,17 @@ function showToast(message, type) {
 // ============================================
 // МОДАЛЬНЫЕ ОКНА
 // ============================================
-
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
     if (!modal) return;
-    
     document.getElementById('confirmTitle').textContent = title || 'Подтверждение';
     document.getElementById('confirmText').textContent = text || 'Вы уверены?';
     document.getElementById('confirmIcon').textContent = icon || '⚠️';
-    
     const okBtn = document.getElementById('confirmOkBtn');
     okBtn.onclick = function() {
         closeModal('confirmModal');
         if (callback) callback();
     };
-    
     modal.style.display = 'flex';
 }
 
@@ -1657,26 +1652,8 @@ function deleteAccount() {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
-    
-    const user = DB.get('currentUser');
-    const modal = document.getElementById('deleteAccountModal');
-    if (!modal) return;
-    
-    document.getElementById('deleteCurrentUser').textContent = user.name;
-    document.getElementById('deleteConfirmName').value = '';
-    modal.style.display = 'flex';
-}
-
-function confirmDeleteAccount() {
-    const user = DB.get('currentUser');
-    const input = document.getElementById('deleteConfirmName');
-    if (!user || input.value.trim() !== user.name) {
-        showToast('❌ Имя не совпадает!', 'error');
-        return;
-    }
-    
-    closeModal('deleteAccountModal');
-    showConfirmModal('💀 Удаление аккаунта', 'Вы уверены?', function() {
+    if (confirm('Вы уверены, что хотите удалить аккаунт? Это действие необратимо!')) {
+        const user = DB.get('currentUser');
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/delete-account');
         xhr.setRequestHeader('Content-Type', 'application/json');
@@ -1693,7 +1670,7 @@ function confirmDeleteAccount() {
             setTimeout(function() { location.reload(); }, 500);
         };
         xhr.send(JSON.stringify({ userId: user.id }));
-    });
+    }
 }
 
 function closeModal(id) {
@@ -1708,7 +1685,6 @@ document.addEventListener('click', function(e) {
         e.target.style.display = 'none';
     }
 });
-
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         document.querySelectorAll('.modal').forEach(function(modal) {
@@ -1722,24 +1698,19 @@ document.addEventListener('keydown', function(e) {
 // ============================================
 // РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
-
 function editProfile(type) {
     const user = DB.get('currentUser');
     if (!user) {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
-    
     window._editType = type;
     const input = document.getElementById('editInput');
     const textarea = document.getElementById('editTextarea');
     const title = document.getElementById('editTitle');
-    
     if (!input || !textarea || !title) return;
-    
     input.style.display = type === 'bio' ? 'none' : 'block';
     textarea.style.display = type === 'bio' ? 'block' : 'none';
-    
     if (type === 'name') {
         title.textContent = '✏️ Изменить никнейм';
         input.value = user.name;
@@ -1763,7 +1734,6 @@ function editProfile(type) {
         textarea.value = (profiles[user.name] && profiles[user.name].bio) || '';
         textarea.placeholder = 'Введите описание';
     }
-    
     document.getElementById('editModal').style.display = 'flex';
 }
 
@@ -1773,17 +1743,14 @@ function saveEdit() {
         showToast('Войдите в аккаунт!', 'error');
         return;
     }
-    
     const input = document.getElementById('editInput');
     const textarea = document.getElementById('editTextarea');
     const type = window._editType || 'bio';
     const val = type === 'bio' ? textarea.value.trim() : input.value.trim();
-    
     if (!val) {
         showToast('Поле не может быть пустым!', 'error');
         return;
     }
-    
     if (type === 'name') {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/update-name');
@@ -1796,7 +1763,6 @@ function saveEdit() {
                     user.name = val;
                     localStorage.setItem('onika_currentUser', JSON.stringify(user));
                     DB._data.currentUser = user;
-                    
                     if (DB._data.favorites[oldName]) {
                         DB._data.favorites[val] = DB._data.favorites[oldName];
                         delete DB._data.favorites[oldName];
@@ -1821,7 +1787,6 @@ function saveEdit() {
                         DB._data.lastSeen[val] = DB._data.lastSeen[oldName];
                         delete DB._data.lastSeen[oldName];
                     }
-                    
                     const backupFavs = localStorage.getItem('favorites_' + oldName);
                     if (backupFavs) {
                         localStorage.setItem('favorites_' + val, backupFavs);
@@ -1832,7 +1797,6 @@ function saveEdit() {
                         localStorage.setItem('avatar_' + val, backupAvatar);
                         localStorage.removeItem('avatar_' + oldName);
                     }
-                    
                     DB.save();
                     closeModal('editModal');
                     renderProfile();
@@ -1862,13 +1826,10 @@ function saveEdit() {
 // ============================================
 // ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
-
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
-    
     const user = DB.get('currentUser');
     if (!user) return;
-    
     const backupFavs = localStorage.getItem('favorites_' + user.name);
     if (backupFavs) {
         try {
@@ -1882,7 +1843,6 @@ function restoreAllData() {
             }
         } catch(e) {}
     }
-    
     const backupAvatar = localStorage.getItem('avatar_' + user.name);
     if (backupAvatar) {
         const profiles = DB.get('profiles', {});
@@ -1893,23 +1853,18 @@ function restoreAllData() {
             console.log('🖼️ Восстановлена аватарка');
         }
     }
-    
     DB.save();
-    
     if (typeof renderProfile === 'function') renderProfile();
     if (typeof renderFavorites === 'function') renderFavorites();
     if (typeof renderAchievements === 'function') renderAchievements();
-    
     console.log('✅ Восстановление завершено');
 }
 
 // ============================================
 // ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
-
 function updateSocialStats() {
     console.log('🔄 Обновление статистики соцсетей...');
-    
     const tgElement = document.getElementById('tgStats');
     if (tgElement) {
         const tgBase = 1200;
@@ -1919,7 +1874,6 @@ function updateSocialStats() {
         tgElement.classList.add('pulse');
         setTimeout(function() { tgElement.classList.remove('pulse'); }, 500);
     }
-    
     const vkElement = document.getElementById('vkStats');
     if (vkElement) {
         const vkBase = 856;
@@ -1927,9 +1881,8 @@ function updateSocialStats() {
         const vkCurrent = vkBase + vkGrowth;
         vkElement.textContent = '👥 ' + formatNumber(vkCurrent) + ' подписчиков';
         vkElement.classList.add('pulse');
-        setTimeout(function() { tgElement.classList.remove('pulse'); }, 500);
+        setTimeout(function() { vkElement.classList.remove('pulse'); }, 500);
     }
-    
     const ttElement = document.getElementById('ttStats');
     if (ttElement) {
         const ttBase = 2400;
@@ -1941,47 +1894,62 @@ function updateSocialStats() {
     }
 }
 
-function refreshStats() {
-    updateSocialStats();
-    showToast('📊 Статистика обновлена!', 'success');
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(updateSocialStats, 1000);
     setInterval(updateSocialStats, 30000);
 });
 
-console.log('📊 Система живой статистики запущена!');
-console.log('💡 Используйте refreshStats() для ручного обновления');
-
 // ============================================
 // ЗАПУСК
 // ============================================
-
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
-    
     restoreAllData();
     updateUI();
     navigate('catalog');
-    
+    loadFilterReferences();
     const user = DB.get('currentUser');
     if (user) {
         startOnlineTracking();
     }
-    
     console.log('✅ OnikaAnime готов!');
 });
-
-console.log('🌟 OnikaAnime загружен!');
-console.log('💡 Используйте restoreAllData() для восстановления данных');
-console.log('💡 Используйте refreshStats() для обновления статистики соцсетей');
 
 // ============================================
 // ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ
 // ============================================
-
 window.playWithShikimori = playWithShikimori;
 window.currentPlayer = currentPlayer;
 window.allData = allData;
 window.showManualVideoInput = showManualVideoInput;
+window.applyFilters = applyFilters;
+window.resetFilters = resetFilters;
+window.randomAnime = randomAnime;
+window.selectAutocomplete = selectAutocomplete;
+window.openDetail = openDetail;
+window.navigate = navigate;
+window.goBack = goBack;
+window.toggleMenu = toggleMenu;
+window.closeMenu = closeMenu;
+window.showLoginModal = showLoginModal;
+window.logout = logout;
+window.deleteAccount = deleteAccount;
+window.editProfile = editProfile;
+window.saveEdit = saveEdit;
+window.toggleFav = toggleFav;
+window.addComment = addComment;
+window.deleteComment = deleteComment;
+window.setActiveTitle = setActiveTitle;
+window.renderFavorites = renderFavorites;
+window.renderAchievements = renderAchievements;
+window.renderProfile = renderProfile;
+window.renderMyComments = renderMyComments;
+window.loadCatalog = loadCatalog;
+window.loadRecommendations = loadRecommendations;
+window.renderSchedulePage = renderSchedulePage;
+window.setGenre = setGenre;
+window.goToPage = goToPage;
+window.scrollToTop = scrollToTop;
+window.closeModal = closeModal;
+window.showToast = showToast;
+window.showConfirmModal = showConfirmModal;
