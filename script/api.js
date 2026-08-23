@@ -1,50 +1,35 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (ТОЛЬКО SHIKIMORI)
+// API МОДУЛЬ ONIKAANIME (SHIKIMORI GRAPHQL)
 // ============================================
 
 const API = {
     SHIKIMORI_GRAPHQL: 'https://shikimori.one/api/graphql',
-    SHIKIMORI_REST: 'https://shikimori.one/api/v2',
     
     _cache: new Map(),
     _cacheTTL: 5 * 60 * 1000,
 
     // ============================================
-    // SHIKIMORI GRAPHQL — ПОИСК
+    // ЗАПРОС К GRAPHQL
     // ============================================
-    async searchShikimoriGraphQL(query, page = 1, limit = 24) {
-        const gqlQuery = `
-            query SearchAnime($search: String!, $page: Int!, $limit: Int!) {
-                animes(search: $search, page: $page, limit: $limit, kind: "!special") {
-                    id
-                    name
-                    russian
-                    english
-                    score
-                    episodes
-                    airedOn { year }
-                    poster { originalUrl }
-                    genres { name russian }
-                    description
-                }
+    async _graphql(query, variables = {}) {
+        const cacheKey = JSON.stringify({ query, variables });
+        
+        if (this._cache.has(cacheKey)) {
+            const cached = this._cache.get(cacheKey);
+            if (Date.now() - cached.timestamp < this._cacheTTL) {
+                console.log('📦 Кэш:', cacheKey.substring(0, 50) + '...');
+                return cached.data;
             }
-        `;
-
-        const variables = {
-            search: query,
-            page: page,
-            limit: limit
-        };
+        }
 
         try {
-            console.log('📡 Shikimori GraphQL запрос:', query);
             const response = await fetch(this.SHIKIMORI_GRAPHQL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'User-Agent': 'OnikaAnime/2.0'
                 },
-                body: JSON.stringify({ query: gqlQuery, variables })
+                body: JSON.stringify({ query, variables })
             });
 
             if (!response.ok) {
@@ -52,154 +37,314 @@ const API = {
             }
 
             const data = await response.json();
-            console.log('📦 Shikimori ответ:', data);
             
-            if (data?.data?.animes?.length > 0) {
-                return {
-                    items: data.data.animes.map(item => ({
-                        mal_id: item.id,
-                        id: item.id,
-                        title: item.russian || item.name || 'Без названия',
-                        title_russian: item.russian || '',
-                        title_english: item.name || '',
-                        year: item.airedOn?.year || '--',
-                        episodes: item.episodes || '?',
-                        images: { jpg: { image_url: item.poster?.originalUrl || '' } },
-                        synopsis: item.description || 'Описание отсутствует',
-                        genres: item.genres?.map(g => g.russian || g.name) || [],
-                        score: item.score || 0,
-                        russian: item.russian || '',
-                        source: 'ShikimoriGraphQL'
-                    })),
-                    totalPages: Math.ceil((data.data.animes.length || 0) / limit) + 1
-                };
-            }
-            return null;
+            this._cache.set(cacheKey, { data, timestamp: Date.now() });
+            
+            return data;
         } catch (error) {
-            console.error('❌ Shikimori GraphQL ошибка:', error.message);
+            console.error('❌ GraphQL ошибка:', error.message);
             return null;
         }
     },
 
     // ============================================
-    // SHIKIMORI REST — РЕЗЕРВ
+    // ПОИСК АНИМЕ
     // ============================================
-    async searchShikimoriREST(query, genre = null, page = 1) {
+    async searchAnime(query = '', genre = null, page = 1, limit = 24) {
         const isSearch = query && query.length > 1;
-        let url = `${this.SHIKIMORI_REST}/animes?page=${page}&limit=24`;
         
+        let gqlQuery = `
+            query SearchAnime($page: Int!, $limit: Int!) {
+                animes(page: $page, limit: $limit, kind: "!special") {
+                    id
+                    malId
+                    name
+                    russian
+                    english
+                    score
+                    episodes
+                    airedOn { year }
+                    poster { originalUrl mainUrl }
+                    genres { id name russian kind }
+                    description
+                }
+            }
+        `;
+
+        const variables = {
+            page: page,
+            limit: limit
+        };
+
         if (isSearch) {
-            url += `&search=${encodeURIComponent(query)}`;
-        } else if (genre) {
-            const genreMap = {
-                '1': 'action', '8': 'drama', '21': 'comedy',
-                '10': 'fantasy', '22': 'romance'
-            };
-            url += `&genre=${genreMap[genre] || ''}`;
-        } else {
-            url += '&order=popularity';
+            gqlQuery = `
+                query SearchAnime($search: String!, $page: Int!, $limit: Int!) {
+                    animes(search: $search, page: $page, limit: $limit, kind: "!special") {
+                        id
+                        malId
+                        name
+                        russian
+                        english
+                        score
+                        episodes
+                        airedOn { year }
+                        poster { originalUrl mainUrl }
+                        genres { id name russian kind }
+                        description
+                    }
+                }
+            `;
+            variables.search = query;
         }
 
-        try {
-            console.log('📡 Shikimori REST запрос:', url);
-            const response = await fetch(url, {
-                headers: { 'User-Agent': 'OnikaAnime/2.0' }
-            });
-            
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const data = await response.json();
-            console.log('📦 Shikimori REST ответ:', data);
-            
-            if (data?.length > 0) {
-                return {
-                    items: data.map(item => ({
-                        mal_id: item.id,
-                        id: item.id,
-                        title: item.russian || item.name || 'Без названия',
-                        title_russian: item.russian || '',
-                        title_english: item.name || '',
-                        year: item.aired_on ? item.aired_on.split('-')[0] : '--',
-                        episodes: item.episodes || '?',
-                        images: { jpg: { image_url: item.poster?.originalUrl || '' } },
-                        synopsis: item.description || 'Описание отсутствует',
-                        genres: item.genres?.map(g => g.russian || g.name) || [],
-                        score: item.score || 0,
-                        russian: item.russian || '',
-                        source: 'ShikimoriREST'
-                    })),
-                    totalPages: Math.ceil((data.length || 0) / 24) + 1
+        console.log('📡 Shikimori GraphQL запрос:', { query, page, limit });
+        const result = await this._graphql(gqlQuery, variables);
+        
+        if (result?.data?.animes?.length > 0) {
+            const items = result.data.animes.map(item => ({
+                mal_id: item.id,
+                id: item.id,
+                title: item.russian || item.name || 'Без названия',
+                title_russian: item.russian || '',
+                title_english: item.name || '',
+                year: item.airedOn?.year || '--',
+                episodes: item.episodes || '?',
+                images: { 
+                    jpg: { 
+                        image_url: item.poster?.originalUrl || item.poster?.mainUrl || '' 
+                    } 
+                },
+                synopsis: item.description || 'Описание отсутствует',
+                genres: item.genres?.map(g => g.russian || g.name) || [],
+                score: item.score || 0,
+                russian: item.russian || '',
+                source: 'ShikimoriGraphQL'
+            }));
+
+            let filteredItems = items;
+            if (genre) {
+                const genreMap = {
+                    '1': 'экшен', '8': 'драма', '21': 'комедия',
+                    '10': 'фэнтези', '22': 'романтика'
                 };
+                const g = genreMap[genre] || genre;
+                filteredItems = items.filter(item => {
+                    const genres = item.genres || [];
+                    return genres.some(gen => gen.toLowerCase().includes(g.toLowerCase()));
+                });
+                console.log(`🎭 Фильтр по жанру "${g}": ${filteredItems.length} из ${items.length}`);
             }
-            return null;
-        } catch (error) {
-            console.error('❌ Shikimori REST ошибка:', error.message);
-            return null;
+
+            const totalPages = Math.ceil(filteredItems.length / limit) + 1;
+
+            return {
+                items: filteredItems,
+                totalPages: Math.max(totalPages, 1)
+            };
         }
+
+        console.log('❌ Shikimori ничего не нашёл');
+        return null;
     },
 
     // ============================================
     // ОСНОВНАЯ ФУНКЦИЯ
     // ============================================
     async searchAll(query, genre = null, page = 1) {
-        console.log('🚀 Поиск в Shikimori:', query || 'все');
+        console.log('🚀 Поиск в Shikimori GraphQL:', query || 'популярное');
         
-        // Сначала пробуем GraphQL
-        if (query && query.length > 1) {
-            const result = await this.searchShikimoriGraphQL(query, page);
+        try {
+            const result = await this.searchAnime(query, genre, page);
             if (result?.items?.length > 0) {
                 console.log('✅ Shikimori GraphQL:', result.items.length, 'результатов');
                 return result;
             }
+        } catch (e) {
+            console.error('❌ Shikimori GraphQL ошибка:', e.message);
         }
-        
-        // Если GraphQL не дал результат — пробуем REST
-        console.log('🔄 Пробуем Shikimori REST...');
-        const result = await this.searchShikimoriREST(query, genre, page);
-        if (result?.items?.length > 0) {
-            console.log('✅ Shikimori REST:', result.items.length, 'результатов');
-            return result;
-        }
-        
-        console.log('❌ Ничего не найдено');
-        return { items: [], totalPages: 1 };
+
+        console.log('🔄 Возвращаем демо-данные');
+        return {
+            items: this._getDemoData(),
+            totalPages: 1
+        };
+    },
+
+    // ============================================
+    // ДЕМО-ДАННЫЕ
+    // ============================================
+    _getDemoData() {
+        return [
+            { 
+                mal_id: 'demo_1',
+                title: 'Атака Титанов',
+                title_russian: 'Атака Титанов',
+                title_english: 'Attack on Titan',
+                year: 2013,
+                episodes: 25,
+                images: { jpg: { image_url: '' } },
+                genres: ['Экшен', 'Драма'],
+                score: 8.7,
+                russian: 'Атака Титанов',
+                source: 'Demo'
+            },
+            { 
+                mal_id: 'demo_2',
+                title: 'Наруто',
+                title_russian: 'Наруто',
+                title_english: 'Naruto',
+                year: 2002,
+                episodes: 220,
+                images: { jpg: { image_url: '' } },
+                genres: ['Экшен', 'Приключения'],
+                score: 8.5,
+                russian: 'Наруто',
+                source: 'Demo'
+            },
+            { 
+                mal_id: 'demo_3',
+                title: 'Ван Пис',
+                title_russian: 'Ван Пис',
+                title_english: 'One Piece',
+                year: 1999,
+                episodes: 1000,
+                images: { jpg: { image_url: '' } },
+                genres: ['Экшен', 'Приключения'],
+                score: 8.8,
+                russian: 'Ван Пис',
+                source: 'Demo'
+            },
+            { 
+                mal_id: 'demo_4',
+                title: 'Магическая битва',
+                title_russian: 'Магическая битва',
+                title_english: 'Jujutsu Kaisen',
+                year: 2020,
+                episodes: 24,
+                images: { jpg: { image_url: '' } },
+                genres: ['Экшен', 'Фэнтези'],
+                score: 8.6,
+                russian: 'Магическая битва',
+                source: 'Demo'
+            },
+            { 
+                mal_id: 'demo_5',
+                title: 'Клинок, рассекающий демонов',
+                title_russian: 'Клинок, рассекающий демонов',
+                title_english: 'Demon Slayer',
+                year: 2019,
+                episodes: 26,
+                images: { jpg: { image_url: '' } },
+                genres: ['Экшен', 'Фэнтези'],
+                score: 8.9,
+                russian: 'Клинок, рассекающий демонов',
+                source: 'Demo'
+            },
+            { 
+                mal_id: 'demo_6',
+                title: 'Токийский гуль',
+                title_russian: 'Токийский гуль',
+                title_english: 'Tokyo Ghoul',
+                year: 2014,
+                episodes: 12,
+                images: { jpg: { image_url: '' } },
+                genres: ['Экшен', 'Ужасы'],
+                score: 8.2,
+                russian: 'Токийский гуль',
+                source: 'Demo'
+            },
+            { 
+                mal_id: 'demo_7',
+                title: 'Стальной алхимик',
+                title_russian: 'Стальной алхимик',
+                title_english: 'Fullmetal Alchemist',
+                year: 2009,
+                episodes: 64,
+                images: { jpg: { image_url: '' } },
+                genres: ['Экшен', 'Драма'],
+                score: 9.1,
+                russian: 'Стальной алхимик',
+                source: 'Demo'
+            },
+            { 
+                mal_id: 'demo_8',
+                title: 'Моя геройская академия',
+                title_russian: 'Моя геройская академия',
+                title_english: 'My Hero Academia',
+                year: 2016,
+                episodes: 113,
+                images: { jpg: { image_url: '' } },
+                genres: ['Экшен', 'Комедия'],
+                score: 8.3,
+                russian: 'Моя геройская академия',
+                source: 'Demo'
+            }
+        ];
     },
 
     // ============================================
     // ДЕТАЛИ АНИМЕ
     // ============================================
     async getAnimeDetails(id) {
-        const cleanId = id.toString().replace('shikimori_', '');
+        const cleanId = id.toString().replace('demo_', '');
         
+        const gqlQuery = `
+            query GetAnime($id: ID!) {
+                animes(id: $id) {
+                    id
+                    malId
+                    name
+                    russian
+                    english
+                    score
+                    episodes
+                    airedOn { year }
+                    poster { originalUrl mainUrl }
+                    genres { id name russian kind }
+                    description
+                    descriptionHtml
+                    rating
+                    status
+                    duration
+                    season
+                    year
+                    kind
+                    videos { id url name kind playerUrl imageUrl }
+                }
+            }
+        `;
+
         try {
-            const response = await fetch(`${this.SHIKIMORI_REST}/animes/${cleanId}`, {
-                headers: { 'User-Agent': 'OnikaAnime/2.0' }
-            });
+            const result = await this._graphql(gqlQuery, { id: cleanId });
+            const item = result?.data?.animes?.[0];
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const data = await response.json();
-            
-            if (data?.id) {
+            if (item) {
                 return {
-                    mal_id: data.id,
-                    id: data.id,
-                    title: data.russian || data.name || 'Без названия',
-                    title_russian: data.russian || '',
-                    title_english: data.name || '',
-                    year: data.aired_on ? data.aired_on.split('-')[0] : '--',
-                    episodes: data.episodes || '?',
-                    images: { jpg: { image_url: data.poster?.originalUrl || '' } },
-                    synopsis: data.description || 'Описание отсутствует',
-                    genres: data.genres?.map(g => g.russian || g.name) || [],
-                    score: data.score || 0,
-                    russian: data.russian || '',
-                    source: 'ShikimoriREST'
+                    mal_id: item.id,
+                    id: item.id,
+                    title: item.russian || item.name || 'Без названия',
+                    title_russian: item.russian || '',
+                    title_english: item.name || '',
+                    year: item.airedOn?.year || '--',
+                    episodes: item.episodes || '?',
+                    images: { 
+                        jpg: { 
+                            image_url: item.poster?.originalUrl || item.poster?.mainUrl || '' 
+                        } 
+                    },
+                    synopsis: item.description || 'Описание отсутствует',
+                    genres: item.genres?.map(g => g.russian || g.name) || [],
+                    score: item.score || 0,
+                    russian: item.russian || '',
+                    rating: item.rating || '',
+                    status: item.status || '',
+                    duration: item.duration || '',
+                    source: 'ShikimoriGraphQL'
                 };
             }
             return null;
-        } catch (error) {
-            console.error('❌ Shikimori детали ошибка:', error.message);
+        } catch (e) {
+            console.error('❌ Ошибка получения деталей:', e.message);
             return null;
         }
     },
@@ -211,4 +356,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль загружен (только Shikimori)');
+console.log('✅ API модуль загружен (Shikimori GraphQL)');
