@@ -111,12 +111,59 @@
                         <a data-genre="22" onclick="setGenre('22', this)">Романтика</a>
                     </div>
                     <h2 id="title">✨ Популярное аниме</h2>
+
+                    <!-- ===== ПАНЕЛЬ ФИЛЬТРОВ ===== -->
+                    <div class="filter-panel" id="filterPanel" style="background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:16px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.04);">
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;">
+                            <span style="font-weight:600;color:var(--text-secondary);">Фильтры:</span>
+                            <button onclick="resetFilters()" style="padding:4px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px;">✕ Сбросить</button>
+                            <select id="filterSorting" onchange="applyFilters()" style="padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;">
+                                <option value="FRESH_AT_DESC">Новые</option>
+                                <option value="RATING_DESC">Популярные</option>
+                                <option value="TITLE_ASC">По алфавиту</option>
+                            </select>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Жанры</div>
+                                <div id="filterGenres" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Типы</div>
+                                <div id="filterTypes" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Сезоны</div>
+                                <div id="filterSeasons" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Год</div>
+                                <div style="display:flex;gap:4px;">
+                                    <select id="filterYearFrom" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">От</option></select>
+                                    <select id="filterYearTo" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">До</option></select>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус публикации</div>
+                                <div id="filterPublishStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус производства</div>
+                                <div id="filterProductionStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Возраст</div>
+                                <div id="filterAgeRatings" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid" id="grid">
                         <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка каталога...</div>
                     </div>
                     <div class="pagination" id="pagination"></div>
 
-                    <!-- ===== РАСПИСАНИЕ ВЫХОДА ===== -->
+                    <!-- ===== РАСПИСАНИЕ ВЫХОДА (краткий блок) ===== -->
                     <section class="schedule-section">
                         <div class="schedule-container">
                             <div class="schedule-header">
@@ -136,6 +183,16 @@
                                 🎲 Не знаю что посмотреть?
                             </button>
                             <div class="random-result" id="randomResult"></div>
+                        </div>
+                    </section>
+
+                    <!-- ===== РЕКОМЕНДАЦИИ ===== -->
+                    <section class="recommendations-section">
+                        <div class="recommendations-container" style="max-width:1200px;margin:30px auto;padding:0 16px;">
+                            <h2>🔥 Рекомендуем</h2>
+                            <div class="recommendations-grid" id="recommendationsGrid">
+                                <div style="text-align:center;padding:30px;color:#888;">⏳ Загрузка...</div>
+                            </div>
                         </div>
                     </section>
 
@@ -500,6 +557,18 @@
                     </div>
                     
                     <button class="logout-btn" onclick="logout()">🚪 Выйти из аккаунта</button>
+                </div>
+
+                <!-- ===== СТРАНИЦА РАСПИСАНИЯ ===== -->
+                <div id="page-schedule" style="display:none;">
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
+                    <h2>📅 Расписание выхода</h2>
+                    <div id="schedulePageContent" style="max-width:1200px;margin:0 auto;">
+                        <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>
+                    </div>
                 </div>
 
             </div>
