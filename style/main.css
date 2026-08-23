@@ -3454,3 +3454,138 @@ svg use {
         gap: 8px !important;
     }
 }
+
+/* ============================================
+   РАСПИСАНИЕ НА ГЛАВНОЙ (5 ЭЛЕМЕНТОВ)
+   ============================================ */
+.schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+}
+.schedule-item {
+    background: rgba(255,255,255,0.03);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.04);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.schedule-item:hover {
+    transform: translateY(-3px);
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(108,92,231,0.15);
+    box-shadow: var(--shadow-glow);
+}
+.schedule-item .s-day {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+}
+.schedule-item .s-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.schedule-item .s-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+.schedule-item.today {
+    border-color: rgba(255,215,0,0.2);
+    background: rgba(255,215,0,0.03);
+}
+.schedule-item.today .s-day {
+    color: #ffd700;
+}
+.schedule-item.today .s-title {
+    color: #ffd700;
+}
+
+@media (max-width: 768px) {
+    .schedule-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .schedule-item .s-title {
+        font-size: 11px;
+    }
+}
+@media (max-width: 480px) {
+    .schedule-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+    .schedule-item {
+        padding: 8px 6px;
+    }
+    .schedule-item .s-title {
+        font-size: 10px;
+    }
+}
+
+/* ============================================
+   СТРАНИЦА РАСПИСАНИЯ (ПОЛНАЯ)
+   ============================================ */
+.schedule-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+.schedule-day-block {
+    background: rgba(255,255,255,0.02);
+    border-radius: var(--radius);
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+.schedule-day-block h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--accent-glow);
+}
+.schedule-day-block ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.schedule-day-block li {
+    padding: 6px 8px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition);
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.schedule-day-block li:hover {
+    background: rgba(108,92,231,0.05);
+}
+.schedule-day-block li .time {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ============================================
+   РЕКОМЕНДАЦИИ (МОБИЛЬНАЯ ВЕРСИЯ)
+   ============================================ */
+@media (max-width: 600px) {
+    .recommendations-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+        gap: 10px !important;
+    }
+}
+@media (max-width: 400px) {
+    .recommendations-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+        gap: 8px !important;
+    }
+}
