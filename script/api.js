@@ -1,5 +1,6 @@
 // ============================================
 // API МОДУЛЬ ONIKAANIME (Anilibria API v2)
+// Основан на официальной документации v2
 // ============================================
 
 const API = {
@@ -9,7 +10,7 @@ const API = {
     async _fetch(url, options = {}) {
         const headers = {
             'Accept': 'application/json',
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
             ...options.headers
         };
         try {
@@ -40,8 +41,8 @@ const API = {
         const data = await this._fetch(url);
         if (data && Array.isArray(data)) {
             const items = data.map(item => this._convertItem(item));
-            // v2 не возвращает общее количество страниц, предполагаем, что если данных меньше лимита, это последняя страница
-            const totalPages = data.length < limit ? page : page + 1; // упрощённо
+            // v2 не возвращает общее количество страниц, определяем последнюю страницу
+            const totalPages = data.length < limit ? page : page + 1;
             return {
                 items: items,
                 totalPages: totalPages
@@ -76,7 +77,7 @@ const API = {
         const url = `${this.BASE_URL}/getSchedule`;
         const data = await this._fetch(url);
         if (data && Array.isArray(data)) {
-            // v2 возвращает массив объектов с полями day и list
+            // data – массив объектов { day: 0..6, list: [...] }
             return data;
         }
         return [];
@@ -96,19 +97,20 @@ const API = {
     },
 
     // ============================================
-    // 5. СЛУЧАЙНОЕ – /getRandom
+    // 5. СЛУЧАЙНОЕ – /getRandomTitle
     // ============================================
     async getRandomReleases(limit = 1) {
-        const url = `${this.BASE_URL}/getRandom?limit=${limit}`;
+        // v2 не поддерживает limit для случайного, возвращает один тайтл
+        const url = `${this.BASE_URL}/getRandomTitle`;
         const data = await this._fetch(url);
-        if (data && Array.isArray(data)) {
-            return data.map(item => this._convertItem(item));
+        if (data && data.id) {
+            return [this._convertItem(data)];
         }
         return [];
     },
 
     // ============================================
-    // 6. РЕКОМЕНДАЦИИ (используем /getUpdates)
+    // 6. РЕКОМЕНДАЦИИ (используем /getUpdates с лимитом)
     // ============================================
     async getRecommended(limit = 6) {
         const url = `${this.BASE_URL}/getUpdates?limit=${limit}`;
@@ -120,7 +122,7 @@ const API = {
     },
 
     // ============================================
-    // 7. АВТОДОПОЛНЕНИЕ (используем /searchTitles с limit)
+    // 7. АВТОДОПОЛНЕНИЕ (используем /searchTitles с лимитом)
     // ============================================
     async searchAutocomplete(query, limit = 5) {
         if (!query || query.length < 2) return [];
@@ -140,6 +142,7 @@ const API = {
     // 8. КОНВЕРТАЦИЯ ЭЛЕМЕНТА (под v2)
     // ============================================
     _convertItem(item) {
+        // Постер
         let img = '';
         if (item.posters) {
             const poster = item.posters.medium || item.posters.small || item.posters.original;
@@ -151,11 +154,24 @@ const API = {
             }
         }
 
+        // Названия
         const names = item.names || {};
         const title = names.ru || names.en || 'Без названия';
+
+        // Жанры
         const genres = item.genres || [];
+
+        // Год и серии (в v2 поля называются иначе)
         const year = item.year || '--';
-        const episodes = item.episodes?.string || item.episodes_total || '?';
+        // В v2 серии могут быть в item.series (объект с first, last, string) или item.episodes
+        let episodes = '?';
+        if (item.series) {
+            episodes = item.series.string || `${item.series.first}-${item.series.last}`;
+        } else if (item.episodes) {
+            episodes = item.episodes.string || '?';
+        } else if (item.episodes_total) {
+            episodes = item.episodes_total;
+        }
 
         return {
             mal_id: 'anilibria_' + item.id,
@@ -168,7 +184,7 @@ const API = {
             images: { jpg: { image_url: img || '' } },
             synopsis: item.description || 'Описание отсутствует',
             genres: genres,
-            score: 0,
+            score: 0, // v2 не возвращает рейтинг
             russian: names.ru || '',
             source: 'Anilibria v2',
             _raw: item
@@ -181,4 +197,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (v2) загружен');
+console.log('✅ API модуль (v2, по документации) загружен');
