@@ -3437,3 +3437,20 @@ svg use {
     font-size: 10px;
     color: var(--text-secondary);
 }
+
+/* ============================================
+   МОБИЛЬНАЯ ВЕРСИЯ РЕКОМЕНДАЦИЙ
+   ============================================ */
+@media (max-width: 600px) {
+    .recommendations-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+        gap: 10px !important;
+    }
+}
+
+@media (max-width: 400px) {
+    .recommendations-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+        gap: 8px !important;
+    }
+}
