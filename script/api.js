@@ -1,69 +1,84 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (Anilibria API v1)
-// Работает через POST-запросы к public/api/index.php
+// API МОДУЛЬ ONIKAANIME (Shikimori API + Прокси)
 // ============================================
 
 const API = {
-    BASE_URL: 'https://www.anilibria.tv/public/api/index.php',
+    PROXY_URL: 'https://cors-anywhere.herokuapp.com/',
+    BASE_URL: 'https://shikimori.one/api',
 
-    // ===== БАЗОВЫЙ POST-ЗАПРОС =====
-    async _post(params = {}) {
-        const formData = new URLSearchParams();
-        for (const key in params) {
-            if (params[key] !== undefined && params[key] !== null) {
-                if (typeof params[key] === 'object') {
-                    formData.append(key, JSON.stringify(params[key]));
-                } else {
-                    formData.append(key, params[key]);
-                }
-            }
-        }
-
+    // ===== БАЗОВЫЙ ЗАПРОС =====
+    async _fetch(url, options = {}) {
+        const headers = {
+            'Accept': 'application/json',
+            'User-Agent': 'OnikaAnime/2.0',
+            ...options.headers
+        };
+        
+        const proxyUrl = this.PROXY_URL + url;
+        
         try {
-            const response = await fetch(this.BASE_URL, {
-                method: 'POST',
+            console.log('📡 Запрос:', proxyUrl);
+            const response = await fetch(proxyUrl, { 
+                ...options, 
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json',
-                },
-                body: formData.toString()
+                    ...headers,
+                    'Origin': window.location.origin
+                }
             });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
-            console.log(`📡 [${this.BASE_URL}]`, params, data);
+            console.log('📦 Ответ:', data);
             return data;
         } catch (error) {
             console.error('❌ API Error:', error.message);
-            return null;
+            try {
+                console.log('🔄 Пробуем без прокси...');
+                const response = await fetch(url, { ...options, headers });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                console.log('📦 Ответ (без прокси):', data);
+                return data;
+            } catch (e) {
+                console.error('❌ Вторая попытка ошибка:', e.message);
+                return null;
+            }
         }
     },
 
     // ============================================
-    // 1. КАТАЛОГ (query=catalog)
+    // 1. КАТАЛОГ И ПОИСК
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        const perPage = 24;
-        const params = {
-            query: 'catalog',
-            page: page,
-            perPage: perPage,
-            sort: '2', // сортировка по новизне
-            xpage: 'catalog'
-        };
+        const limit = 24;
+        const offset = (page - 1) * limit;
+
+        let url = `${this.BASE_URL}/animes?limit=${limit}&offset=${offset}`;
 
         if (query && query.length > 1) {
-            return await this._searchTitles(query, page);
+            url += `&search=${encodeURIComponent(query)}`;
         }
 
         if (genre) {
-            params.search = JSON.stringify({ genre: genre });
+            const genreMap = {
+                '1': 'action',
+                '8': 'drama',
+                '21': 'comedy',
+                '10': 'fantasy',
+                '22': 'romance'
+            };
+            const genreName = genreMap[genre];
+            if (genreName) {
+                url += `&genre=${genreName}`;
+            }
         }
 
-        const data = await this._post(params);
-        if (data && data.status === true && data.data && data.data.items) {
-            const items = data.data.items.map(item => this._convertItem(item));
-            const pagination = data.data.pagination || {};
-            const totalPages = pagination.allPages || 1;
+        url += `&order=popularity`;
+
+        const data = await this._fetch(url);
+
+        if (data && Array.isArray(data)) {
+            const items = data.map(item => this._convertItem(item));
+            const totalPages = data.length < limit ? page : page + 1;
             return {
                 items: items,
                 totalPages: totalPages
@@ -73,21 +88,16 @@ const API = {
     },
 
     // ============================================
-    // 2. ПОИСК (query=search)
+    // 2. ПОИСК
     // ============================================
     async _searchTitles(query, page = 1) {
-        const perPage = 24;
-        const params = {
-            query: 'search',
-            search: query,
-            page: page,
-            perPage: perPage
-        };
-        const data = await this._post(params);
-        if (data && data.status === true && data.data && data.data.items) {
-            const items = data.data.items.map(item => this._convertItem(item));
-            const pagination = data.data.pagination || {};
-            const totalPages = pagination.allPages || 1;
+        const limit = 24;
+        const offset = (page - 1) * limit;
+        const url = `${this.BASE_URL}/animes?search=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`;
+        const data = await this._fetch(url);
+        if (data && Array.isArray(data)) {
+            const items = data.map(item => this._convertItem(item));
+            const totalPages = data.length < limit ? page : page + 1;
             return {
                 items: items,
                 totalPages: totalPages
@@ -97,114 +107,86 @@ const API = {
     },
 
     // ============================================
-    // 3. РАСПИСАНИЕ (query=schedule)
-    // ============================================
-    async getSchedule() {
-        const params = { query: 'schedule' };
-        const data = await this._post(params);
-        if (data && data.status === true && Array.isArray(data.data)) {
-            return data.data.map(dayObj => ({
-                day: parseInt(dayObj.day) - 1,
-                list: dayObj.items.map(item => this._convertItem(item))
-            }));
-        }
-        return [];
-    },
-
-    // ============================================
-    // 4. ДЕТАЛИ (query=release)
+    // 3. ДЕТАЛИ
     // ============================================
     async getAnimeDetails(id) {
-        const cleanId = id.toString().replace('anilibria_', '');
-        const params = {
-            query: 'release',
-            id: cleanId
-        };
-        const data = await this._post(params);
-        if (data && data.status === true && data.data) {
-            return this._convertItem(data.data);
+        const cleanId = id.toString().replace('shikimori_', '');
+        const url = `${this.BASE_URL}/animes/${cleanId}`;
+        const data = await this._fetch(url);
+        if (data && data.id) {
+            return this._convertItem(data);
         }
         return null;
     },
 
     // ============================================
-    // 5. СЛУЧАЙНОЕ (query=random_release)
+    // 4. СЛУЧАЙНОЕ
     // ============================================
     async getRandomReleases(limit = 1) {
-        const params = { query: 'random_release' };
-        const data = await this._post(params);
-        if (data && data.status === true && data.data && data.data.code) {
-            const details = await this.getAnimeDetails(data.data.code);
-            if (details) {
-                return [details];
-            }
+        const randomPage = Math.floor(Math.random() * 100) + 1;
+        const offset = (randomPage - 1) * 24;
+        const url = `${this.BASE_URL}/animes?limit=${limit}&offset=${offset}`;
+        const data = await this._fetch(url);
+        if (data && Array.isArray(data) && data.length > 0) {
+            return data.slice(0, limit).map(item => this._convertItem(item));
         }
         return [];
     },
 
     // ============================================
-    // 6. РЕКОМЕНДАЦИИ
+    // 5. РЕКОМЕНДАЦИИ
     // ============================================
     async getRecommended(limit = 6) {
-        const params = {
-            query: 'catalog',
-            page: 1,
-            perPage: limit,
-            sort: '1',
-            xpage: 'catalog'
-        };
-        const data = await this._post(params);
-        if (data && data.status === true && data.data && data.data.items) {
-            return data.data.items.map(item => this._convertItem(item));
+        const url = `${this.BASE_URL}/animes?limit=${limit}&order=popularity`;
+        const data = await this._fetch(url);
+        if (data && Array.isArray(data)) {
+            return data.map(item => this._convertItem(item));
         }
         return [];
     },
 
     // ============================================
-    // 7. АВТОДОПОЛНЕНИЕ
+    // 6. АВТОДОПОЛНЕНИЕ
     // ============================================
     async searchAutocomplete(query, limit = 5) {
         if (!query || query.length < 2) return [];
-        const params = {
-            query: 'search',
-            search: query,
-            page: 1,
-            perPage: limit
-        };
-        const data = await this._post(params);
-        if (data && data.status === true && data.data && data.data.items) {
-            return data.data.items.map(item => ({
+        const url = `${this.BASE_URL}/animes?search=${encodeURIComponent(query)}&limit=${limit}`;
+        const data = await this._fetch(url);
+        if (data && Array.isArray(data)) {
+            return data.map(item => ({
                 id: item.id,
-                title: item.names?.[0] || item.names?.[1] || 'Без названия',
-                poster: item.poster || ''
+                title: item.russian || item.name || 'Без названия',
+                poster: item.poster?.medium?.url || item.poster?.small?.url || ''
             }));
         }
         return [];
     },
 
     // ============================================
-    // 8. КОНВЕРТАЦИЯ
+    // 7. КОНВЕРТАЦИЯ
     // ============================================
     _convertItem(item) {
         let img = '';
         if (item.poster) {
-            img = item.poster;
-            if (img && img.startsWith('/')) {
-                img = 'https://www.anilibria.tv' + img;
+            const poster = item.poster.medium || item.poster.small || item.poster.original;
+            if (poster && poster.url) {
+                img = poster.url;
+                if (img.startsWith('/')) {
+                    img = 'https://shikimori.one' + img;
+                }
             }
         }
 
-        const names = item.names || [];
-        const title = names[0] || names[1] || 'Без названия';
-        const title_russian = names[0] || '';
-        const title_english = names[1] || '';
+        const title = item.russian || item.name || 'Без названия';
+        const title_russian = item.russian || '';
+        const title_english = item.name || '';
 
-        const genres = item.genres ? item.genres.split(',').map(g => g.trim()) : [];
-        const year = item.year || '--';
-        const episodes = item.series || '?';
+        const genres = (item.genres || []).map(g => g.russian || g.name);
+        const year = item.year || item.released_on?.split('-')[0] || '--';
+        const episodes = item.episodes || item.episodes_aired || '?';
 
         return {
-            mal_id: 'anilibria_' + item.id,
+            mal_id: 'shikimori_' + item.id,
             id: item.id,
             title: title,
             title_russian: title_russian,
@@ -212,11 +194,11 @@ const API = {
             year: year,
             episodes: episodes,
             images: { jpg: { image_url: img || '' } },
-            synopsis: item.description || 'Описание отсутствует',
+            synopsis: item.description || item.description_en || 'Описание отсутствует',
             genres: genres,
-            score: 0,
+            score: item.score || 0,
             russian: title_russian,
-            source: 'Anilibria v1',
+            source: 'Shikimori',
             _raw: item
         };
     },
@@ -227,4 +209,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (v1) загружен');
+console.log('✅ API модуль (Shikimori + прокси) загружен');
