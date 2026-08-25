@@ -219,69 +219,97 @@
                     </section>
                 </div>
 
-                <!-- ===== СТРАНИЦА КАТАЛОГА ===== -->
+                <!-- ===== СТРАНИЦА КАТАЛОГА С ФИЛЬТРОМ ===== -->
                 <div id="page-catalog" style="display:none;">
-                    <div class="genres" id="genresNav">
-                        <a class="active" data-genre="" onclick="setGenre('', this)">📚 Все</a>
-                        <a data-genre="latest" onclick="setGenre('latest', this)">🔥 Новинки</a>
-                        <a data-genre="1" onclick="setGenre('1', this)">🎬 Экшен</a>
-                        <a data-genre="8" onclick="setGenre('8', this)">🎭 Драма</a>
-                        <a data-genre="21" onclick="setGenre('21', this)">😂 Комедия</a>
-                        <a data-genre="10" onclick="setGenre('10', this)">🧙 Фэнтези</a>
-                        <a data-genre="22" onclick="setGenre('22', this)">💕 Романтика</a>
+                    <div class="catalog-header">
+                        <h2 id="title">📚 ВСЕ АНИМЕ</h2>
                     </div>
-                    <h2 id="title">📚 ВСЕ АНИМЕ</h2>
 
-                    <div class="filter-panel" id="filterPanel" style="background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:16px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.04);display:none;">
-                        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;">
-                            <span style="font-weight:600;color:var(--text-secondary);">Фильтры:</span>
-                            <button onclick="resetFilters()" style="padding:4px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px;">✕ Сбросить</button>
-                            <select id="filterSorting" onchange="applyFilters()" style="padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;">
-                                <option value="CREATED_AT_DESC">Новинки</option>
-                                <option value="FRESH_AT_DESC">Свежие</option>
-                                <option value="RATING_DESC">Популярные</option>
-                                <option value="TITLE_ASC">По алфавиту</option>
-                            </select>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Жанры</div>
-                                <div id="filterGenres" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                    <!-- ===== ФИЛЬТР ===== -->
+                    <div class="filter-panel" id="filterPanel">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label>🔍 Поиск</label>
+                                <input type="text" id="filterSearchInput" placeholder="Название аниме..." class="filter-input">
                             </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Типы</div>
-                                <div id="filterTypes" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Сезоны</div>
-                                <div id="filterSeasons" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Год</div>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="filterYearFrom" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">От</option></select>
-                                    <select id="filterYearTo" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">До</option></select>
+                            <div class="filter-group">
+                                <label>📅 Год</label>
+                                <div class="filter-year-group">
+                                    <input type="number" id="filterYearFrom" placeholder="От" class="filter-input-small" min="1900" max="2100">
+                                    <span>—</span>
+                                    <input type="number" id="filterYearTo" placeholder="До" class="filter-input-small" min="1900" max="2100">
                                 </div>
                             </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус публикации</div>
-                                <div id="filterPublishStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус производства</div>
-                                <div id="filterProductionStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Возраст</div>
-                                <div id="filterAgeRatings" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            <button class="filter-apply-btn" onclick="applyCatalogFilters()">🔍 Применить</button>
+                            <button class="filter-reset-btn" onclick="resetCatalogFilters()">✕ Сбросить</button>
+                        </div>
+
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label>🎭 Жанры</label>
+                                <div id="filterGenres" class="filter-checkboxes"></div>
                             </div>
                         </div>
+
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label>📺 Тип</label>
+                                <div id="filterTypes" class="filter-checkboxes"></div>
+                            </div>
+                            <div class="filter-group">
+                                <label>📅 Сезон</label>
+                                <div id="filterSeasons" class="filter-checkboxes"></div>
+                            </div>
+                            <div class="filter-group">
+                                <label>🔞 Возраст</label>
+                                <div id="filterAgeRatings" class="filter-checkboxes"></div>
+                            </div>
+                        </div>
+
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label>📌 Статус</label>
+                                <div id="filterPublishStatuses" class="filter-checkboxes"></div>
+                            </div>
+                            <div class="filter-group">
+                                <label>🎬 Производство</label>
+                                <div id="filterProductionStatuses" class="filter-checkboxes"></div>
+                            </div>
+                        </div>
+
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label>📊 Сортировка</label>
+                                <select id="filterSorting" class="filter-select">
+                                    <option value="CREATED_AT_DESC">Новинки</option>
+                                    <option value="FRESH_AT_DESC">Свежие</option>
+                                    <option value="RATING_DESC">Популярные</option>
+                                    <option value="TITLE_ASC">По алфавиту</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label>📦 Количество</label>
+                                <select id="filterLimit" class="filter-select">
+                                    <option value="24">24</option>
+                                    <option value="48">48</option>
+                                    <option value="96">96</option>
+                                    <option value="0">Все</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="catalog-stats" id="catalogStats">
+                        <span id="totalCount">Загрузка...</span>
                     </div>
 
                     <div class="grid" id="grid">
-                        <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка каталога...</div>
+                        <div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка каталога...</div>
                     </div>
-                    <div class="pagination" id="pagination"></div>
+                    
+                    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreCatalog()" style="display:none;">
+                        📥 Загрузить ещё
+                    </button>
                 </div>
 
                 <!-- ===== ДЕТАЛЬНАЯ ===== -->
@@ -344,20 +372,6 @@
                         </div>
                         <div id="commentsList">
                             <div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== СТРАНИЦА ЖАНРОВ ===== -->
-                <div id="page-genres" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">
-                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
-                        Назад
-                    </span>
-                    <div class="genres-page">
-                        <h2>🎭 Все жанры</h2>
-                        <div class="genres-grid" id="genresGrid">
-                            <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка жанров...</div>
                         </div>
                     </div>
                 </div>
@@ -646,25 +660,6 @@
         </div>
     </div>
 
-    <!-- Детали жанра -->
-    <div class="modal" id="genreDetailModal">
-        <div class="modal-box" style="max-width:600px;">
-            <button class="modal-close" onclick="closeModal('genreDetailModal')">
-                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
-            </button>
-            <div id="genreDetailContent">
-                <h2 id="genreDetailName">Жанр</h2>
-                <p id="genreDetailDesc">Описание</p>
-                <div id="genreDetailStats">
-                    <span>📺 Релизов: <strong id="genreDetailCount">0</strong></span>
-                </div>
-                <button class="btn-primary" onclick="loadGenreReleases()" style="width:100%;margin-top:12px;">
-                    🎬 Смотреть все релизы
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Удаление аккаунта -->
     <div class="modal" id="deleteAccountModal">
         <div class="modal-box">
@@ -773,7 +768,6 @@
                 <ul>
                     <li><a href="#" onclick="navigate('home');return false;">🏠 Главная</a></li>
                     <li><a href="#" onclick="navigate('catalog');return false;">📚 Каталог</a></li>
-                    <li><a href="#" onclick="navigate('genres');return false;">🎭 Жанры</a></li>
                     <li><a href="#" onclick="navigate('favorites');return false;">❤️ Избранное</a></li>
                     <li><a href="#" onclick="navigate('achievements');return false;">🏆 Достижения</a></li>
                     <li><a href="#" onclick="navigate('profile');return false;">👤 Профиль</a></li>
@@ -914,53 +908,6 @@
             const overlay = document.getElementById('sidebarOverlay');
             if (sidebar) sidebar.classList.remove('open');
             if (overlay) overlay.classList.remove('open');
-        };
-
-        window.setGenre = function(genreId, btn) {
-            document.querySelectorAll('.genres a').forEach(function(el) {
-                el.classList.remove('active');
-            });
-            if (btn) btn.classList.add('active');
-            
-            window.genre = genreId;
-            window.query = '';
-            window.page = 1;
-            
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) searchInput.value = '';
-            
-            const titleEl = document.getElementById('title');
-            if (titleEl) {
-                if (genreId === 'latest') {
-                    titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
-                } else if (genreId) {
-                    const genreNames = {
-                        '1': '🎬 Экшен',
-                        '8': '🎭 Драма',
-                        '21': '😂 Комедия',
-                        '10': '🧙 Фэнтези',
-                        '22': '💕 Романтика'
-                    };
-                    titleEl.textContent = genreNames[genreId] || '🎭 ' + (btn ? btn.textContent : 'Жанр');
-                } else {
-                    titleEl.textContent = '📚 ВСЕ АНИМЕ';
-                }
-            }
-            
-            loadCatalog();
-        };
-
-        window.applyFilters = function() {
-            page = 1;
-            loadCatalog();
-        };
-
-        window.resetFilters = function() {
-            document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
-            document.querySelectorAll('#filterPanel select').forEach(sel => sel.value = '');
-            activeFilters = {};
-            page = 1;
-            loadCatalog();
         };
 
         console.log('🌟 OnikaAnime загружен!');
