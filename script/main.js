@@ -193,9 +193,7 @@ async function loadCatalog() {
     try {
         const filters = getFiltersFromUI();
         
-        console.log('🔍 Запрос каталога:', { query, genre, page, filters });
         const result = await API.searchAll(query, genre, page, filters);
-        console.log('📦 Ответ API:', result);
         
         if (result && result.items && result.items.length > 0) {
             totalPages = result.totalPages || 1;
@@ -438,7 +436,6 @@ async function loadRecommendations() {
     
     try {
         const recs = await API.getRecommended(6);
-        console.log('🔥 Рекомендации получены:', recs);
         
         if (!recs || !recs.length) {
             container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">😅 Нет рекомендаций</div>';
@@ -624,9 +621,9 @@ function setGenre(genreId, btn) {
         if (genreId === 'latest') {
             titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
         } else if (genreId) {
-            const genre = window.allGenres?.find(g => g.id == genreId);
-            if (genre) {
-                titleEl.textContent = `${genre.icon || '🎭'} ${genre.name}`;
+            const genreObj = window.allGenres?.find(g => g.id == genreId);
+            if (genreObj) {
+                titleEl.textContent = `${genreObj.icon || '🎭'} ${genreObj.name}`;
             } else {
                 const genreNames = {
                     '1': '🎬 Экшен',
@@ -770,7 +767,6 @@ function toggleFav(name) {
     } else {
         favs.push(name);
         showToast('Добавлено в избранное ❤️', 'success');
-        checkAchievements(name);
     }
     DB.setUserData(user.name, 'favorites', favs);
     DB.save();
@@ -889,12 +885,6 @@ function setActiveTitle(achId) {
     renderAchievements();
     renderProfile();
     showToast('👑 Титул установлен!', 'success');
-}
-
-function checkAchievements(animeName) {
-    const user = DB.get('currentUser');
-    if (!user) return;
-    // ... стандартная логика
 }
 
 function showAchievementPopup(ach) {
@@ -1031,7 +1021,7 @@ function renderTopUsers() {
     const container = document.getElementById('topUsers');
     if (!container) return;
     const users = DB.get('users', {});
-    const allData = {};
+    const data = {};
     for (const u in users) {
         const onlineTime = DB.getUserData(u, 'onlineTime', 0);
         const lastSeen = DB.getUserData(u, 'lastSeen', 0);
@@ -1051,7 +1041,7 @@ function renderTopUsers() {
             if (ach) titleName = ach.title;
         }
         const xp = favs.length * 10 + commentCount * 5 + earned.length * 20 + Math.floor(onlineTime / 60);
-        allData[u] = {
+        data[u] = {
             name: u,
             email: users[u] || '',
             favs: favs.length,
@@ -1064,7 +1054,7 @@ function renderTopUsers() {
             isOnline: (Date.now() - lastSeen) < 300000
         };
     }
-    const sorted = Object.values(allData).sort(function(a, b) {
+    const sorted = Object.values(data).sort(function(a, b) {
         return b.xp - a.xp;
     }).slice(0, 20);
     if (sorted.length === 0) {
@@ -1230,7 +1220,6 @@ function uploadAvatar(input) {
 // 14. ЖАНРЫ (НОВЫЕ ФУНКЦИИ)
 // ============================================
 
-// 14.1. Загрузка всех жанров
 async function loadGenres() {
     const grid = document.getElementById('genresGrid');
     if (!grid) return;
@@ -1266,7 +1255,6 @@ async function loadGenres() {
     }
 }
 
-// 14.2. Открыть детали жанра
 async function openGenreDetail(genreId) {
     try {
         const genre = await API.getGenreDetails(genreId);
@@ -1287,7 +1275,6 @@ async function openGenreDetail(genreId) {
     }
 }
 
-// 14.3. Загрузить релизы по жанру
 async function loadGenreReleases() {
     if (!_currentGenreId) {
         showToast('❌ Жанр не выбран', 'error');
@@ -1310,7 +1297,6 @@ async function loadGenreReleases() {
     }
 }
 
-// 14.4. Случайные жанры на главной
 async function loadRandomGenres() {
     const container = document.getElementById('randomGenresGrid');
     if (!container) return;
@@ -1607,7 +1593,6 @@ function restoreAllData() {
 // 19. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
-    console.log('🔄 Обновление статистики соцсетей...');
     const tgElement = document.getElementById('tgStats');
     if (tgElement) {
         const tgBase = 1200;
@@ -1736,5 +1721,6 @@ window.loadGenreReleases = loadGenreReleases;
 window.loadRandomGenres = loadRandomGenres;
 window.refreshRandomGenres = refreshRandomGenres;
 window.uploadAvatar = uploadAvatar;
+window.updateSocialStats = updateSocialStats;
 
 console.log('✅ OnikaAnime полностью загружен!');
