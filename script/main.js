@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (УНИВЕРСАЛЬНЫЙ API)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Anilibria v2)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -506,11 +506,6 @@ async function openDetail(id) {
         if (data) {
             if (!allData[id]) allData[id] = data;
             showDetail(data);
-            // Пытаемся найти видео
-            const videoUrl = await API.getVideoUrl(data.title, 1);
-            if (videoUrl) {
-                showVideo(videoUrl);
-            }
         } else {
             showToast('❌ Не найдено', 'error');
         }
@@ -539,57 +534,26 @@ function showDetail(anime) {
     btn.className = 'fav-btn' + (isFav ? ' active' : '');
     btn.onclick = () => toggleFav(anime.title);
     renderComments(anime.title);
-}
-
-function showVideo(url) {
+    
+    // Ссылка на Anilibria
     const wrapper = document.getElementById('playerWrapper');
-    if (!wrapper) return;
-    
-    // Определяем тип ссылки
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-        // YouTube
-        const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
-        if (videoId) {
-            wrapper.innerHTML = `
-                <iframe src="https://www.youtube.com/embed/${videoId[1]}" 
-                        allowfullscreen 
-                        allow="autoplay; encrypted-media" 
-                        style="width:100%;height:100%;border:none;"
-                        frameborder="0">
-                </iframe>
-            `;
-            return;
-        }
-    }
-    
-    // Если ссылка на плеер Anilibria или Kodik
-    if (url.includes('anilibria') || url.includes('kodik')) {
+    if (wrapper) {
+        const code = anime._raw?.code || '';
         wrapper.innerHTML = `
-            <iframe src="${url}" 
-                    allowfullscreen 
-                    allow="autoplay; encrypted-media" 
-                    style="width:100%;height:100%;border:none;"
-                    frameborder="0">
-            </iframe>
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+                <span style="font-size:48px;">🎬</span>
+                <span style="font-size:16px;color:#aaa;">Смотреть на Anilibria</span>
+                <a href="https://www.anilibria.tv/release/${code}" target="_blank" 
+                   style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
+                    🌐 Открыть на Anilibria
+                </a>
+            </div>
         `;
-        return;
     }
-    
-    // Если ссылка на MAL или другая
-    wrapper.innerHTML = `
-        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
-            <span style="font-size:48px;">🎬</span>
-            <span style="font-size:16px;color:#aaa;">Смотреть онлайн</span>
-            <a href="${url}" target="_blank" 
-               style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
-                🌐 Открыть плеер
-            </a>
-        </div>
-    `;
 }
 
 // ============================================
-// 7. КОММЕНТАРИИ
+// КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -684,7 +648,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 8. МОИ КОММЕНТАРИИ
+// МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -723,7 +687,7 @@ function renderMyComments() {
             container.innerHTML = html;
         })
         .catch(() => {
-            container.innerHTML = '<div class="empty-state"><p>⚠️ Ошибка загрузки</p></div>';
+            container.innerHTML = '<div class="empty-state"><p>⚠️ Ошибка</p></div>';
         });
 }
 
@@ -741,7 +705,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 9. ИЗБРАННОЕ
+// ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -804,7 +768,7 @@ function renderFavorites() {
 }
 
 // ============================================
-// 10. ДОСТИЖЕНИЯ
+// ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -908,7 +872,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 11. ПРОФИЛЬ
+// ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -999,7 +963,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 12. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1008,7 +972,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 13. АВАТАР
+// АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1056,7 +1020,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 14. TOAST
+// TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1088,7 +1052,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 15. МОДАЛЬНЫЕ ОКНА
+// МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1152,7 +1116,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 16. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1272,7 +1236,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 17. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -1309,7 +1273,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 18. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     console.log('🔄 Обновление статистики соцсетей...');
@@ -1348,7 +1312,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 19. ЗАПУСК
+// ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -1363,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 20. ЭКСПОРТ
+// ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
