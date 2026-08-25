@@ -1,5 +1,5 @@
 // ============================================
-// ХРАНИЛИЩЕ ONIKAANIME (С ПИТОМЦЕМ И КАСТОМНЫМИ ОБЛИКАМИ)
+// ХРАНИЛИЩЕ ONIKAANIME (БЕЗ ПИТОМЦА)
 // ============================================
 
 class Storage {
@@ -65,100 +65,7 @@ class Storage {
             lastSeen: {},
             completedAnime: {},
             currentUser: null,
-            settings: { "3d": true, "vibe": true },
-            pets: {},
-            // ============================================
-            // 🎨 ОБЛИКИ СЕРИЙЧИКА С ИЗОБРАЖЕНИЯМИ
-            // ============================================
-            petSkins: {
-                // --- СТАНДАРТНЫЕ ---
-                'egg': { 
-                    name: '🥚 Яйцо', 
-                    emoji: '🥚',
-                    image: 'images/pet/egg.png',
-                    level: 0, 
-                    expNeeded: 0 
-                },
-                'baby': { 
-                    name: '🐣 Малыш', 
-                    emoji: '🐣',
-                    image: 'images/pet/baby.png',
-                    level: 1, 
-                    expNeeded: 50 
-                },
-                'kitten': { 
-                    name: '🐱 Котёнок', 
-                    emoji: '🐱',
-                    image: 'images/pet/kitten.png',
-                    level: 2, 
-                    expNeeded: 150 
-                },
-                'cat': { 
-                    name: '🐈 Кот', 
-                    emoji: '🐈',
-                    image: 'images/pet/cat.png',
-                    level: 3, 
-                    expNeeded: 300 
-                },
-                'lion': { 
-                    name: '🦁 Король', 
-                    emoji: '🦁',
-                    image: 'images/pet/lion.png',
-                    level: 4, 
-                    expNeeded: 500 
-                },
-                'dragon': { 
-                    name: '🐉 Дракон', 
-                    emoji: '🐉',
-                    image: 'images/pet/dragon.png',
-                    level: 5, 
-                    expNeeded: 750 
-                },
-                
-                // --- НОВЫЕ С ИЗОБРАЖЕНИЯМИ ---
-                'fox': { 
-                    name: '🦊 Лисёнок', 
-                    emoji: '🦊',
-                    image: 'images/pet/fox.png',
-                    level: 6, 
-                    expNeeded: 1000 
-                },
-                'wolf': { 
-                    name: '🐺 Волк', 
-                    emoji: '🐺',
-                    image: 'images/pet/wolf.png',
-                    level: 7, 
-                    expNeeded: 1300 
-                },
-                'phoenix': { 
-                    name: '🔥 Феникс', 
-                    emoji: '🔥',
-                    image: 'images/pet/phoenix.png',
-                    level: 8, 
-                    expNeeded: 1700 
-                },
-                'demon': { 
-                    name: '👿 Демон', 
-                    emoji: '👿',
-                    image: 'images/pet/demon.png',
-                    level: 9, 
-                    expNeeded: 2100 
-                },
-                'angel': { 
-                    name: '😇 Ангел', 
-                    emoji: '😇',
-                    image: 'images/pet/angel.png',
-                    level: 10, 
-                    expNeeded: 2600 
-                },
-                'god': { 
-                    name: '⭐ Бог', 
-                    emoji: '⭐',
-                    image: 'images/pet/god.png',
-                    level: 11, 
-                    expNeeded: 3200 
-                }
-            }
+            settings: { "3d": true, "vibe": true }
         };
     }
 
@@ -355,129 +262,18 @@ class Storage {
         this._saveToLocal();
     }
 
-    // ============================================
-    // СЕРИЙЧИК - МЕТОДЫ
-    // ============================================
-
-    getPet(user) {
-        if (!user) return null;
-        if (!this._data.pets[user]) {
-            this._data.pets[user] = {
-                exp: 0,
-                skin: 'egg',
-                unlockedSkins: ['egg'],
-                days: 0,
-                lastDaily: null,
-                name: 'Серийчик'
-            };
-        }
-        return this._data.pets[user];
-    }
-
-    addPetExp(user, amount) {
-        if (!user) return;
-        
-        const pet = this.getPet(user);
-        pet.exp += amount;
-        
-        // Проверяем разблокировку новых обликов
-        let newSkinUnlocked = false;
-        for (const [skinId, skin] of Object.entries(this._data.petSkins)) {
-            if (pet.exp >= skin.expNeeded && !pet.unlockedSkins.includes(skinId)) {
-                pet.unlockedSkins.push(skinId);
-                newSkinUnlocked = true;
-            }
-        }
-        
-        // Обновляем текущий облик (самый высокий доступный)
-        let highestSkin = 'egg';
-        let highestLevel = 0;
-        for (const skinId of pet.unlockedSkins) {
-            const skin = this._data.petSkins[skinId];
-            if (skin.level > highestLevel) {
-                highestLevel = skin.level;
-                highestSkin = skinId;
-            }
-        }
-        pet.skin = highestSkin;
-        
+    // ===== МЕТОДЫ ДЛЯ РАБОТЫ С ЖАНРАМИ =====
+    
+    saveUserGenres(user, genres) {
+        if (!user || !this._data) return false;
+        this._setUserData(user, 'userGenres', genres);
         this.save();
-        
-        if (newSkinUnlocked) {
-            const skin = this._data.petSkins[pet.skin];
-            setTimeout(() => {
-                if (typeof showToast === 'function') {
-                    showToast(`🎉 Новый облик разблокирован! ${skin.name}`, 'success');
-                }
-            }, 500);
-        }
-        
-        return pet;
-    }
-
-    getPetProgress(user) {
-        const pet = this.getPet(user);
-        if (!pet) return { current: 0, max: 1, percent: 0, nextSkin: null, currentSkin: null };
-        
-        const currentSkin = this._data.petSkins[pet.skin];
-        let nextSkin = null;
-        let nextLevel = currentSkin.level + 1;
-        
-        for (const [id, skin] of Object.entries(this._data.petSkins)) {
-            if (skin.level === nextLevel) {
-                nextSkin = skin;
-                break;
-            }
-        }
-        
-        if (!nextSkin) {
-            return { 
-                current: pet.exp, 
-                max: pet.exp, 
-                percent: 100, 
-                nextSkin: null, 
-                currentSkin: currentSkin,
-                isMaxLevel: true
-            };
-        }
-        
-        const expInLevel = pet.exp - currentSkin.expNeeded;
-        const expNeeded = nextSkin.expNeeded - currentSkin.expNeeded;
-        const percent = Math.min(100, Math.round((expInLevel / expNeeded) * 100));
-        
-        return { 
-            current: expInLevel, 
-            max: expNeeded, 
-            percent: percent,
-            nextSkin: nextSkin,
-            currentSkin: currentSkin,
-            isMaxLevel: false
-        };
-    }
-
-    claimDailyBonus(user) {
-        if (!user) return false;
-        
-        const pet = this.getPet(user);
-        const today = new Date().toDateString();
-        
-        if (pet.lastDaily === today) {
-            return false;
-        }
-        
-        pet.lastDaily = today;
-        pet.days = (pet.days || 0) + 1;
-        this.addPetExp(user, 5);
-        this.save();
-        
         return true;
     }
 
-    canClaimDaily(user) {
-        if (!user) return false;
-        const pet = this.getPet(user);
-        const today = new Date().toDateString();
-        return pet.lastDaily !== today;
+    getUserGenres(user) {
+        if (!user) return [];
+        return this._getUserData(user, 'userGenres', []);
     }
 }
 
@@ -508,7 +304,6 @@ window.checkData = function() {
         console.log('Профиль:', DB._data.profiles ? DB._data.profiles[user.name] : null);
         console.log('Достижения:', DB.getAchievements(user.name));
         console.log('Время онлайн:', DB._getUserData(user.name, 'onlineTime', 0));
-        console.log('Питомец:', DB.getPet(user.name));
     }
 };
 
