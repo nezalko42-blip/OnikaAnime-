@@ -104,18 +104,79 @@
                 <div id="page-catalog">
                     <div class="genres" id="genresNav">
                         <a class="active" data-genre="" onclick="setGenre('', this)">Все</a>
+                        <a data-genre="latest" onclick="setGenre('latest', this)">🔥 Новинки</a>
                         <a data-genre="1" onclick="setGenre('1', this)">Экшен</a>
                         <a data-genre="8" onclick="setGenre('8', this)">Драма</a>
                         <a data-genre="21" onclick="setGenre('21', this)">Комедия</a>
                         <a data-genre="10" onclick="setGenre('10', this)">Фэнтези</a>
                         <a data-genre="22" onclick="setGenre('22', this)">Романтика</a>
                     </div>
-                    <h2 id="title">🔥 Популярное аниме</h2>
+                    <h2 id="title">🔥 НОВИНКИ АНИМЕ</h2>
+
+                    <!-- ===== ПАНЕЛЬ ФИЛЬТРОВ ===== -->
+                    <div class="filter-panel" id="filterPanel" style="background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:16px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.04);display:none;">
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;">
+                            <span style="font-weight:600;color:var(--text-secondary);">Фильтры:</span>
+                            <button onclick="resetFilters()" style="padding:4px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px;">✕ Сбросить</button>
+                            <select id="filterSorting" onchange="applyFilters()" style="padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;">
+                                <option value="CREATED_AT_DESC">Новинки</option>
+                                <option value="FRESH_AT_DESC">Свежие</option>
+                                <option value="RATING_DESC">Популярные</option>
+                                <option value="TITLE_ASC">По алфавиту</option>
+                            </select>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Жанры</div>
+                                <div id="filterGenres" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Типы</div>
+                                <div id="filterTypes" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Сезоны</div>
+                                <div id="filterSeasons" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Год</div>
+                                <div style="display:flex;gap:4px;">
+                                    <select id="filterYearFrom" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">От</option></select>
+                                    <select id="filterYearTo" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">До</option></select>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус публикации</div>
+                                <div id="filterPublishStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус производства</div>
+                                <div id="filterProductionStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Возраст</div>
+                                <div id="filterAgeRatings" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="grid" id="grid">
                         <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка каталога...</div>
                     </div>
                     <div class="pagination" id="pagination"></div>
+
+                    <!-- ===== РАСПИСАНИЕ ВЫХОДА ===== -->
+                    <section class="schedule-section">
+                        <div class="schedule-container">
+                            <div class="schedule-header">
+                                <h2>📅 Расписание выхода</h2>
+                                <span class="schedule-week" id="scheduleWeek">Неделя</span>
+                            </div>
+                            <div class="schedule-grid" id="scheduleGrid">
+                                <div class="schedule-loading">⏳ Загрузка расписания...</div>
+                            </div>
+                        </div>
+                    </section>
 
                     <!-- ===== СЛУЧАЙНОЕ АНИМЕ ===== -->
                     <section class="random-section">
@@ -265,6 +326,11 @@
                         </div>
                     </div>
                     
+                    <div class="similar-section" id="similarSection" style="display:none;">
+                        <h3>Похожие</h3>
+                        <div class="similar-scroll" id="similarScroll"></div>
+                    </div>
+                    
                     <!-- ===== ПЛЕЕР ===== -->
                     <div class="player-section">
                         <h3>▶️ Плеер</h3>
@@ -372,12 +438,127 @@
 
                 <!-- ===== ПРОФИЛЬ ===== -->
                 <div id="page-profile" style="display:none;">
-                    <!-- ... (стандартный профиль) ... -->
+                    <div class="profile-container">
+                        <div class="profile-header-card">
+                            <div class="profile-avatar-wrapper">
+                                <div class="avatar-large" onclick="document.getElementById('avatarFileInput').click()">
+                                    <img id="avatarImg" src="" style="display:none;">
+                                    <span id="avatarLetter">?</span>
+                                    <div class="avatar-overlay">
+                                        <span class="avatar-edit-icon">
+                                            <svg width="24" height="24"><use href="icons/icons.svg#icon-profile"/></svg>
+                                        </span>
+                                        <span class="avatar-edit-text">Сменить</span>
+                                    </div>
+                                </div>
+                                <div class="avatar-status online"></div>
+                            </div>
+                            <div class="profile-name-section">
+                                <div class="profile-name-row">
+                                    <h1 id="profileName">--</h1>
+                                    <span class="title-badge" id="profileTitle"></span>
+                                    <button class="profile-edit-btn" onclick="editProfile('name')" title="Редактировать никнейм">
+                                        <svg width="16" height="16"><use href="icons/icons.svg#icon-settings"/></svg>
+                                    </button>
+                                </div>
+                                <div class="profile-email" id="profileEmail" style="color:var(--text-secondary);font-size:13px;margin-top:2px;">📧 --</div>
+                                <div class="status" id="profileStatus">Пользователь</div>
+                                <div class="profile-join-date" id="profileJoinDate">Присоединился: --</div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-bio-block" onclick="editProfile('bio')">
+                            <div class="bio-icon">📝</div>
+                            <div class="bio-text" id="profileBio">Нажмите чтобы добавить описание</div>
+                            <div class="bio-hint">✏️ Редактировать</div>
+                        </div>
+                        
+                        <div class="stats-cards">
+                            <a class="stat-card" onclick="navigate('favorites')">
+                                <div class="stat-icon">
+                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-favorites"/></svg>
+                                </div>
+                                <div class="num" id="statFav">0</div>
+                                <div class="lbl">В избранном</div>
+                            </a>
+                            <a class="stat-card" onclick="navigate('mycomments')">
+                                <div class="stat-icon">
+                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-comment"/></svg>
+                                </div>
+                                <div class="num" id="statComments">0</div>
+                                <div class="lbl">Комментариев</div>
+                            </a>
+                            <a class="stat-card" onclick="navigate('achievements')">
+                                <div class="stat-icon">
+                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-achievements"/></svg>
+                                </div>
+                                <div class="num" id="statAchievements">0</div>
+                                <div class="lbl">Достижений</div>
+                            </a>
+                        </div>
+                        
+                        <div class="profile-achievements-preview">
+                            <div class="profile-section-header">
+                                <h3>🏆 Последние достижения</h3>
+                                <a onclick="navigate('achievements')">Смотреть все →</a>
+                            </div>
+                            <div class="profile-achievements-grid" id="profileAchievementsGrid">
+                                <div style="color:var(--text-muted);text-align:center;padding:12px;">Нет достижений</div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-top-users">
+                            <div id="topUsers">
+                                <div style="text-align:center;padding:20px;color:var(--text-muted);">
+                                    <span style="font-size:36px;display:block;">👑</span>
+                                    Загрузка топа...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ===== НАСТРОЙКИ ===== -->
                 <div id="page-settings" style="display:none;">
-                    <!-- ... (стандартные настройки) ... -->
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
+                    <h2>⚙️ Настройки</h2>
+                    
+                    <div class="settings-group">
+                        <h3>👤 Аккаунт</h3>
+                        <div class="setting-row">
+                            <div class="label">Никнейм</div>
+                            <button onclick="editProfile('name')">Изменить</button>
+                        </div>
+                        <div class="setting-row">
+                            <div class="label">Email</div>
+                            <button onclick="editProfile('email')">Изменить</button>
+                        </div>
+                        <div class="setting-row">
+                            <div class="label">Пароль</div>
+                            <button onclick="editProfile('pass')">Изменить</button>
+                        </div>
+                        <div class="setting-row">
+                            <div class="label">Описание</div>
+                            <button onclick="editProfile('bio')">Изменить</button>
+                        </div>
+                        <div class="setting-row">
+                            <div class="label">Аватар</div>
+                            <button onclick="document.getElementById('avatarFileInput').click()">Загрузить</button>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h3>⚠️ Опасная зона</h3>
+                        <div class="setting-row">
+                            <div class="label">Удалить аккаунт</div>
+                            <button class="danger" onclick="deleteAccount()">Удалить</button>
+                        </div>
+                    </div>
+                    
+                    <button class="logout-btn" onclick="logout()">🚪 Выйти из аккаунта</button>
                 </div>
 
             </div>
@@ -485,7 +666,65 @@
 
     <!-- ===== МОДАЛЬНОЕ ОКНО СЕРИЙЧИКА ===== -->
     <div class="modal" id="petModal">
-        <!-- ... (стандартное модальное окно питомца) ... -->
+        <div class="modal-box pet-modal-box">
+            <button class="modal-close" onclick="closePetModal()">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
+            
+            <div class="pet-modal-content">
+                <div class="pet-modal-header">
+                    <span class="pet-modal-avatar" id="petModalAvatar">🐱</span>
+                    <div class="pet-modal-title">
+                        <h2 onclick="changePetName()" title="Нажмите, чтобы изменить имя">Серийчик ✏️</h2>
+                        <span class="pet-rename-hint" onclick="changePetName()">Нажмите на имя, чтобы изменить</span>
+                        <div class="pet-modal-skin" id="petModalSkin">🥚 Яйцо</div>
+                    </div>
+                </div>
+                
+                <div class="pet-modal-progress">
+                    <div class="pet-modal-progress-info">
+                        <span id="petModalProgressText">0 / 50 очков</span>
+                        <span id="petModalProgressPercent">0%</span>
+                    </div>
+                    <div class="pet-modal-progress-bar">
+                        <div class="pet-modal-progress-fill" id="petModalProgressFill" style="width:0%"></div>
+                    </div>
+                    <div class="pet-modal-next" id="petModalNext">🐣 50 очков до нового облика</div>
+                </div>
+                
+                <div class="pet-modal-stats">
+                    <div class="pet-modal-stat">
+                        <span class="pet-modal-stat-icon">📅</span>
+                        <span class="pet-modal-stat-value" id="petModalDays">0</span>
+                        <span class="pet-modal-stat-label">дней</span>
+                    </div>
+                    <div class="pet-modal-stat">
+                        <span class="pet-modal-stat-icon">📺</span>
+                        <span class="pet-modal-stat-value" id="petModalEpisodes">0</span>
+                        <span class="pet-modal-stat-label">серий</span>
+                    </div>
+                    <div class="pet-modal-stat">
+                        <span class="pet-modal-stat-icon">⭐</span>
+                        <span class="pet-modal-stat-value" id="petModalExp">0</span>
+                        <span class="pet-modal-stat-label">очков</span>
+                    </div>
+                </div>
+                
+                <div class="pet-modal-skins">
+                    <div class="pet-modal-skins-title">🎨 Облики</div>
+                    <div class="pet-modal-skins-grid" id="petModalSkinsGrid"></div>
+                </div>
+                
+                <div class="pet-modal-actions">
+                    <button class="pet-modal-btn daily" onclick="claimDailyBonusPet()" id="petDailyBtn">
+                        📅 Ежедневный бонус <span class="pet-modal-btn-reward">+5</span>
+                    </button>
+                    <button class="pet-modal-btn" onclick="watchAnimeForPet()">
+                        🎬 Смотреть аниме <span class="pet-modal-btn-reward">+10</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ===== ФУТЕР ===== -->
@@ -583,6 +822,18 @@
                 }, 200);
             }
             
+            if (typeof loadSchedule === 'function') {
+                setTimeout(function() {
+                    loadSchedule();
+                }, 300);
+            }
+            
+            if (typeof loadRecommendations === 'function') {
+                setTimeout(function() {
+                    loadRecommendations();
+                }, 400);
+            }
+            
             const user = DB.get('currentUser');
             if (user) {
                 if (typeof startOnlineTracking === 'function') {
@@ -663,9 +914,35 @@
             
             const titleEl = document.getElementById('title');
             if (titleEl) {
-                titleEl.textContent = genreId ? btn.textContent : '🔥 Популярное аниме';
+                if (genreId === 'latest') {
+                    titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
+                } else if (genreId) {
+                    const genreNames = {
+                        '1': '🎭 Экшен',
+                        '8': '🎭 Драма',
+                        '21': '🎭 Комедия',
+                        '10': '🎭 Фэнтези',
+                        '22': '🎭 Романтика'
+                    };
+                    titleEl.textContent = genreNames[genreId] || '🎭 ' + btn.textContent;
+                } else {
+                    titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
+                }
             }
             
+            loadCatalog();
+        };
+
+        window.applyFilters = function() {
+            page = 1;
+            loadCatalog();
+        };
+
+        window.resetFilters = function() {
+            document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.querySelectorAll('#filterPanel select').forEach(sel => sel.value = '');
+            activeFilters = {};
+            page = 1;
             loadCatalog();
         };
 
