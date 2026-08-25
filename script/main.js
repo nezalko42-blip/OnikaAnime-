@@ -437,12 +437,18 @@ function renderScheduleCompact(scheduleData) {
 async function loadRecommendations() {
     const container = document.getElementById('recommendationsGrid');
     if (!container) return;
+    
+    container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;">⏳ Загрузка рекомендаций...</div>';
+    
     try {
         const recs = await API.getRecommended(6);
+        console.log('🔥 Рекомендации получены:', recs);
+        
         if (!recs || !recs.length) {
-            container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">Нет рекомендаций</div>';
+            container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">😅 Нет рекомендаций</div>';
             return;
         }
+        
         let html = '';
         recs.forEach(item => {
             const img = item.images?.jpg?.image_url || '';
@@ -462,7 +468,8 @@ async function loadRecommendations() {
         });
         container.innerHTML = html;
     } catch (e) {
-        container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">Ошибка</div>';
+        console.error('Ошибка загрузки рекомендаций:', e);
+        container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">⚠️ Ошибка загрузки</div>';
     }
 }
 
@@ -972,7 +979,152 @@ function renderProfileAchievements(user) {
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
     if (!container) return;
-    // ... стандартный код
+    const users = DB.get('users', {});
+    const allData = {};
+    for (const u in users) {
+        const onlineTime = DB.getUserData(u, 'onlineTime', 0);
+        const lastSeen = DB.getUserData(u, 'lastSeen', 0);
+        const favs = DB.getUserData(u, 'favorites', []);
+        const comments = DB.get('comments', {});
+        let commentCount = 0;
+        for (const k in comments) {
+            comments[k].forEach(function(c) {
+                if (c.user === u) commentCount++;
+            });
+        }
+        const earned = DB.getAchievements(u);
+        const activeTitle = DB.getActiveTitle(u);
+        let titleName = '';
+        if (activeTitle) {
+            const ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === activeTitle; });
+            if (ach) titleName = ach.title;
+        }
+        const xp = favs.length * 10 + commentCount * 5 + earned.length * 20 + Math.floor(onlineTime / 60);
+        allData[u] = {
+            name: u,
+            email: users[u] || '',
+            favs: favs.length,
+            comments: commentCount,
+            achievements: earned.length,
+            onlineTime: onlineTime,
+            lastSeen: lastSeen,
+            xp: xp,
+            title: titleName,
+            isOnline: (Date.now() - lastSeen) < 300000
+        };
+    }
+    const sorted = Object.values(allData).sort(function(a, b) {
+        return b.xp - a.xp;
+    }).slice(0, 20);
+    if (sorted.length === 0) {
+        container.innerHTML = `
+            <div style="color:var(--text-muted);text-align:center;padding:30px;">
+                <span style="font-size:48px;display:block;margin-bottom:12px;">👑</span>
+                <p>Нет пользователей</p>
+                <p style="font-size:12px;">Станьте первым!</p>
+            </div>
+        `;
+        return;
+    }
+    const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+    const avatarGradients = ['avatar-gradient-1', 'avatar-gradient-2', 'avatar-gradient-3', 
+                           'avatar-gradient-4', 'avatar-gradient-5', 'avatar-gradient-6',
+                           'avatar-gradient-7', 'avatar-gradient-8', 'avatar-gradient-9', 'avatar-gradient-10'];
+    let html = `
+        <div class="top-users-wrapper">
+            <div class="top-users-header">
+                <h3>👑 Топ пользователей</h3>
+                <span class="top-update-time">🔄 Обновлено: ${new Date().toLocaleTimeString()}</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="top-users-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Пользователь</th>
+                            <th class="hide-mobile">📚 В изб.</th>
+                            <th class="hide-mobile">💬 Комм.</th>
+                            <th>🏆 Дост.</th>
+                            <th>⏱ Время</th>
+                            <th>⭐ XP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    const maxXP = sorted.length > 0 ? sorted[0].xp : 1;
+    sorted.forEach(function(user, index) {
+        const rankClass = index === 0 ? 'rank-1' : (index === 1 ? 'rank-2' : (index === 2 ? 'rank-3' : ''));
+        const medal = index < 10 ? medals[index] : '#' + (index + 1);
+        const avatarGrad = avatarGradients[index % avatarGradients.length];
+        const initial = user.name[0].toUpperCase();
+        const xpPercent = Math.min((user.xp / maxXP) * 100, 100);
+        html += `
+            <tr class="${rankClass}">
+                <td class="rank-cell">${medal}</td>
+                <td>
+                    <div class="user-info-cell">
+                        <div class="user-avatar-mini ${avatarGrad}">
+                            ${initial}
+                        </div>
+                        <div>
+                            <div class="user-name-cell">
+                                ${user.name} 
+                                <span style="font-size:11px;color:${user.isOnline ? '#2ecc71' : '#666'};">
+                                    ${user.isOnline ? '🟢' : '🟡'}
+                                </span>
+                            </div>
+                            ${user.title ? `<div class="user-title-cell">🎖️ ${user.title}</div>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td class="stat-cell hide-mobile">
+                    <span class="stat-number">${user.favs}</span>
+                    <span class="stat-label">аниме</span>
+                </td>
+                <td class="stat-cell hide-mobile">
+                    <span class="stat-number">${user.comments}</span>
+                    <span class="stat-label">комм.</span>
+                </td>
+                <td class="stat-cell">
+                    <span class="stat-number">${user.achievements}</span>
+                    <span class="stat-label">достиж.</span>
+                </td>
+                <td class="time-cell">
+                    <div class="time-value">${formatTime(user.onlineTime)}</div>
+                    <span class="time-label">${formatFullTime(user.onlineTime)}</span>
+                </td>
+                <td>
+                    <div class="xp-bar-wrapper">
+                        <div class="xp-bar-bg">
+                            <div class="xp-bar-fill" style="width:${xpPercent}%;"></div>
+                        </div>
+                        <div class="xp-text">${user.xp} XP</div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            <div class="status-legend">
+                <span class="status-legend-item">
+                    <span class="dot dot-online"></span> Онлайн
+                </span>
+                <span class="status-legend-item">
+                    <span class="dot dot-idle"></span> Недавно был
+                </span>
+                <span class="status-legend-item">
+                    <span class="dot dot-offline"></span> Не в сети
+                </span>
+                <span class="status-legend-item">
+                    ⭐ XP = Изб×10 + Комм×5 + Дост×20 + Время
+                </span>
+            </div>
+        </div>
+    `;
+    container.innerHTML = html;
 }
 
 // ============================================
