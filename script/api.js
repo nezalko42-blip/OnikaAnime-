@@ -1,6 +1,6 @@
 // ============================================
 // API МОДУЛЬ ONIKAANIME (Anilibria API v1)
-// С ПРАВИЛЬНОЙ ФИЛЬТРАЦИЕЙ ПО ЖАНРАМ
+// POST с фильтрацией по жанрам
 // ============================================
 
 const API = {
@@ -10,7 +10,7 @@ const API = {
     _cache: new Map(),
     _cacheTTL: 5 * 60 * 1000,
 
-    // ===== БАЗОВЫЙ GET-ЗАПРОС С КЭШИРОВАНИЕМ =====
+    // ===== БАЗОВЫЙ GET-ЗАПРОС =====
     async _get(endpoint, params = {}, useCache = true) {
         const cacheKey = endpoint + '|' + JSON.stringify(params);
         
@@ -62,90 +62,108 @@ const API = {
         }
     },
 
+    // ===== БАЗОВЫЙ POST-ЗАПРОС =====
+    async _post(endpoint, body = {}) {
+        const url = `${this.BASE_URL}${endpoint}`;
+        const cacheKey = endpoint + '|' + JSON.stringify(body);
+        
+        if (this._cache.has(cacheKey)) {
+            const cached = this._cache.get(cacheKey);
+            if (Date.now() - cached.time < this._cacheTTL) {
+                console.log('💾 Кэш POST:', endpoint);
+                return cached.data;
+            }
+        }
+        
+        try {
+            console.log('📡 POST:', url, body);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}`);
+            }
+            const data = await response.json();
+            console.log('📦 Ответ:', data);
+            
+            if (data) {
+                this._cache.set(cacheKey, { data, time: Date.now() });
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('❌ POST Error:', error.message);
+            return null;
+        }
+    },
+
     // ============================================
-    // 1. КАТАЛОГ (ВСЕ АНИМЕ)
+    // 1. КАТАЛОГ (POST — с фильтрацией по жанрам)
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        // Если выбран жанр "Новинки" (genre === 'latest')
         if (genre === 'latest') {
             return await this._getLatestReleases(24);
         }
 
-        const params = {
+        const body = {
             page: page,
             limit: 24,
+            f: {},
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing,player,status'
         };
 
-        // Поисковый запрос
         if (query && query.length > 1) {
-            params['f[search]'] = query;
+            body.f.search = query;
         }
 
-        // ===== ФИЛЬТРАЦИЯ ПО ЖАНРАМ =====
+        // ===== ЖАНРЫ =====
         let genresArray = [];
         
-        // Если выбран конкретный жанр (не 'latest')
         if (genre && genre !== 'latest') {
             genresArray = [parseInt(genre)];
         } else if (filters.genres && filters.genres.length) {
             genresArray = filters.genres.map(g => parseInt(g));
         }
 
-        // Добавляем жанры в параметры запроса
         if (genresArray.length > 0) {
-            genresArray.forEach((g, index) => {
-                params[`f[genres][${index}]`] = g;
-            });
+            body.f.genres = genresArray;
         }
 
-        // Типы
         if (filters.types && filters.types.length) {
-            filters.types.forEach((t, index) => {
-                params[`f[types][${index}]`] = t;
-            });
+            body.f.types = filters.types;
         }
 
-        // Сезоны
         if (filters.seasons && filters.seasons.length) {
-            filters.seasons.forEach((s, index) => {
-                params[`f[seasons][${index}]`] = s;
-            });
+            body.f.seasons = filters.seasons;
         }
 
-        // Годы
-        if (filters.year_from) {
-            params['f[years][from_year]'] = filters.year_from;
-        }
-        if (filters.year_to) {
-            params['f[years][to_year]'] = filters.year_to;
+        if (filters.year_from || filters.year_to) {
+            body.f.years = {};
+            if (filters.year_from) body.f.years.from_year = filters.year_from;
+            if (filters.year_to) body.f.years.to_year = filters.year_to;
         }
 
-        // Сортировка
-        params['f[sorting]'] = filters.sorting || 'CREATED_AT_DESC';
+        body.f.sorting = filters.sorting || 'CREATED_AT_DESC';
 
-        // Возрастные рейтинги
         if (filters.age_ratings && filters.age_ratings.length) {
-            filters.age_ratings.forEach((a, index) => {
-                params[`f[age_ratings][${index}]`] = a;
-            });
+            body.f.age_ratings = filters.age_ratings;
         }
 
-        // Статусы публикации
         if (filters.publish_statuses && filters.publish_statuses.length) {
-            filters.publish_statuses.forEach((p, index) => {
-                params[`f[publish_statuses][${index}]`] = p;
-            });
+            body.f.publish_statuses = filters.publish_statuses;
         }
 
-        // Статусы производства
         if (filters.production_statuses && filters.production_statuses.length) {
-            filters.production_statuses.forEach((p, index) => {
-                params[`f[production_statuses][${index}]`] = p;
-            });
+            body.f.production_statuses = filters.production_statuses;
         }
 
-        const data = await this._get('/anime/catalog/releases', params);
+        const data = await this._post('/anime/catalog/releases', body);
         
         if (data && data.data && data.data.length > 0) {
             const items = data.data.map(item => this._convertItem(item));
@@ -159,7 +177,7 @@ const API = {
     },
 
     // ============================================
-    // 1.1. НОВИНКИ (СПЕЦИАЛЬНЫЙ БЫСТРЫЙ ЗАПРОС)
+    // 1.1. НОВИНКИ
     // ============================================
     async _getLatestReleases(limit = 24) {
         const params = {
@@ -178,14 +196,13 @@ const API = {
             };
         }
         
-        // Fallback
-        const fallbackParams = {
+        const fallbackBody = {
             page: 1,
             limit: limit,
-            'f[sorting]': 'CREATED_AT_DESC',
+            f: { sorting: 'CREATED_AT_DESC' },
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
         };
-        const fallbackData = await this._get('/anime/catalog/releases', fallbackParams, true);
+        const fallbackData = await this._post('/anime/catalog/releases', fallbackBody);
         if (fallbackData && fallbackData.data && fallbackData.data.length > 0) {
             const items = fallbackData.data.map(item => this._convertItem(item));
             return {
@@ -434,7 +451,7 @@ const API = {
     },
 
     // ============================================
-    // 9. СПРАВОЧНИКИ ДЛЯ ФИЛЬТРОВ
+    // 9. СПРАВОЧНИКИ
     // ============================================
     async getGenres() {
         const data = await this._get('/anime/catalog/references/genres');
@@ -478,4 +495,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (с фильтрацией по жанрам) загружен');
+console.log('✅ API модуль (POST с фильтрацией по жанрам) загружен');
