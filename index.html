@@ -100,98 +100,8 @@
         <div class="content">
             <div class="content-inner">
 
-                <!-- ===== КАТАЛОГ ===== -->
-                <div id="page-catalog">
-                    <div class="genres" id="genresNav">
-                        <a class="active" data-genre="" onclick="setGenre('', this)">📚 Все</a>
-                        <a data-genre="latest" onclick="setGenre('latest', this)">🔥 Новинки</a>
-                        <a data-genre="1" onclick="setGenre('1', this)">🎬 Экшен</a>
-                        <a data-genre="8" onclick="setGenre('8', this)">🎭 Драма</a>
-                        <a data-genre="21" onclick="setGenre('21', this)">😂 Комедия</a>
-                        <a data-genre="10" onclick="setGenre('10', this)">🧙 Фэнтези</a>
-                        <a data-genre="22" onclick="setGenre('22', this)">💕 Романтика</a>
-                    </div>
-                    <h2 id="title">📚 ВСЕ АНИМЕ</h2>
-
-                    <div class="filter-panel" id="filterPanel" style="background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:16px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.04);display:none;">
-                        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;">
-                            <span style="font-weight:600;color:var(--text-secondary);">Фильтры:</span>
-                            <button onclick="resetFilters()" style="padding:4px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px;">✕ Сбросить</button>
-                            <select id="filterSorting" onchange="applyFilters()" style="padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;">
-                                <option value="CREATED_AT_DESC">Новинки</option>
-                                <option value="FRESH_AT_DESC">Свежие</option>
-                                <option value="RATING_DESC">Популярные</option>
-                                <option value="TITLE_ASC">По алфавиту</option>
-                            </select>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Жанры</div>
-                                <div id="filterGenres" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Типы</div>
-                                <div id="filterTypes" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Сезоны</div>
-                                <div id="filterSeasons" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Год</div>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="filterYearFrom" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">От</option></select>
-                                    <select id="filterYearTo" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">До</option></select>
-                                </div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус публикации</div>
-                                <div id="filterPublishStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус производства</div>
-                                <div id="filterProductionStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Возраст</div>
-                                <div id="filterAgeRatings" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid" id="grid">
-                        <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка каталога...</div>
-                    </div>
-                    <div class="pagination" id="pagination"></div>
-
-                    <!-- ===== СЛУЧАЙНЫЕ ЖАНРЫ ===== -->
-                    <section class="random-genres-section">
-                        <div class="random-genres-container" style="max-width:1200px;margin:30px auto;padding:0 16px;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-                                <h2>🎲 Попробуйте что-то новое</h2>
-                                <button onclick="refreshRandomGenres()" class="rec-filter-btn" style="padding:8px 20px;">
-                                    🔄 Обновить
-                                </button>
-                            </div>
-                            <div class="random-genres-grid" id="randomGenresGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
-                                <div style="text-align:center;padding:30px;color:#888;">⏳ Загрузка...</div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- ===== РАСПИСАНИЕ ВЫХОДА ===== -->
-                    <section class="schedule-section">
-                        <div class="schedule-container">
-                            <div class="schedule-header">
-                                <h2>📅 Расписание выхода</h2>
-                                <span class="schedule-week" id="scheduleWeek">Неделя</span>
-                            </div>
-                            <div class="schedule-grid" id="scheduleGrid">
-                                <div class="schedule-loading">⏳ Загрузка расписания...</div>
-                            </div>
-                        </div>
-                    </section>
-
+                <!-- ===== ГЛАВНАЯ СТРАНИЦА ===== -->
+                <div id="page-home">
                     <!-- ===== СЛУЧАЙНОЕ АНИМЕ ===== -->
                     <section class="random-section">
                         <div class="random-container">
@@ -307,6 +217,71 @@
                             </div>
                         </div>
                     </section>
+                </div>
+
+                <!-- ===== СТРАНИЦА КАТАЛОГА ===== -->
+                <div id="page-catalog" style="display:none;">
+                    <div class="genres" id="genresNav">
+                        <a class="active" data-genre="" onclick="setGenre('', this)">📚 Все</a>
+                        <a data-genre="latest" onclick="setGenre('latest', this)">🔥 Новинки</a>
+                        <a data-genre="1" onclick="setGenre('1', this)">🎬 Экшен</a>
+                        <a data-genre="8" onclick="setGenre('8', this)">🎭 Драма</a>
+                        <a data-genre="21" onclick="setGenre('21', this)">😂 Комедия</a>
+                        <a data-genre="10" onclick="setGenre('10', this)">🧙 Фэнтези</a>
+                        <a data-genre="22" onclick="setGenre('22', this)">💕 Романтика</a>
+                    </div>
+                    <h2 id="title">📚 ВСЕ АНИМЕ</h2>
+
+                    <div class="filter-panel" id="filterPanel" style="background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:16px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.04);display:none;">
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;">
+                            <span style="font-weight:600;color:var(--text-secondary);">Фильтры:</span>
+                            <button onclick="resetFilters()" style="padding:4px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px;">✕ Сбросить</button>
+                            <select id="filterSorting" onchange="applyFilters()" style="padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;">
+                                <option value="CREATED_AT_DESC">Новинки</option>
+                                <option value="FRESH_AT_DESC">Свежие</option>
+                                <option value="RATING_DESC">Популярные</option>
+                                <option value="TITLE_ASC">По алфавиту</option>
+                            </select>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Жанры</div>
+                                <div id="filterGenres" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Типы</div>
+                                <div id="filterTypes" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Сезоны</div>
+                                <div id="filterSeasons" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Год</div>
+                                <div style="display:flex;gap:4px;">
+                                    <select id="filterYearFrom" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">От</option></select>
+                                    <select id="filterYearTo" onchange="applyFilters()" style="padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-primary);font-size:12px;"><option value="">До</option></select>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус публикации</div>
+                                <div id="filterPublishStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Статус производства</div>
+                                <div id="filterProductionStatuses" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Возраст</div>
+                                <div id="filterAgeRatings" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid" id="grid">
+                        <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка каталога...</div>
+                    </div>
+                    <div class="pagination" id="pagination"></div>
                 </div>
 
                 <!-- ===== ДЕТАЛЬНАЯ ===== -->
@@ -796,7 +771,8 @@
             <div class="footer-column">
                 <h4>📂 Разделы</h4>
                 <ul>
-                    <li><a href="#" onclick="navigate('catalog');return false;">🏠 Главная</a></li>
+                    <li><a href="#" onclick="navigate('home');return false;">🏠 Главная</a></li>
+                    <li><a href="#" onclick="navigate('catalog');return false;">📚 Каталог</a></li>
                     <li><a href="#" onclick="navigate('genres');return false;">🎭 Жанры</a></li>
                     <li><a href="#" onclick="navigate('favorites');return false;">❤️ Избранное</a></li>
                     <li><a href="#" onclick="navigate('achievements');return false;">🏆 Достижения</a></li>
@@ -864,28 +840,11 @@
                 updateUI();
             }
             
-            if (typeof loadCatalog === 'function') {
+            // Запускаем главную страницу
+            if (typeof navigate === 'function') {
                 setTimeout(function() {
-                    loadCatalog();
-                }, 200);
-            }
-            
-            if (typeof loadSchedule === 'function') {
-                setTimeout(function() {
-                    loadSchedule();
-                }, 300);
-            }
-            
-            if (typeof loadRecommendations === 'function') {
-                setTimeout(function() {
-                    loadRecommendations();
-                }, 400);
-            }
-            
-            if (typeof loadRandomGenres === 'function') {
-                setTimeout(function() {
-                    loadRandomGenres();
-                }, 500);
+                    navigate('home');
+                }, 100);
             }
             
             const user = DB.get('currentUser');
@@ -923,7 +882,11 @@
         };
 
         window.goBack = function() {
-            navigate('catalog');
+            if (window._previousPage) {
+                navigate(window._previousPage);
+            } else {
+                navigate('home');
+            }
         };
 
         window.toggleDescription = function() {
