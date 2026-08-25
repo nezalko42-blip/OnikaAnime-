@@ -4987,3 +4987,253 @@ svg use {
         gap: 8px !important;
     }
 }
+
+/* ============================================
+   ДОПОЛНЕНИЯ ДЛЯ НОВЫХ ФУНКЦИЙ (ЖАНРЫ, РАСПИСАНИЕ, МОДАЛЬНЫЕ ОКНА)
+   ============================================ */
+
+/* ===== СТРАНИЦА ЖАНРОВ ===== */
+.genres-page {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.genres-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 0 4px;
+}
+
+.genre-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.genre-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(108, 92, 231, 0.03), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.genre-card:hover::before {
+    opacity: 1;
+}
+
+.genre-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(108, 92, 231, 0.15);
+    box-shadow: var(--shadow-glow);
+}
+
+.genre-card .genre-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.genre-card .genre-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.genre-card .genre-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.genre-card .genre-stats {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    display: inline-block;
+}
+
+/* ===== СЛУЧАЙНЫЕ ЖАНРЫ НА ГЛАВНОЙ ===== */
+.random-genres-grid .genre-card {
+    padding: 16px;
+}
+
+.random-genres-grid .genre-card .genre-icon {
+    font-size: 32px;
+}
+
+.random-genres-grid .genre-card .genre-name {
+    font-size: 14px;
+}
+
+.random-genres-grid .genre-card .genre-desc {
+    font-size: 11px;
+    -webkit-line-clamp: 1;
+}
+
+.random-genres-grid .genre-card .genre-stats {
+    font-size: 11px;
+}
+
+/* ===== МОДАЛЬНОЕ ОКНО ДЕТАЛЕЙ ЖАНРА ===== */
+#genreDetailModal .modal-box {
+    max-width: 600px;
+}
+
+#genreDetailModal .modal-box h2 {
+    -webkit-text-fill-color: #fff;
+    text-align: center;
+}
+
+#genreDetailModal .modal-box p {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+#genreDetailStats {
+    text-align: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+}
+
+#genreDetailStats strong {
+    color: var(--accent-glow);
+    font-size: 20px;
+}
+
+/* ===== РАСПИСАНИЕ НА ГЛАВНОЙ (КОМПАКТНАЯ ВЕРСИЯ) ===== */
+.schedule-day-block-compact {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.3s ease;
+}
+
+.schedule-day-block-compact.today {
+    border-color: rgba(255, 215, 0, 0.2);
+    background: rgba(255, 215, 0, 0.03);
+}
+
+.schedule-day-block-compact.today .schedule-day-header {
+    color: #ffd700;
+}
+
+.schedule-item-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.schedule-item-compact:hover {
+    background: rgba(108, 92, 231, 0.05);
+    margin: 0 -4px;
+    padding: 4px 4px;
+    border-radius: 4px;
+}
+
+.schedule-item-compact .s-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+.schedule-more {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    padding-top: 4px;
+    font-style: italic;
+}
+
+/* ===== АДАПТИВ ДЛЯ ЖАНРОВ ===== */
+@media (max-width: 600px) {
+    .genres-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .genre-card {
+        padding: 16px 12px;
+    }
+    
+    .genre-card .genre-icon {
+        font-size: 32px;
+    }
+    
+    .genre-card .genre-name {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 380px) {
+    .genres-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .genre-card {
+        padding: 12px 8px;
+    }
+    
+    .genre-card .genre-icon {
+        font-size: 28px;
+    }
+    
+    .genre-card .genre-name {
+        font-size: 13px;
+    }
+}
+
+/* ===== УЛУЧШЕНИЯ ДЛЯ РЕКОМЕНДАЦИЙ НА ГЛАВНОЙ ===== */
+.recommendations-grid {
+    display: grid;
+    gap: 14px;
+}
+
+@media (max-width: 600px) {
+    .recommendations-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+}
+
+@media (min-width: 601px) and (max-width: 1024px) {
+    .recommendations-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+@media (min-width: 1025px) {
+    .recommendations-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+}
