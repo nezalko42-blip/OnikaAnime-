@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Anilibria v1)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Jikan API v4)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -51,6 +51,7 @@ function navigate(pageName) {
     if (pageName === 'catalog') {
         loadCatalog();
         loadRecommendations();
+        loadSchedule();
     }
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
@@ -125,24 +126,61 @@ function closeMenu() {
 }
 
 // ============================================
+// ОТСЛЕЖИВАНИЕ ВРЕМЕНИ
+// ============================================
+function startOnlineTracking() {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    startTime = Date.now();
+    if (onlineTimer) clearInterval(onlineTimer);
+    onlineTimer = setInterval(function() {
+        const userNow = DB.get('currentUser');
+        if (!userNow) {
+            clearInterval(onlineTimer);
+            return;
+        }
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const totalTime = DB.getUserData(userNow.name, 'onlineTime', 0);
+        totalTime += 30;
+        DB.setUserData(userNow.name, 'onlineTime', totalTime);
+        DB.setUserData(userNow.name, 'lastSeen', Date.now());
+        DB.save();
+        if (elapsed % 120 === 0) {
+            renderTopUsers();
+        }
+    }, 30000);
+}
+
+function stopOnlineTracking() {
+    if (onlineTimer) {
+        clearInterval(onlineTimer);
+        onlineTimer = null;
+    }
+}
+
+window.addEventListener('beforeunload', function() {
+    const userExit = DB.get('currentUser');
+    if (userExit) {
+        const elapsedExit = Math.floor((Date.now() - startTime) / 1000);
+        const totalTimeExit = DB.getUserData(userExit.name, 'onlineTime', 0);
+        DB.setUserData(userExit.name, 'onlineTime', totalTimeExit + elapsedExit);
+        DB.setUserData(userExit.name, 'lastSeen', Date.now());
+        DB.save();
+    }
+});
+
+// ============================================
 // 1. КАТАЛОГ
 // ============================================
 async function loadCatalog() {
     const grid = document.getElementById('grid');
     if (!grid) return;
     
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка из Jikan...</div>';
     
     try {
         console.log('🔍 Запрос каталога:', { query, genre, page });
-        let result;
-        
-        if (query && query.length > 1) {
-            result = await API.searchTitles(query, page);
-        } else {
-            result = await API.searchAll(query, genre, page, activeFilters);
-        }
-        
+        const result = await API.searchAll(query, genre, page);
         console.log('📦 Ответ API:', result);
         
         if (result && result.items && result.items.length > 0) {
@@ -163,7 +201,7 @@ async function loadCatalog() {
                 };
                 titleEl.textContent = `🎭 ${genreNames[genre] || 'Жанр'}`;
             } else {
-                titleEl.textContent = '✨ Новинки аниме';
+                titleEl.textContent = '🔥 Популярное аниме';
             }
             
             renderCatalog(result.items);
@@ -255,7 +293,90 @@ function goToPage(p) {
 }
 
 // ============================================
-// 2. РЕКОМЕНДАЦИИ
+// 2. РАСПИСАНИЕ
+// ============================================
+async function loadSchedule() {
+    const container = document.getElementById('scheduleGrid');
+    if (!container) return;
+
+    if (scheduleCache && Date.now() - scheduleCacheTime < 300000) {
+        renderScheduleCompact(scheduleCache);
+        return;
+    }
+
+    container.innerHTML = '<div class="schedule-loading">⏳ Загрузка расписания...</div>';
+
+    try {
+        const data = await API.getSchedule();
+        if (data && data.length) {
+            scheduleCache = data;
+            scheduleCacheTime = Date.now();
+            renderScheduleCompact(data);
+        } else {
+            container.innerHTML = '<div class="schedule-loading">📅 Расписание временно недоступно</div>';
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки расписания:', e);
+        container.innerHTML = '<div class="schedule-loading">⚠️ Ошибка загрузки расписания</div>';
+    }
+}
+
+function renderScheduleCompact(scheduleData) {
+    const container = document.getElementById('scheduleGrid');
+    if (!container) return;
+
+    if (!scheduleData || !scheduleData.length) {
+        container.innerHTML = '<div class="schedule-loading">📅 Нет данных</div>';
+        return;
+    }
+
+    const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+    const today = new Date().getDay();
+    const currentDayIndex = today === 0 ? 6 : today - 1;
+
+    const sortedDays = scheduleData
+        .map(dayObj => ({
+            dayIndex: dayObj.day,
+            items: dayObj.list || []
+        }))
+        .sort((a, b) => {
+            const diffA = (a.dayIndex - currentDayIndex + 7) % 7;
+            const diffB = (b.dayIndex - currentDayIndex + 7) % 7;
+            return diffA - diffB;
+        });
+
+    const topDays = sortedDays.slice(0, 5);
+
+    let html = '';
+    topDays.forEach(dayObj => {
+        const dayIndex = dayObj.dayIndex;
+        const dayName = days[dayIndex] || 'Неизвестно';
+        const isToday = dayIndex === currentDayIndex;
+        const dayClass = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][dayIndex] || '';
+
+        const items = dayObj.items.slice(0, 2);
+        const hasMore = dayObj.items.length > 2;
+
+        html += `<div class="schedule-day-block-compact ${dayClass}${isToday ? ' today' : ''}">`;
+        html += `<div class="schedule-day-header">${dayName}${isToday ? ' (сегодня)' : ''}</div>`;
+        items.forEach(item => {
+            const title = item.title;
+            const id = item.id;
+            html += `<div class="schedule-item-compact" onclick="openDetail('${id}')">
+                <span class="s-title">${title}</span>
+            </div>`;
+        });
+        if (hasMore) {
+            html += `<div class="schedule-more">+ ещё ${dayObj.items.length - 2}</div>`;
+        }
+        html += `</div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// ============================================
+// 3. РЕКОМЕНДАЦИИ
 // ============================================
 async function loadRecommendations() {
     const container = document.getElementById('recommendationsGrid');
@@ -290,7 +411,7 @@ async function loadRecommendations() {
 }
 
 // ============================================
-// 3. СЛУЧАЙНОЕ АНИМЕ
+// 4. СЛУЧАЙНОЕ АНИМЕ
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
@@ -328,7 +449,7 @@ async function randomAnime() {
 }
 
 // ============================================
-// 4. АВТОДОПОЛНЕНИЕ ПОИСКА
+// 5. АВТОДОПОЛНЕНИЕ ПОИСКА
 // ============================================
 let autocompleteTimeout = null;
 const searchInput = document.getElementById('searchInput');
@@ -395,7 +516,7 @@ function selectAutocomplete(id) {
 }
 
 // ============================================
-// 5. ДЕТАЛЬНАЯ СТРАНИЦА
+// 6. ДЕТАЛЬНАЯ СТРАНИЦА
 // ============================================
 async function openDetail(id) {
     if (!id) {
@@ -408,9 +529,6 @@ async function openDetail(id) {
     
     if (allData[id]) {
         showDetail(allData[id]);
-        setTimeout(() => {
-            playWithShikimori(id, 1);
-        }, 1000);
         return;
     }
     
@@ -423,9 +541,6 @@ async function openDetail(id) {
                 allData[id] = data;
             }
             showDetail(allData[id]);
-            setTimeout(() => {
-                playWithShikimori(id, 1);
-            }, 1000);
         } else {
             showToast('❌ Не удалось загрузить данные', 'error');
         }
@@ -464,7 +579,6 @@ function showDetail(anime) {
     const descEl = document.getElementById('detailDesc');
     if (descEl) {
         let descText = anime.synopsis || 'Описание отсутствует';
-        // Очищаем HTML
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = descText;
         descText = tempDiv.textContent || descText;
@@ -499,144 +613,36 @@ function showDetail(anime) {
     
     renderComments(title);
     checkAchievements(title);
-}
-
-// ============================================
-// 6. ПЛЕЕР SHIKIMORI
-// ============================================
-async function playWithShikimori(animeId, episode = 1) {
-    const wrapper = document.getElementById('playerWrapper');
-    if (!wrapper) {
-        console.error('❌ playerWrapper не найден');
-        return;
-    }
-    wrapper.innerHTML = '';
-    currentAnimeId = animeId;
-    const anime = allData[animeId];
-    const title = anime ? anime.title : 'Аниме';
-    const totalEp = parseInt(anime?.episodes) || 0;
     
-    try {
-        currentPlayer = new ShikimoriPlayer(wrapper, {
-            animeId: animeId,
-            episode: episode,
-            title: title,
-            totalEpisodes: totalEp,
-            volume: 0.8,
-            speed: 1,
-            onEpisodeEnd: function() {
-                const nextEp = episode + 1;
-                if (totalEp === 0 || nextEp <= totalEp) {
-                    playWithShikimori(animeId, nextEp);
-                    showToast('▶️ Следующая серия', 'info');
-                } else {
-                    showToast('🎬 Все серии просмотрены!', 'success');
-                }
-            }
-        });
-    } catch (error) {
-        console.error('❌ Ошибка создания плеера:', error);
-        showErrorInPlayer('Ошибка создания плеера');
-        return;
-    }
-    
-    try {
-        console.log('📡 Загрузка через Shikimori, ID:', animeId, 'Серия:', episode);
-        await currentPlayer.loadFromShikimori(animeId, episode);
-    } catch (error) {
-        console.error('❌ Ошибка загрузки:', error);
-        showManualVideoButton(wrapper, title, episode, animeId);
-    }
-    updateEpisodeButtons(animeId, episode);
-}
-
-function showErrorInPlayer(message) {
+    // Показываем сообщение о видео
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
         wrapper.innerHTML = `
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
-                <span style="font-size:48px;">⚠️</span>
-                <span style="font-size:16px;color:#aaa;">${message}</span>
+                <span style="font-size:48px;">🎬</span>
+                <span style="font-size:16px;color:#aaa;">Видео доступно на MyAnimeList</span>
+                <a href="https://myanimelist.net/anime/${anime.id.replace('jikan_', '')}" target="_blank" 
+                   style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
+                    🌐 Открыть на MyAnimeList
+                </a>
             </div>
         `;
     }
 }
 
-function showManualVideoButton(wrapper, title, episode, animeId) {
-    wrapper.innerHTML = `
-        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
-            <span style="font-size:48px;">🔍</span>
-            <span style="font-size:16px;color:#aaa;">Не удалось найти видео</span>
-            <span style="font-size:13px;color:#666;">Для "${title}" серия ${episode}</span>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
-                <button onclick="showManualVideoInput('${title}')" 
-                        style="padding:10px 24px;border-radius:20px;border:1px solid rgba(255,215,0,0.2);background:rgba(255,215,0,0.05);color:#f1c40f;cursor:pointer;font-size:14px;">
-                    📎 Вставить ссылку вручную
-                </button>
-                <button onclick="playWithShikimori(${animeId}, ${episode})" 
-                        style="padding:10px 24px;border-radius:20px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.05);color:#888;cursor:pointer;font-size:14px;">
-                    🔄 Попробовать снова
-                </button>
-                <button onclick="window.open('https://shikimori.one/animes/${animeId}', '_blank')" 
-                        style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;">
-                    🌐 Открыть на Shikimori
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-function showManualVideoInput(animeTitle) {
-    const url = prompt('Вставьте ссылку на видео (YouTube, VK, etc.) для "' + animeTitle + '":');
-    if (url && url.startsWith('http')) {
-        const wrapper = document.getElementById('playerWrapper');
-        if (wrapper) {
-            wrapper.innerHTML = `
-                <iframe src="${url}" 
-                        allowfullscreen 
-                        allow="autoplay; encrypted-media" 
-                        style="width:100%;height:100%;border:none;"
-                        frameborder="0">
-                </iframe>
-            `;
-            showToast('✅ Видео загружено!', 'success');
-        }
-    } else if (url) {
-        showToast('❌ Неверная ссылка', 'error');
-    }
-}
-
-function updateEpisodeButtons(animeId, currentEpisode) {
-    const container = document.getElementById('episodeBtns');
-    if (!container) return;
-    const anime = allData[animeId];
-    const totalEp = parseInt(anime?.episodes) || 12;
-    let html = '';
-    const maxShow = Math.min(totalEp, 24);
-    for (let i = 1; i <= maxShow; i++) {
-        const active = i === currentEpisode ? 'active' : '';
-        html += `<button class="ep-btn ${active}" onclick="playWithShikimori(${animeId}, ${i})">${i}</button>`;
-    }
-    if (totalEp > 24) {
-        html += `<button class="ep-btn" onclick="showToast('📺 Всего ${totalEp} серий', 'info')">...</button>`;
-    }
-    container.innerHTML = html;
-}
-
 // ============================================
-// ОСТАЛЬНЫЕ ФУНКЦИИ (стандартные)
+// ОСТАЛЬНЫЕ ФУНКЦИИ (КОММЕНТАРИИ, ИЗБРАННОЕ, ДОСТИЖЕНИЯ, ПРОФИЛЬ)
 // ============================================
 
 // КОММЕНТАРИИ
 function renderComments(animeName) {
-    // ... (стандартный код)
     const container = document.getElementById('commentsList');
     if (!container) return;
     fetch('/api/comments/' + encodeURIComponent(animeName))
         .then(res => res.json())
         .then(comments => {
             if (!comments || !comments.length) {
-                container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев</div>';
+                container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев. Будьте первым!</div>';
                 return;
             }
             const user = DB.get('currentUser');
@@ -655,7 +661,7 @@ function renderComments(animeName) {
             container.innerHTML = html;
         })
         .catch(() => {
-            container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">⚠️ Ошибка загрузки</div>';
+            container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">⚠️ Ошибка загрузки комментариев</div>';
         });
 }
 
@@ -763,7 +769,7 @@ function renderFavorites() {
         const colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
         const color = colors[index % colors.length];
         for (const id in allData) {
-            if (allData[id].title === name) {
+            if (allData[id] && allData[id].title === name) {
                 img = allData[id].images?.jpg?.image_url || '';
                 break;
             }
@@ -793,9 +799,8 @@ function searchAndOpen(name) {
     loadCatalog();
 }
 
-// ДОСТИЖЕНИЯ (сокращённо)
+// ДОСТИЖЕНИЯ
 function renderAchievements() {
-    // ... (стандартный код)
     const user = DB.get('currentUser');
     const grid = document.getElementById('achievementsGrid');
     if (!grid) return;
@@ -848,31 +853,399 @@ function setActiveTitle(achId) {
 }
 
 function checkAchievements(animeName) {
-    // ... (стандартный код)
+    const user = DB.get('currentUser');
+    if (!user) return;
+    const earned = DB.getAchievements(user.name);
+    const allComments = DB.get('comments', {});
+    let commentCount = 0;
+    for (const k in allComments) {
+        allComments[k].forEach(function(c) {
+            if (c.user === user.name) commentCount++;
+        });
+    }
+    const favs = DB.getUserData(user.name, 'favorites', []);
+    const favCount = favs.length;
+    const history = DB.getUserData(user.name, 'history', []);
+    const continueData = DB.getUserData(user.name, 'continueWatching', {});
+    let episodeCount = 0;
+    for (const a in continueData) {
+        if (continueData[a] && continueData[a].ep) {
+            episodeCount += continueData[a].ep || 0;
+        }
+    }
+    if (episodeCount === 0) {
+        episodeCount = history.length * 12;
+    }
+    const newAchievements = [];
+    ACHIEVEMENTS_LIST.forEach(function(ach) {
+        if (earned.indexOf(ach.id) !== -1) return;
+        let unlocked = false;
+        if (ach.id === 'ep100' && episodeCount >= 100) unlocked = true;
+        else if (ach.id === 'ep200' && episodeCount >= 200) unlocked = true;
+        else if (ach.id === 'ep500' && episodeCount >= 500) unlocked = true;
+        else if (ach.id === 'ep750' && episodeCount >= 750) unlocked = true;
+        else if (ach.id === 'ep1000' && episodeCount >= 1000) unlocked = true;
+        else if (ach.id === 'cm100' && commentCount >= 100) unlocked = true;
+        else if (ach.id === 'cm200' && commentCount >= 200) unlocked = true;
+        else if (ach.id === 'cm500' && commentCount >= 500) unlocked = true;
+        else if (ach.id === 'cm750' && commentCount >= 750) unlocked = true;
+        else if (ach.id === 'cm1000' && commentCount >= 1000) unlocked = true;
+        else if (ach.id === 'fv100' && favCount >= 100) unlocked = true;
+        else if (ach.id === 'fv200' && favCount >= 200) unlocked = true;
+        else if (ach.id === 'fv500' && favCount >= 500) unlocked = true;
+        else if (ach.id === 'fv750' && favCount >= 750) unlocked = true;
+        else if (ach.id === 'fv1000' && favCount >= 1000) unlocked = true;
+        if (unlocked) {
+            DB.addAchievement(user.name, ach.id);
+            newAchievements.push(ach);
+        }
+    });
+    newAchievements.forEach(function(ach) {
+        showAchievementPopup(ach);
+    });
+    if (newAchievements.length > 0) {
+        renderAchievements();
+        renderProfile();
+    }
 }
 
 function showAchievementPopup(ach) {
-    // ... (стандартный код)
+    const popup = document.getElementById('achievementPopup');
+    if (!popup) return;
+    document.getElementById('popupIcon').textContent = ach.icon;
+    document.getElementById('popupName').textContent = ach.name;
+    document.getElementById('popupDesc').textContent = ach.desc;
+    document.getElementById('popupBadge').textContent = '🎖️ ' + (ach.title || 'Новое достижение!');
+    popup.classList.add('show');
+    spawnConfetti();
+    clearTimeout(window._popupTimer);
+    window._popupTimer = setTimeout(function() {
+        popup.classList.remove('show');
+    }, 5000);
+}
+
+function hidePopup() {
+    document.getElementById('achievementPopup').classList.remove('show');
 }
 
 function spawnConfetti() {
-    // ... (стандартный код)
+    const container = document.getElementById('confetti');
+    if (!container) return;
+    const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#a29bfe', '#fd79a8'];
+    let html = '';
+    for (let i = 0; i < 30; i++) {
+        const x = Math.random() * 100;
+        const size = 4 + Math.random() * 8;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const duration = 1.5 + Math.random() * 2;
+        const delay = Math.random() * 1.5;
+        html += `
+            <div style="position:absolute;left:${x}vw;top:-20px;width:${size}px;height:${size}px;background:${color};border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation:confettiFall ${duration}s ease-out forwards;animation-delay:${delay}s;transform:rotate(${Math.random() * 360}deg);"></div>
+        `;
+    }
+    container.innerHTML = html;
+    setTimeout(function() { container.innerHTML = ''; }, 4000);
 }
 
 // ПРОФИЛЬ
 function renderProfile() {
-    // ... (стандартный код)
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'warning');
+        navigate('catalog');
+        return;
+    }
+    const profiles = DB.get('profiles', {});
+    const profile = profiles[user.name] || { bio: '', avatar: '' };
+    document.getElementById('profileName').textContent = user.name;
+    document.getElementById('profileEmail').textContent = '📧 ' + user.email;
+    document.getElementById('profileBio').textContent = profile.bio || 'Нажмите чтобы добавить описание';
+    const img = document.getElementById('avatarImg');
+    const letter = document.getElementById('avatarLetter');
+    let avatarFound = false;
+    if (profile.avatar && profile.avatar.length > 100) {
+        img.src = profile.avatar;
+        img.style.display = 'block';
+        if (letter) letter.style.display = 'none';
+        avatarFound = true;
+    }
+    if (!avatarFound) {
+        const backupAvatar = localStorage.getItem('avatar_' + user.name);
+        if (backupAvatar && backupAvatar.length > 100) {
+            img.src = backupAvatar;
+            img.style.display = 'block';
+            if (letter) letter.style.display = 'none';
+            if (!profiles[user.name]) profiles[user.name] = {};
+            profiles[user.name].avatar = backupAvatar;
+            DB.set('profiles', profiles);
+            DB.save();
+            avatarFound = true;
+        }
+    }
+    if (!avatarFound) {
+        img.style.display = 'none';
+        if (letter) {
+            letter.style.display = 'flex';
+            letter.textContent = user.name[0].toUpperCase();
+        }
+    }
+    const favs = DB.getUserData(user.name, 'favorites', []);
+    document.getElementById('statFav').textContent = favs.length;
+    const comments = DB.get('comments', {});
+    let count = 0;
+    for (const k in comments) {
+        comments[k].forEach(function(c) {
+            if (c.user === user.name) count++;
+        });
+    }
+    document.getElementById('statComments').textContent = count;
+    document.getElementById('statAchievements').textContent = DB.getAchievements(user.name).length;
+    const activeTitle = DB.getActiveTitle(user.name);
+    const titleBadge = document.getElementById('profileTitle');
+    if (titleBadge && activeTitle) {
+        const ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === activeTitle; });
+        if (ach) {
+            titleBadge.textContent = '🎖️ ' + ach.title;
+            titleBadge.style.display = 'inline';
+            titleBadge.className = 'title-badge';
+        } else {
+            titleBadge.style.display = 'none';
+        }
+    } else if (titleBadge) {
+        titleBadge.style.display = 'none';
+    }
+    renderProfileAchievements(user.name);
+    renderTopUsers();
 }
 
-function renderMyComments() {
-    // ... (стандартный код)
+function renderProfileAchievements(user) {
+    const grid = document.getElementById('profileAchievementsGrid');
+    if (!grid) return;
+    const earned = DB.getAchievements(user);
+    const recent = earned.slice(-3).reverse();
+    if (recent.length === 0) {
+        grid.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Нет достижений</div>';
+        return;
+    }
+    let html = '';
+    recent.forEach(function(id) {
+        const ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === id; });
+        if (ach) {
+            html += `
+                <div class="profile-ach-item">
+                    <span class="ach-icon">${ach.icon}</span>
+                    <div class="ach-name">${ach.name}</div>
+                    ${ach.title ? `<div class="ach-title">🎖️ ${ach.title}</div>` : ''}
+                </div>
+            `;
+        }
+    });
+    grid.innerHTML = html;
 }
 
+// ТОП ПОЛЬЗОВАТЕЛЕЙ
 function renderTopUsers() {
-    // ... (стандартный код)
+    const container = document.getElementById('topUsers');
+    if (!container) return;
+    const users = DB.get('users', {});
+    const allData = {};
+    for (const u in users) {
+        const onlineTime = DB.getUserData(u, 'onlineTime', 0);
+        const lastSeen = DB.getUserData(u, 'lastSeen', 0);
+        const favs = DB.getUserData(u, 'favorites', []);
+        const comments = DB.get('comments', {});
+        let commentCount = 0;
+        for (const k in comments) {
+            comments[k].forEach(function(c) {
+                if (c.user === u) commentCount++;
+            });
+        }
+        const earned = DB.getAchievements(u);
+        const activeTitle = DB.getActiveTitle(u);
+        let titleName = '';
+        if (activeTitle) {
+            const ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === activeTitle; });
+            if (ach) titleName = ach.title;
+        }
+        const xp = favs.length * 10 + commentCount * 5 + earned.length * 20 + Math.floor(onlineTime / 60);
+        allData[u] = {
+            name: u,
+            email: users[u] || '',
+            favs: favs.length,
+            comments: commentCount,
+            achievements: earned.length,
+            onlineTime: onlineTime,
+            lastSeen: lastSeen,
+            xp: xp,
+            title: titleName,
+            isOnline: (Date.now() - lastSeen) < 300000
+        };
+    }
+    const sorted = Object.values(allData).sort(function(a, b) {
+        return b.xp - a.xp;
+    }).slice(0, 20);
+    if (sorted.length === 0) {
+        container.innerHTML = `
+            <div style="color:var(--text-muted);text-align:center;padding:30px;">
+                <span style="font-size:48px;display:block;margin-bottom:12px;">👑</span>
+                <p>Нет пользователей</p>
+                <p style="font-size:12px;">Станьте первым!</p>
+            </div>
+        `;
+        return;
+    }
+    const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+    const avatarGradients = ['avatar-gradient-1', 'avatar-gradient-2', 'avatar-gradient-3', 
+                           'avatar-gradient-4', 'avatar-gradient-5', 'avatar-gradient-6',
+                           'avatar-gradient-7', 'avatar-gradient-8', 'avatar-gradient-9', 'avatar-gradient-10'];
+    let html = `
+        <div class="top-users-wrapper">
+            <div class="top-users-header">
+                <h3>👑 Топ пользователей</h3>
+                <span class="top-update-time">🔄 Обновлено: ${new Date().toLocaleTimeString()}</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="top-users-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Пользователь</th>
+                            <th class="hide-mobile">📚 В изб.</th>
+                            <th class="hide-mobile">💬 Комм.</th>
+                            <th>🏆 Дост.</th>
+                            <th>⏱ Время</th>
+                            <th>⭐ XP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    const maxXP = sorted.length > 0 ? sorted[0].xp : 1;
+    sorted.forEach(function(user, index) {
+        const rankClass = index === 0 ? 'rank-1' : (index === 1 ? 'rank-2' : (index === 2 ? 'rank-3' : ''));
+        const medal = index < 10 ? medals[index] : '#' + (index + 1);
+        const avatarGrad = avatarGradients[index % avatarGradients.length];
+        const initial = user.name[0].toUpperCase();
+        const xpPercent = Math.min((user.xp / maxXP) * 100, 100);
+        html += `
+            <tr class="${rankClass}">
+                <td class="rank-cell">${medal}</td>
+                <td>
+                    <div class="user-info-cell">
+                        <div class="user-avatar-mini ${avatarGrad}">
+                            ${initial}
+                        </div>
+                        <div>
+                            <div class="user-name-cell">
+                                ${user.name} 
+                                <span style="font-size:11px;color:${user.isOnline ? '#2ecc71' : '#666'};">
+                                    ${user.isOnline ? '🟢' : '🟡'}
+                                </span>
+                            </div>
+                            ${user.title ? `<div class="user-title-cell">🎖️ ${user.title}</div>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td class="stat-cell hide-mobile">
+                    <span class="stat-number">${user.favs}</span>
+                    <span class="stat-label">аниме</span>
+                </td>
+                <td class="stat-cell hide-mobile">
+                    <span class="stat-number">${user.comments}</span>
+                    <span class="stat-label">комм.</span>
+                </td>
+                <td class="stat-cell">
+                    <span class="stat-number">${user.achievements}</span>
+                    <span class="stat-label">достиж.</span>
+                </td>
+                <td class="time-cell">
+                    <div class="time-value">${formatTime(user.onlineTime)}</div>
+                    <span class="time-label">${formatFullTime(user.onlineTime)}</span>
+                </td>
+                <td>
+                    <div class="xp-bar-wrapper">
+                        <div class="xp-bar-bg">
+                            <div class="xp-bar-fill" style="width:${xpPercent}%;"></div>
+                        </div>
+                        <div class="xp-text">${user.xp} XP</div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            <div class="status-legend">
+                <span class="status-legend-item">
+                    <span class="dot dot-online"></span> Онлайн
+                </span>
+                <span class="status-legend-item">
+                    <span class="dot dot-idle"></span> Недавно был
+                </span>
+                <span class="status-legend-item">
+                    <span class="dot dot-offline"></span> Не в сети
+                </span>
+                <span class="status-legend-item">
+                    ⭐ XP = Изб×10 + Комм×5 + Дост×20 + Время
+                </span>
+            </div>
+        </div>
+    `;
+    container.innerHTML = html;
 }
 
+// ============================================
+// АВАТАР
+// ============================================
+function uploadAvatar(input) {
+    if (!input || !input.files || input.files.length === 0) {
+        showToast('Выберите файл!', 'error');
+        return;
+    }
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    const file = input.files[0];
+    if (file.size > 20 * 1024 * 1024) {
+        showToast('Файл слишком большой! Максимум 20MB', 'error');
+        return;
+    }
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (validTypes.indexOf(file.type) === -1) {
+        showToast('Поддерживаются только изображения', 'error');
+        return;
+    }
+    showToast('⏳ Загрузка...', 'info');
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const avatarData = e.target.result;
+        const profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        profiles[user.name].avatar = avatarData;
+        DB.set('profiles', profiles);
+        localStorage.setItem('avatar_' + user.name, avatarData);
+        DB.save();
+        const img = document.getElementById('avatarImg');
+        const letter = document.getElementById('avatarLetter');
+        if (img) {
+            img.src = avatarData;
+            img.style.display = 'block';
+        }
+        if (letter) letter.style.display = 'none';
+        showToast('✅ Аватар обновлен!', 'success');
+    };
+    reader.onerror = function() {
+        showToast('Ошибка загрузки файла', 'error');
+    };
+    reader.readAsDataURL(file);
+}
+
+// ============================================
 // TOAST
+// ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
     if (old) old.remove();
@@ -897,7 +1270,9 @@ function showToast(message, type) {
     }, 3000);
 }
 
+// ============================================
 // МОДАЛЬНЫЕ ОКНА
+// ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
     if (!modal) return;
@@ -916,16 +1291,12 @@ function closeModal(id) {
     if (el) el.style.display = 'none';
 }
 
-// ОТСЛЕЖИВАНИЕ ВРЕМЕНИ
-function startOnlineTracking() {
-    // ... (стандартный код)
-}
-
 // ============================================
 // ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
+    restoreAllData();
     updateUI();
     navigate('catalog');
     const user = DB.get('currentUser');
@@ -935,7 +1306,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 // ЭКСПОРТ
 // ============================================
-window.playWithShikimori = playWithShikimori;
 window.openDetail = openDetail;
 window.navigate = navigate;
 window.goBack = goBack;
