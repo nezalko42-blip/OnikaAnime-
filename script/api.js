@@ -1,7 +1,6 @@
 // ============================================
 // API МОДУЛЬ ONIKAANIME (Anilibria API v1)
-// GET /anime/catalog/releases для каталога (быстрее)
-// НОВИНКИ — CREATED_AT_DESC
+// С ПОЛНОЙ ПОДДЕРЖКОЙ ВСЕХ МОДЕЛЕЙ ДАННЫХ
 // ============================================
 
 const API = {
@@ -9,7 +8,6 @@ const API = {
 
     // ===== БАЗОВЫЙ GET-ЗАПРОС =====
     async _get(endpoint, params = {}) {
-        // Очищаем параметры
         const cleanParams = {};
         for (const key in params) {
             if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
@@ -43,67 +41,34 @@ const API = {
         }
     },
 
-    // ===== БАЗОВЫЙ POST-ЗАПРОС =====
-    async _post(endpoint, body = {}) {
-        const url = `${this.BASE_URL}${endpoint}`;
-        
-        try {
-            console.log('📡 POST:', url, body);
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(body)
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP ${response.status}`);
-            }
-            const data = await response.json();
-            console.log('📦 Ответ:', data);
-            return data;
-        } catch (error) {
-            console.error('❌ POST Error:', error.message);
-            return null;
-        }
-    },
-
     // ============================================
-    // 1. КАТАЛОГ (GET /anime/catalog/releases) — БЫСТРЫЙ
+    // 1. КАТАЛОГ (GET /anime/catalog/releases)
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        // Формируем параметры для GET-запроса
         const params = {
             page: page,
             limit: 24,
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player'
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing,player,status'
         };
 
-        // Поисковый запрос
         if (query && query.length > 1) {
             params['f[search]'] = query;
         }
 
-        // Жанры
         if (genre) {
             params['f[genres]'] = [parseInt(genre)];
         } else if (filters.genres && filters.genres.length) {
             params['f[genres]'] = filters.genres.map(g => parseInt(g));
         }
 
-        // Типы
         if (filters.types && filters.types.length) {
             params['f[types]'] = filters.types;
         }
 
-        // Сезоны
         if (filters.seasons && filters.seasons.length) {
             params['f[seasons]'] = filters.seasons;
         }
 
-        // Годы
         if (filters.year_from) {
             params['f[years][from_year]'] = filters.year_from;
         }
@@ -111,20 +76,16 @@ const API = {
             params['f[years][to_year]'] = filters.year_to;
         }
 
-        // НОВИНКИ — сортировка по дате создания
         params['f[sorting]'] = filters.sorting || 'CREATED_AT_DESC';
 
-        // Возрастные рейтинги
         if (filters.age_ratings && filters.age_ratings.length) {
             params['f[age_ratings]'] = filters.age_ratings;
         }
 
-        // Статусы публикации
         if (filters.publish_statuses && filters.publish_statuses.length) {
             params['f[publish_statuses]'] = filters.publish_statuses;
         }
 
-        // Статусы производства
         if (filters.production_statuses && filters.production_statuses.length) {
             params['f[production_statuses]'] = filters.production_statuses;
         }
@@ -152,7 +113,7 @@ const API = {
             query: query,
             limit: 24,
             page: page,
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres'
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
         };
         const data = await this._get('/app/search/releases', params);
         console.log('🔍 Поиск данных:', data);
@@ -173,7 +134,7 @@ const API = {
     // ============================================
     async getSchedule() {
         const params = {
-            include: 'id,type.genres,name,poster,year,episodes_total'
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,publish_day'
         };
         const data = await this._get('/anime/schedule/week', params);
         if (data && Array.isArray(data)) {
@@ -191,7 +152,7 @@ const API = {
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('anilibria_', '');
         const params = {
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player'
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing,player,status,torrents'
         };
         const data = await this._get(`/anime/releases/${cleanId}`, params);
         if (data && data.id) {
@@ -206,7 +167,7 @@ const API = {
     async getRandomReleases(limit = 1) {
         const params = {
             limit: limit,
-            include: 'id,type.genres,name,poster,year,episodes_total'
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,publish_day'
         };
         const data = await this._get('/anime/releases/random', params);
         if (data && Array.isArray(data)) {
@@ -221,7 +182,7 @@ const API = {
     async getRecommended(limit = 6) {
         const params = {
             limit: limit,
-            include: 'id,type.genres,name,poster,year,episodes_total'
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,publish_day'
         };
         const data = await this._get('/anime/releases/recommended', params);
         console.log('🔥 Рекомендации данные:', data);
@@ -230,12 +191,11 @@ const API = {
             return data.map(item => this._convertItem(item));
         }
         
-        // Если рекомендаций нет — берём последние релизы (быстро)
         const fallbackParams = {
             page: 1,
             limit: limit,
             'f[sorting]': 'CREATED_AT_DESC',
-            include: 'id,type.genres,name,poster,year,episodes_total'
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,publish_day'
         };
         const fallbackData = await this._get('/anime/catalog/releases', fallbackParams);
         if (fallbackData && fallbackData.data && fallbackData.data.length > 0) {
@@ -267,7 +227,7 @@ const API = {
     },
 
     // ============================================
-    // 8. ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // 8. КОНВЕРТАЦИЯ С ПОЛНОЙ ПОДДЕРЖКОЙ ВСЕХ МОДЕЛЕЙ
     // ============================================
     _getPosterUrl(poster) {
         if (!poster) return '';
@@ -291,14 +251,82 @@ const API = {
         // Жанры
         const genres = (item.genres || []).map(g => g.name || g);
 
-        // Год и серии
+        // Основные поля
         const year = item.year || '--';
         const episodes = item.episodes_total || item.episodes?.total || '?';
-
-        // Возрастной рейтинг
         const ageRating = item.age_rating?.label || item.age_rating?.value || '0+';
+        const status = item.status?.string || item.status || 'Неизвестно';
+        const isOngoing = item.is_ongoing || false;
+
+        // Дополнительные поля из моделей
+        const publishDay = item.publish_day?.description || null;
+        const publishDayValue = item.publish_day?.value !== undefined ? item.publish_day.value : null;
+        const favoritesCount = item.added_in_users_favorites || 0;
+        const duration = item.average_duration_of_episode || null;
+        const createdAt = item.created_at || null;
+        const updatedAt = item.updated_at || null;
+        const externalPlayer = item.external_player || null;
+
+        // Извлечение ссылок на видео из player
+        let videoLinks = null;
+        let episodesList = null;
+        let totalEpisodes = null;
+
+        if (item.player) {
+            totalEpisodes = item.player.episodes || null;
+            
+            if (item.player.list) {
+                episodesList = Object.values(item.player.list).map(ep => ({
+                    episode: ep.episode || ep.serie || 0,
+                    name: ep.name || null,
+                    uuid: ep.uuid || null,
+                    created_timestamp: ep.created_timestamp || null,
+                    preview: ep.preview || null,
+                    hls: ep.hls ? {
+                        fhd: ep.hls.fhd || null,
+                        hd: ep.hls.hd || null,
+                        sd: ep.hls.sd || null
+                    } : null,
+                    skips: ep.skips || null
+                })).sort((a, b) => a.episode - b.episode);
+            }
+
+            // Берем первую серию для быстрого доступа к видео
+            if (episodesList && episodesList.length > 0) {
+                const firstEp = episodesList[0];
+                if (firstEp.hls) {
+                    videoLinks = firstEp.hls;
+                }
+            }
+        }
+
+        // Торренты
+        let torrents = null;
+        if (item.torrents && item.torrents.list) {
+            torrents = item.torrents.list.map(t => ({
+                torrent_id: t.torrent_id,
+                episodes: t.episodes || null,
+                quality: t.quality ? {
+                    string: t.quality.string || null,
+                    type: t.quality.type || null,
+                    resolution: t.quality.resolution || null,
+                    encoder: t.quality.encoder || null,
+                    lq_audio: t.quality.lq_audio || null
+                } : null,
+                leechers: t.leechers || 0,
+                seeders: t.seeders || 0,
+                downloads: t.downloads || 0,
+                total_size: t.total_size || 0,
+                size_string: t.size_string || null,
+                url: t.url || null,
+                magnet: t.magnet || null,
+                uploaded_timestamp: t.uploaded_timestamp || null,
+                hash: t.hash || null
+            }));
+        }
 
         return {
+            // Основные
             mal_id: 'anilibria_' + item.id,
             id: 'anilibria_' + item.id,
             title: title,
@@ -311,9 +339,29 @@ const API = {
             genres: genres,
             score: 0,
             age_rating: ageRating,
+            status: status,
             russian: title_russian,
             source: 'Anilibria v1',
-            external_player: item.external_player || null,
+            
+            // Дополнительные поля из моделей
+            publish_day: publishDay,
+            publish_day_value: publishDayValue,
+            favorites_count: favoritesCount,
+            duration: duration,
+            created_at: createdAt,
+            updated_at: updatedAt,
+            is_ongoing: isOngoing,
+            external_player: externalPlayer,
+            
+            // Видео и серии
+            video_links: videoLinks,
+            episodes_list: episodesList,
+            total_episodes: totalEpisodes,
+            
+            // Торренты
+            torrents: torrents,
+            
+            // Сырые данные
             _raw: item
         };
     },
@@ -356,10 +404,40 @@ const API = {
         return data || [];
     },
 
+    // ============================================
+    // 10. ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ДЛЯ НОВЫХ МОДЕЛЕЙ
+    // ============================================
+    
+    // Получение информации о торрентах релиза
+    async getReleaseTorrents(id) {
+        const cleanId = id.toString().replace('anilibria_', '');
+        const data = await this._get(`/anime/torrents/release/${cleanId}`);
+        if (data && data.data) {
+            return data.data;
+        }
+        return [];
+    },
+
+    // Получение информации о команде
+    async getTeam() {
+        const data = await this._get('/teams');
+        return data || [];
+    },
+
+    // Получение видео-контента
+    async getVideos(limit = 5) {
+        const params = { limit: limit };
+        const data = await this._get('/media/videos', params);
+        if (data && data.data) {
+            return data.data;
+        }
+        return [];
+    },
+
     clearCache() {
         console.log('🗑️ Кэш API очищен');
     }
 };
 
 window.API = API;
-console.log('✅ API модуль (GET каталог) загружен');
+console.log('✅ API модуль (полная поддержка моделей) загружен');
