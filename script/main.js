@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С ЖАНРАМИ)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -9,15 +9,14 @@ let previousPage = null;
 let page = 1;
 let genre = '';
 let query = '';
-let totalPages = 1;
+let totalCount = 0;
+let loadedCount = 0;
+let allItems = [];
 let onlineTimer = null;
 let startTime = Date.now();
-let scheduleCache = null;
-let scheduleCacheTime = 0;
 let isLoading = false;
 let activeFilters = {};
-let allGenres = [];
-let _currentGenreId = null;
+let isAllLoaded = false;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -43,7 +42,7 @@ const ACHIEVEMENTS_LIST = [
 // ============================================
 function navigate(pageName) {
     currentPage = pageName;
-    const pages = ['home', 'catalog', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings', 'genres'];
+    const pages = ['home', 'catalog', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings'];
     
     pages.forEach(p => {
         const el = document.getElementById(`page-${p}`);
@@ -52,16 +51,15 @@ function navigate(pageName) {
     
     if (pageName === 'home') {
         loadRecommendations();
-        // Не загружаем каталог
     }
     if (pageName === 'catalog') {
         loadCatalog();
+        loadFilterOptions();
     }
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
     if (pageName === 'achievements') renderAchievements();
     if (pageName === 'mycomments') renderMyComments();
-    if (pageName === 'genres') loadGenres();
     
     closeMenu();
 }
@@ -93,9 +91,6 @@ function updateUI() {
             <a data-page="catalog" onclick="navigate('catalog'); closeMenu();">
                 <span class="icon">📚</span> Каталог
             </a>
-            <a data-page="genres" onclick="navigate('genres'); closeMenu();">
-                <span class="icon">🎭</span> Жанры
-            </a>
             <a data-page="favorites" onclick="navigate('favorites'); closeMenu();">
                 <span class="icon">❤️</span> Избранное
             </a>
@@ -124,9 +119,6 @@ function updateUI() {
             </a>
             <a data-page="catalog" onclick="navigate('catalog'); closeMenu();">
                 <span class="icon">📚</span> Каталог
-            </a>
-            <a data-page="genres" onclick="navigate('genres'); closeMenu();">
-                <span class="icon">🎭</span> Жанры
             </a>
         `;
         footer.innerHTML = `<button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">🚀 Войти</button>`;
@@ -192,60 +184,151 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// 1. КАТАЛОГ
+// 1. КАТАЛОГ С ФИЛЬТРОМ
 // ============================================
 async function loadCatalog() {
     if (isLoading) return;
     isLoading = true;
     
     const grid = document.getElementById('grid');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const stats = document.getElementById('totalCount');
     if (!grid) return;
     
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка...</div>';
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+    if (stats) stats.textContent = 'Загрузка...';
     
     try {
-        const filters = getFiltersFromUI();
-        const result = await API.searchAll(query, genre, page, filters);
+        const filters = getCatalogFilters();
+        const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
+        
+        // Загружаем первую партию
+        const result = await API.searchAll(filters.search || '', '', 1, filters);
         
         if (result && result.items && result.items.length > 0) {
-            totalPages = result.totalPages || 1;
-            if (totalPages < 1) totalPages = 1;
+            allItems = result.items;
+            totalCount = result.totalCount || result.items.length;
             
-            result.items.forEach(item => {
+            // Сохраняем все данные
+            allItems.forEach(item => {
                 allData[item.mal_id] = item;
             });
             
-            renderCatalog(result.items);
-            renderPagination();
+            // Отображаем
+            renderCatalog(allItems);
+            
+            // Обновляем статистику
+            if (stats) {
+                const shown = allItems.length;
+                stats.textContent = `📊 Показано ${shown} из ${totalCount} аниме`;
+            }
+            
+            // Показываем кнопку "Загрузить ещё", если есть ещё
+            if (loadMoreBtn) {
+                if (allItems.length < totalCount && totalCount > limit) {
+                    loadMoreBtn.style.display = 'block';
+                    loadMoreBtn.textContent = `📥 Загрузить ещё (${allItems.length}/${totalCount})`;
+                } else {
+                    loadMoreBtn.style.display = 'none';
+                }
+            }
+            
+            isAllLoaded = allItems.length >= totalCount;
         } else {
-            showError('🔍 Ничего не найдено');
+            grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">🔍 Ничего не найдено</div>';
+            if (stats) stats.textContent = '📊 Найдено 0 аниме';
+            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+            allItems = [];
+            totalCount = 0;
         }
     } catch (error) {
         console.error('❌ Ошибка загрузки:', error);
-        showError('⚠️ Ошибка загрузки: ' + error.message);
+        grid.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">⚠️ Ошибка загрузки: ${error.message}</div>`;
     } finally {
         isLoading = false;
     }
 }
 
-function getFiltersFromUI() {
+// Загрузка дополнительных аниме
+async function loadMoreCatalog() {
+    if (isLoading || isAllLoaded) return;
+    isLoading = true;
+    
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const grid = document.getElementById('grid');
+    const stats = document.getElementById('totalCount');
+    
+    if (loadMoreBtn) {
+        loadMoreBtn.textContent = '⏳ Загрузка...';
+        loadMoreBtn.disabled = true;
+    }
+    
+    try {
+        const filters = getCatalogFilters();
+        const currentCount = allItems.length;
+        const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
+        const nextPage = Math.floor(currentCount / limit) + 1;
+        
+        const result = await API.searchAll(filters.search || '', '', nextPage, filters);
+        
+        if (result && result.items && result.items.length > 0) {
+            // Добавляем новые элементы
+            const newItems = result.items;
+            newItems.forEach(item => {
+                if (!allData[item.mal_id]) {
+                    allData[item.mal_id] = item;
+                }
+            });
+            
+            // Обновляем список всех элементов
+            allItems = [...allItems, ...newItems];
+            totalCount = result.totalCount || totalCount;
+            
+            // Перерисовываем
+            renderCatalog(allItems);
+            
+            // Обновляем статистику
+            if (stats) {
+                stats.textContent = `📊 Показано ${allItems.length} из ${totalCount} аниме`;
+            }
+            
+            // Проверяем, все ли загружены
+            isAllLoaded = allItems.length >= totalCount || newItems.length < limit;
+            
+            if (loadMoreBtn) {
+                if (!isAllLoaded) {
+                    loadMoreBtn.textContent = `📥 Загрузить ещё (${allItems.length}/${totalCount})`;
+                    loadMoreBtn.disabled = false;
+                } else {
+                    loadMoreBtn.style.display = 'none';
+                }
+            }
+        } else {
+            isAllLoaded = true;
+            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('❌ Ошибка загрузки:', error);
+        showToast('⚠️ Ошибка загрузки', 'error');
+    } finally {
+        isLoading = false;
+        if (loadMoreBtn) {
+            loadMoreBtn.disabled = false;
+        }
+    }
+}
+
+function getCatalogFilters() {
     const filters = {};
-
-    const genreChecks = document.querySelectorAll('#filterGenres input:checked');
-    if (genreChecks.length) {
-        filters.genres = Array.from(genreChecks).map(cb => parseInt(cb.value));
+    
+    // Поиск по названию
+    const searchInput = document.getElementById('filterSearchInput');
+    if (searchInput && searchInput.value.trim()) {
+        filters.search = searchInput.value.trim();
     }
-
-    const typeChecks = document.querySelectorAll('#filterTypes input:checked');
-    if (typeChecks.length) {
-        filters.types = Array.from(typeChecks).map(cb => cb.value);
-    }
-
-    const seasonChecks = document.querySelectorAll('#filterSeasons input:checked');
-    if (seasonChecks.length) {
-        filters.seasons = Array.from(seasonChecks).map(cb => cb.value);
-    }
-
+    
+    // Год
     const yearFrom = document.getElementById('filterYearFrom');
     const yearTo = document.getElementById('filterYearTo');
     if (yearFrom && yearFrom.value) {
@@ -254,35 +337,162 @@ function getFiltersFromUI() {
     if (yearTo && yearTo.value) {
         filters.year_to = parseInt(yearTo.value);
     }
-
-    const pubChecks = document.querySelectorAll('#filterPublishStatuses input:checked');
-    if (pubChecks.length) {
-        filters.publish_statuses = Array.from(pubChecks).map(cb => cb.value);
+    
+    // Жанры
+    const genreChecks = document.querySelectorAll('#filterGenres input:checked');
+    if (genreChecks.length) {
+        filters.genres = Array.from(genreChecks).map(cb => parseInt(cb.value));
     }
-
-    const prodChecks = document.querySelectorAll('#filterProductionStatuses input:checked');
-    if (prodChecks.length) {
-        filters.production_statuses = Array.from(prodChecks).map(cb => cb.value);
+    
+    // Типы
+    const typeChecks = document.querySelectorAll('#filterTypes input:checked');
+    if (typeChecks.length) {
+        filters.types = Array.from(typeChecks).map(cb => cb.value);
     }
-
+    
+    // Сезоны
+    const seasonChecks = document.querySelectorAll('#filterSeasons input:checked');
+    if (seasonChecks.length) {
+        filters.seasons = Array.from(seasonChecks).map(cb => cb.value);
+    }
+    
+    // Возраст
     const ageChecks = document.querySelectorAll('#filterAgeRatings input:checked');
     if (ageChecks.length) {
         filters.age_ratings = Array.from(ageChecks).map(cb => cb.value);
     }
-
+    
+    // Статус публикации
+    const pubChecks = document.querySelectorAll('#filterPublishStatuses input:checked');
+    if (pubChecks.length) {
+        filters.publish_statuses = Array.from(pubChecks).map(cb => cb.value);
+    }
+    
+    // Статус производства
+    const prodChecks = document.querySelectorAll('#filterProductionStatuses input:checked');
+    if (prodChecks.length) {
+        filters.production_statuses = Array.from(prodChecks).map(cb => cb.value);
+    }
+    
+    // Сортировка
     const sortSelect = document.getElementById('filterSorting');
     if (sortSelect && sortSelect.value) {
         filters.sorting = sortSelect.value;
     }
-
+    
     return filters;
 }
 
-function showError(msg) {
-    const grid = document.getElementById('grid');
-    if (grid) {
-        grid.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">${msg}</div>`;
+// Загрузка опций для фильтров
+async function loadFilterOptions() {
+    try {
+        // Жанры
+        const genres = await API.getGenres();
+        const genresContainer = document.getElementById('filterGenres');
+        if (genresContainer && genres.length) {
+            genresContainer.innerHTML = genres.map(g => `
+                <label>
+                    <input type="checkbox" value="${g.id}" onchange="applyCatalogFilters()">
+                    <span>${g.icon || '📚'} ${g.name}</span>
+                </label>
+            `).join('');
+        }
+        
+        // Типы
+        const types = await API.getTypes();
+        const typesContainer = document.getElementById('filterTypes');
+        if (typesContainer && types.length) {
+            typesContainer.innerHTML = types.map(t => `
+                <label>
+                    <input type="checkbox" value="${t}" onchange="applyCatalogFilters()">
+                    <span>${t}</span>
+                </label>
+            `).join('');
+        }
+        
+        // Сезоны
+        const seasons = await API.getSeasons();
+        const seasonsContainer = document.getElementById('filterSeasons');
+        if (seasonsContainer && seasons.length) {
+            seasonsContainer.innerHTML = seasons.map(s => `
+                <label>
+                    <input type="checkbox" value="${s}" onchange="applyCatalogFilters()">
+                    <span>${s}</span>
+                </label>
+            `).join('');
+        }
+        
+        // Возраст
+        const ages = await API.getAgeRatings();
+        const agesContainer = document.getElementById('filterAgeRatings');
+        if (agesContainer && ages.length) {
+            agesContainer.innerHTML = ages.map(a => `
+                <label>
+                    <input type="checkbox" value="${a}" onchange="applyCatalogFilters()">
+                    <span>${a}+</span>
+                </label>
+            `).join('');
+        }
+        
+        // Статус публикации
+        const pubStatuses = await API.getPublishStatuses();
+        const pubContainer = document.getElementById('filterPublishStatuses');
+        if (pubContainer && pubStatuses.length) {
+            pubContainer.innerHTML = pubStatuses.map(s => `
+                <label>
+                    <input type="checkbox" value="${s}" onchange="applyCatalogFilters()">
+                    <span>${s}</span>
+                </label>
+            `).join('');
+        }
+        
+        // Статус производства
+        const prodStatuses = await API.getProductionStatuses();
+        const prodContainer = document.getElementById('filterProductionStatuses');
+        if (prodContainer && prodStatuses.length) {
+            prodContainer.innerHTML = prodStatuses.map(s => `
+                <label>
+                    <input type="checkbox" value="${s}" onchange="applyCatalogFilters()">
+                    <span>${s}</span>
+                </label>
+            `).join('');
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки опций фильтров:', e);
     }
+}
+
+// Применить фильтры
+function applyCatalogFilters() {
+    allItems = [];
+    isAllLoaded = false;
+    loadCatalog();
+}
+
+// Сбросить фильтры
+function resetCatalogFilters() {
+    // Сбрасываем все чекбоксы
+    document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
+    
+    // Сбрасываем поля ввода
+    const searchInput = document.getElementById('filterSearchInput');
+    if (searchInput) searchInput.value = '';
+    
+    const yearFrom = document.getElementById('filterYearFrom');
+    const yearTo = document.getElementById('filterYearTo');
+    if (yearFrom) yearFrom.value = '';
+    if (yearTo) yearTo.value = '';
+    
+    // Сбрасываем селекты
+    const sortSelect = document.getElementById('filterSorting');
+    if (sortSelect) sortSelect.value = 'CREATED_AT_DESC';
+    
+    const limitSelect = document.getElementById('filterLimit');
+    if (limitSelect) limitSelect.value = '24';
+    
+    allItems = [];
+    isAllLoaded = false;
+    loadCatalog();
 }
 
 function renderCatalog(list) {
@@ -319,40 +529,6 @@ function renderCatalog(list) {
     });
     
     grid.innerHTML = html;
-}
-
-function renderPagination() {
-    const container = document.getElementById('pagination');
-    if (!container) return;
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    let html = '';
-    html += `<button ${page <= 1 ? 'disabled' : ''} onclick="goToPage(${page - 1})">←</button>`;
-    const start = Math.max(1, page - 2);
-    const end = Math.min(totalPages, page + 2);
-    if (start > 1) {
-        html += `<button onclick="goToPage(1)">1</button>`;
-        if (start > 2) html += `<button disabled>...</button>`;
-    }
-    for (let i = start; i <= end; i++) {
-        html += `<button class="${i === page ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
-    }
-    if (end < totalPages) {
-        if (end < totalPages - 1) html += `<button disabled>...</button>`;
-        html += `<button onclick="goToPage(${totalPages})">${totalPages}</button>`;
-    }
-    html += `<button ${page >= totalPages ? 'disabled' : ''} onclick="goToPage(${page + 1})">→</button>`;
-    container.innerHTML = html;
-}
-
-function goToPage(p) {
-    if (p < 1 || p > totalPages) return;
-    page = p;
-    loadCatalog();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ============================================
@@ -480,9 +656,7 @@ function selectAutocomplete(id) {
 async function openDetail(id) {
     if (!id) return showToast('Ошибка ID', 'error');
     
-    // Запоминаем текущую страницу перед переходом
     previousPage = currentPage;
-    
     navigate('detail');
     document.getElementById('detailTitle').textContent = 'Загрузка...';
     try {
@@ -535,62 +709,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 6. УСТАНОВКА ЖАНРА (для каталога)
-// ============================================
-function setGenre(genreId, btn) {
-    document.querySelectorAll('.genres a').forEach(function(el) {
-        el.classList.remove('active');
-    });
-    if (btn) btn.classList.add('active');
-    
-    window.genre = genreId;
-    window.query = '';
-    window.page = 1;
-    
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) searchInput.value = '';
-    
-    const titleEl = document.getElementById('title');
-    if (titleEl) {
-        if (genreId === 'latest') {
-            titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
-        } else if (genreId) {
-            const genreObj = window.allGenres?.find(g => g.id == genreId);
-            if (genreObj) {
-                titleEl.textContent = `${genreObj.icon || '🎭'} ${genreObj.name}`;
-            } else {
-                const genreNames = {
-                    '1': '🎬 Экшен',
-                    '8': '🎭 Драма',
-                    '21': '😂 Комедия',
-                    '10': '🧙 Фэнтези',
-                    '22': '💕 Романтика'
-                };
-                titleEl.textContent = genreNames[genreId] || '🎭 ' + (btn ? btn.textContent : 'Жанр');
-            }
-        } else {
-            titleEl.textContent = '📚 ВСЕ АНИМЕ';
-        }
-    }
-    
-    loadCatalog();
-}
-
-function applyFilters() {
-    page = 1;
-    loadCatalog();
-}
-
-function resetFilters() {
-    document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
-    document.querySelectorAll('#filterPanel select').forEach(sel => sel.value = '');
-    activeFilters = {};
-    page = 1;
-    loadCatalog();
-}
-
-// ============================================
-// 7. КОММЕНТАРИИ
+// 6. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -685,7 +804,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 8. ИЗБРАННОЕ
+// 7. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -748,20 +867,14 @@ function renderFavorites() {
 
 function searchAndOpen(name) {
     if (!name) return;
-    // Переключаемся на каталог и выполняем поиск
     navigate('catalog');
-    query = name;
-    page = 1;
-    genre = '';
-    const searchInput = document.getElementById('searchInput');
+    const searchInput = document.getElementById('filterSearchInput');
     if (searchInput) searchInput.value = name;
-    const titleEl = document.getElementById('title');
-    if (titleEl) titleEl.textContent = '🔍 Поиск: ' + name;
-    loadCatalog();
+    applyCatalogFilters();
 }
 
 // ============================================
-// 9. ДОСТИЖЕНИЯ
+// 8. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -859,7 +972,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 10. ПРОФИЛЬ
+// 9. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -950,7 +1063,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 11. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 10. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1104,7 +1217,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 12. АВАТАР
+// 11. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1152,89 +1265,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 13. ЖАНРЫ (НОВЫЕ ФУНКЦИИ)
-// ============================================
-
-async function loadGenres() {
-    const grid = document.getElementById('genresGrid');
-    if (!grid) return;
-    
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка жанров...</div>';
-    
-    try {
-        const genres = await API.getGenres();
-        window.allGenres = genres;
-        
-        if (!genres || genres.length === 0) {
-            grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">😅 Жанры не найдены</div>';
-            return;
-        }
-        
-        let html = '';
-        genres.forEach(genre => {
-            html += `
-                <div class="genre-card" onclick="openGenreDetail(${genre.id})">
-                    <div class="genre-icon">${genre.icon || '📚'}</div>
-                    <div class="genre-name">${genre.name}</div>
-                    ${genre.description ? `<div class="genre-desc">${genre.description}</div>` : ''}
-                    <div class="genre-stats">🔍 Подробнее</div>
-                </div>
-            `;
-        });
-        
-        grid.innerHTML = html;
-        
-    } catch (error) {
-        console.error('❌ Ошибка загрузки жанров:', error);
-        grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⚠️ Ошибка загрузки</div>';
-    }
-}
-
-async function openGenreDetail(genreId) {
-    try {
-        const genre = await API.getGenreDetails(genreId);
-        if (!genre) {
-            showToast('❌ Жанр не найден', 'error');
-            return;
-        }
-        
-        document.getElementById('genreDetailName').textContent = genre.name;
-        document.getElementById('genreDetailDesc').textContent = genre.description || 'Описание отсутствует';
-        document.getElementById('genreDetailCount').textContent = genre.releases_count || 'неизвестно';
-        
-        _currentGenreId = genreId;
-        document.getElementById('genreDetailModal').style.display = 'flex';
-    } catch (error) {
-        console.error('❌ Ошибка загрузки деталей жанра:', error);
-        showToast('⚠️ Ошибка загрузки', 'error');
-    }
-}
-
-async function loadGenreReleases() {
-    if (!_currentGenreId) {
-        showToast('❌ Жанр не выбран', 'error');
-        return;
-    }
-    
-    closeModal('genreDetailModal');
-    
-    const genre = window.allGenres?.find(g => g.id === _currentGenreId);
-    if (genre) {
-        // Переключаемся на каталог с фильтром по жанру
-        navigate('catalog');
-        window.genre = _currentGenreId;
-        window.query = '';
-        window.page = 1;
-        const titleEl = document.getElementById('title');
-        if (titleEl) {
-            titleEl.textContent = `${genre.icon || '🎭'} ${genre.name}`;
-        }
-        loadCatalog();
-    }
-}
-
-// ============================================
-// 14. TOAST
+// 12. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1266,7 +1297,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 15. МОДАЛЬНЫЕ ОКНА
+// 13. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1330,7 +1361,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 16. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 14. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1450,7 +1481,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 17. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 15. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -1487,7 +1518,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 18. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 16. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -1515,7 +1546,7 @@ function updateSocialStats() {
         const ttCurrent = ttBase + ttGrowth;
         ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
         ttElement.classList.add('pulse');
-        setTimeout(() => { ttElement.classList.remove('pulse'); }, 500);
+        setTimeout(() => { vkElement.classList.remove('pulse'); }, 500);
     }
 }
 
@@ -1525,7 +1556,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 19. МОИ КОММЕНТАРИИ
+// 17. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -1564,13 +1595,12 @@ function renderMyComments() {
 }
 
 // ============================================
-// 20. ЗАПУСК
+// 18. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
     restoreAllData();
     updateUI();
-    // Стартовая страница - home
     navigate('home');
     const user = DB.get('currentUser');
     if (user) {
@@ -1580,7 +1610,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 21. ЭКСПОРТ
+// 19. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -1602,10 +1632,9 @@ window.renderMyComments = renderMyComments;
 window.loadCatalog = loadCatalog;
 window.loadRecommendations = loadRecommendations;
 window.randomAnime = randomAnime;
-window.setGenre = setGenre;
-window.applyFilters = applyFilters;
-window.resetFilters = resetFilters;
-window.goToPage = goToPage;
+window.applyCatalogFilters = applyCatalogFilters;
+window.resetCatalogFilters = resetCatalogFilters;
+window.loadMoreCatalog = loadMoreCatalog;
 window.scrollToTop = scrollToTop;
 window.closeModal = closeModal;
 window.showToast = showToast;
@@ -1613,9 +1642,6 @@ window.showConfirmModal = showConfirmModal;
 window.formatNumber = formatNumber;
 window.formatTime = formatTime;
 window.formatFullTime = formatFullTime;
-window.loadGenres = loadGenres;
-window.openGenreDetail = openGenreDetail;
-window.loadGenreReleases = loadGenreReleases;
 window.uploadAvatar = uploadAvatar;
 window.updateSocialStats = updateSocialStats;
 
