@@ -113,7 +113,6 @@
                     </div>
                     <h2 id="title">📚 ВСЕ АНИМЕ</h2>
 
-                    <!-- ===== ПАНЕЛЬ ФИЛЬТРОВ (скрыта) ===== -->
                     <div class="filter-panel" id="filterPanel" style="background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:16px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.04);display:none;">
                         <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;">
                             <span style="font-weight:600;color:var(--text-secondary);">Фильтры:</span>
@@ -164,6 +163,21 @@
                         <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка каталога...</div>
                     </div>
                     <div class="pagination" id="pagination"></div>
+
+                    <!-- ===== СЛУЧАЙНЫЕ ЖАНРЫ ===== -->
+                    <section class="random-genres-section">
+                        <div class="random-genres-container" style="max-width:1200px;margin:30px auto;padding:0 16px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+                                <h2>🎲 Попробуйте что-то новое</h2>
+                                <button onclick="refreshRandomGenres()" class="rec-filter-btn" style="padding:8px 20px;">
+                                    🔄 Обновить
+                                </button>
+                            </div>
+                            <div class="random-genres-grid" id="randomGenresGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+                                <div style="text-align:center;padding:30px;color:#888;">⏳ Загрузка...</div>
+                            </div>
+                        </div>
+                    </section>
 
                     <!-- ===== РАСПИСАНИЕ ВЫХОДА ===== -->
                     <section class="schedule-section">
@@ -355,6 +369,20 @@
                         </div>
                         <div id="commentsList">
                             <div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== СТРАНИЦА ЖАНРОВ ===== -->
+                <div id="page-genres" style="display:none;">
+                    <span class="back-btn" onclick="goBack()">
+                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
+                        Назад
+                    </span>
+                    <div class="genres-page">
+                        <h2>🎭 Все жанры</h2>
+                        <div class="genres-grid" id="genresGrid">
+                            <div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка жанров...</div>
                         </div>
                     </div>
                 </div>
@@ -643,6 +671,25 @@
         </div>
     </div>
 
+    <!-- Детали жанра -->
+    <div class="modal" id="genreDetailModal">
+        <div class="modal-box" style="max-width:600px;">
+            <button class="modal-close" onclick="closeModal('genreDetailModal')">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
+            <div id="genreDetailContent">
+                <h2 id="genreDetailName">Жанр</h2>
+                <p id="genreDetailDesc">Описание</p>
+                <div id="genreDetailStats">
+                    <span>📺 Релизов: <strong id="genreDetailCount">0</strong></span>
+                </div>
+                <button class="btn-primary" onclick="loadGenreReleases()" style="width:100%;margin-top:12px;">
+                    🎬 Смотреть все релизы
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Удаление аккаунта -->
     <div class="modal" id="deleteAccountModal">
         <div class="modal-box">
@@ -750,6 +797,7 @@
                 <h4>📂 Разделы</h4>
                 <ul>
                     <li><a href="#" onclick="navigate('catalog');return false;">🏠 Главная</a></li>
+                    <li><a href="#" onclick="navigate('genres');return false;">🎭 Жанры</a></li>
                     <li><a href="#" onclick="navigate('favorites');return false;">❤️ Избранное</a></li>
                     <li><a href="#" onclick="navigate('achievements');return false;">🏆 Достижения</a></li>
                     <li><a href="#" onclick="navigate('profile');return false;">👤 Профиль</a></li>
@@ -832,6 +880,12 @@
                 setTimeout(function() {
                     loadRecommendations();
                 }, 400);
+            }
+            
+            if (typeof loadRandomGenres === 'function') {
+                setTimeout(function() {
+                    loadRandomGenres();
+                }, 500);
             }
             
             const user = DB.get('currentUser');
@@ -924,7 +978,7 @@
                         '10': '🧙 Фэнтези',
                         '22': '💕 Романтика'
                     };
-                    titleEl.textContent = genreNames[genreId] || '🎭 ' + btn.textContent;
+                    titleEl.textContent = genreNames[genreId] || '🎭 ' + (btn ? btn.textContent : 'Жанр');
                 } else {
                     titleEl.textContent = '📚 ВСЕ АНИМЕ';
                 }
