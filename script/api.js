@@ -1,6 +1,5 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (Anilibria API v1)
-// POST с фильтрацией по жанрам
+// API МОДУЛЬ ONIKAANIME (Anilibria API + Жанры)
 // ============================================
 
 const API = {
@@ -17,7 +16,6 @@ const API = {
         if (useCache && this._cache.has(cacheKey)) {
             const cached = this._cache.get(cacheKey);
             if (Date.now() - cached.time < this._cacheTTL) {
-                console.log('💾 Кэш GET:', endpoint);
                 return cached.data;
             } else {
                 this._cache.delete(cacheKey);
@@ -36,7 +34,6 @@ const API = {
         const url = queryString ? `${this.BASE_URL}${endpoint}?${queryString}` : `${this.BASE_URL}${endpoint}`;
         
         try {
-            console.log('📡 GET:', url);
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -49,7 +46,6 @@ const API = {
                 throw new Error(errorData.message || `HTTP ${response.status}`);
             }
             const data = await response.json();
-            console.log('📦 Ответ:', data);
             
             if (useCache && data) {
                 this._cache.set(cacheKey, { data, time: Date.now() });
@@ -70,13 +66,11 @@ const API = {
         if (this._cache.has(cacheKey)) {
             const cached = this._cache.get(cacheKey);
             if (Date.now() - cached.time < this._cacheTTL) {
-                console.log('💾 Кэш POST:', endpoint);
                 return cached.data;
             }
         }
         
         try {
-            console.log('📡 POST:', url, body);
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -90,7 +84,6 @@ const API = {
                 throw new Error(errorData.message || `HTTP ${response.status}`);
             }
             const data = await response.json();
-            console.log('📦 Ответ:', data);
             
             if (data) {
                 this._cache.set(cacheKey, { data, time: Date.now() });
@@ -104,7 +97,7 @@ const API = {
     },
 
     // ============================================
-    // 1. КАТАЛОГ (POST — с фильтрацией по жанрам)
+    // 1. КАТАЛОГ (POST с фильтрацией)
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
         if (genre === 'latest') {
@@ -122,9 +115,8 @@ const API = {
             body.f.search = query;
         }
 
-        // ===== ЖАНРЫ =====
+        // Жанры
         let genresArray = [];
-        
         if (genre && genre !== 'latest') {
             genresArray = [parseInt(genre)];
         } else if (filters.genres && filters.genres.length) {
@@ -177,7 +169,7 @@ const API = {
     },
 
     // ============================================
-    // 1.1. НОВИНКИ
+    // 2. НОВИНКИ
     // ============================================
     async _getLatestReleases(limit = 24) {
         const params = {
@@ -215,7 +207,7 @@ const API = {
     },
 
     // ============================================
-    // 2. ПОИСК
+    // 3. ПОИСК
     // ============================================
     async searchTitles(query, page = 1) {
         if (!query || query.length < 2) return { items: [], totalPages: 1 };
@@ -227,7 +219,6 @@ const API = {
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
         };
         const data = await this._get('/app/search/releases', params, false);
-        console.log('🔍 Поиск данных:', data);
         
         if (data && data.data && data.data.length > 0) {
             const items = data.data.map(item => this._convertItem(item));
@@ -241,7 +232,7 @@ const API = {
     },
 
     // ============================================
-    // 3. РАСПИСАНИЕ
+    // 4. РАСПИСАНИЕ
     // ============================================
     async getSchedule() {
         const params = {
@@ -258,7 +249,7 @@ const API = {
     },
 
     // ============================================
-    // 4. ДЕТАЛИ
+    // 5. ДЕТАЛИ АНИМЕ
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('anilibria_', '');
@@ -273,7 +264,7 @@ const API = {
     },
 
     // ============================================
-    // 5. СЛУЧАЙНОЕ
+    // 6. СЛУЧАЙНОЕ АНИМЕ
     // ============================================
     async getRandomReleases(limit = 1) {
         const params = {
@@ -288,7 +279,7 @@ const API = {
     },
 
     // ============================================
-    // 6. РЕКОМЕНДАЦИИ
+    // 7. РЕКОМЕНДАЦИИ
     // ============================================
     async getRecommended(limit = 6) {
         const params = {
@@ -296,7 +287,6 @@ const API = {
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,publish_day,added_in_users_favorites'
         };
         const data = await this._get('/anime/releases/recommended', params, true);
-        console.log('🔥 Рекомендации данные:', data);
         
         if (data && Array.isArray(data) && data.length > 0) {
             return data.map(item => this._convertItem(item));
@@ -306,7 +296,7 @@ const API = {
     },
 
     // ============================================
-    // 7. АВТОДОПОЛНЕНИЕ
+    // 8. АВТОДОПОЛНЕНИЕ
     // ============================================
     async searchAutocomplete(query, limit = 5) {
         if (!query || query.length < 2) return [];
@@ -327,7 +317,121 @@ const API = {
     },
 
     // ============================================
-    // 8. КОНВЕРТАЦИЯ
+    // 9. РАБОТА С ЖАНРАМИ (НОВЫЕ МЕТОДЫ)
+    // ============================================
+    
+    // 9.1. Получить все жанры
+    async getGenres() {
+        const data = await this._get('/anime/genres', {}, false);
+        if (data && Array.isArray(data)) {
+            return data.map(genre => ({
+                id: genre.id,
+                name: genre.name,
+                description: genre.description,
+                icon: this._getGenreIcon(genre.name)
+            }));
+        }
+        return [];
+    },
+
+    // 9.2. Получить данные по конкретному жанру
+    async getGenreDetails(genreId) {
+        const data = await this._get(`/anime/genres/${genreId}`, {}, false);
+        if (data) {
+            return {
+                id: data.id,
+                name: data.name,
+                description: data.description,
+                releases_count: data.releases_count || 0
+            };
+        }
+        return null;
+    },
+
+    // 9.3. Получить релизы по жанру
+    async getReleasesByGenre(genreId, page = 1, limit = 24) {
+        const params = {
+            page: page,
+            limit: limit,
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
+        };
+        
+        const data = await this._get(`/anime/genres/${genreId}/releases`, params, false);
+        
+        if (data && data.data && data.data.length > 0) {
+            const items = data.data.map(item => this._convertItem(item));
+            const totalPages = data.meta?.pagination?.total_pages || 1;
+            return {
+                items: items,
+                totalPages: totalPages,
+                genre: data.meta?.genre || null
+            };
+        }
+        return { items: [], totalPages: 1, genre: null };
+    },
+
+    // 9.4. Получить случайные жанры
+    async getRandomGenres(limit = 3) {
+        const params = { limit: limit };
+        const data = await this._get('/anime/genres/random', params, false);
+        if (data && Array.isArray(data)) {
+            return data.map(genre => ({
+                id: genre.id,
+                name: genre.name,
+                description: genre.description,
+                icon: this._getGenreIcon(genre.name)
+            }));
+        }
+        return [];
+    },
+
+    // 9.5. Получить случайные жанры для главной
+    async getRandomGenresForHome(limit = 4) {
+        const genres = await this.getGenres();
+        if (genres && genres.length > 0) {
+            const shuffled = genres.sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, limit);
+        }
+        return [];
+    },
+
+    // Вспомогательный метод для иконок жанров
+    _getGenreIcon(genreName) {
+        const icons = {
+            'Экшен': '⚔️',
+            'Приключения': '🗺️',
+            'Комедия': '😂',
+            'Драма': '🎭',
+            'Фэнтези': '🧙',
+            'Романтика': '💕',
+            'Научная фантастика': '🚀',
+            'Повседневность': '🏠',
+            'Триллер': '🔪',
+            'Ужасы': '👻',
+            'Мистика': '🔮',
+            'Спорт': '⚽',
+            'Детектив': '🔍',
+            'Психологическое': '🧠',
+            'Историческое': '🏯',
+            'Музыка': '🎵',
+            'Пародия': '🎭',
+            'Сёдзё': '👧',
+            'Сёнэн': '👦',
+            'Дзёсэй': '👩',
+            'Сэйнэн': '👨',
+            'Меха': '🤖',
+            'Киберпанк': '💻',
+            'Постапокалипсис': '🌆',
+            'Самураи': '⚔️',
+            'Вампиры': '🧛',
+            'Демоны': '👿',
+            'Магия': '🔮'
+        };
+        return icons[genreName] || '📚';
+    },
+
+    // ============================================
+    // 10. КОНВЕРТАЦИЯ ДАННЫХ
     // ============================================
     _getPosterUrl(poster) {
         if (!poster) return '';
@@ -451,13 +555,8 @@ const API = {
     },
 
     // ============================================
-    // 9. СПРАВОЧНИКИ
+    // 11. СПРАВОЧНИКИ (для фильтров)
     // ============================================
-    async getGenres() {
-        const data = await this._get('/anime/catalog/references/genres');
-        return data || [];
-    },
-
     async getTypes() {
         const data = await this._get('/anime/catalog/references/types');
         return data || [];
@@ -495,4 +594,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (POST с фильтрацией по жанрам) загружен');
+console.log('✅ API модуль (с поддержкой жанров) загружен');
