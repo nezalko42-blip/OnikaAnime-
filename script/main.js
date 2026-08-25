@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (ОПТИМИЗИРОВАННЫЙ)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С ЖАНРАМИ)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -193,23 +193,6 @@ async function loadCatalog() {
             result.items.forEach(item => {
                 allData[item.mal_id] = item;
             });
-            
-            const titleEl = document.getElementById('title');
-            if (titleEl && query && query.length > 1) {
-                titleEl.textContent = `🔍 Результаты поиска: "${query}" (${result.items.length})`;
-            } else if (titleEl && genre) {
-                const genreNames = {
-                    '1': '🎭 Экшен',
-                    '8': '🎭 Драма',
-                    '21': '🎭 Комедия',
-                    '10': '🎭 Фэнтези',
-                    '22': '🎭 Романтика',
-                    'latest': '🔥 НОВИНКИ'
-                };
-                titleEl.textContent = genreNames[genre] || '🎭 ' + (document.querySelector('.genres a.active')?.textContent || 'Жанр');
-            } else {
-                titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
-            }
             
             renderCatalog(result.items);
             renderPagination();
@@ -610,7 +593,57 @@ function showDetail(anime) {
 }
 
 // ============================================
-// КОММЕНТАРИИ
+// 7. УСТАНОВКА ЖАНРА
+// ============================================
+function setGenre(genreId, btn) {
+    document.querySelectorAll('.genres a').forEach(function(el) {
+        el.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+    
+    window.genre = genreId;
+    window.query = '';
+    window.page = 1;
+    
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+    
+    const titleEl = document.getElementById('title');
+    if (titleEl) {
+        if (genreId === 'latest') {
+            titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
+        } else if (genreId) {
+            const genreNames = {
+                '1': '🎬 Экшен',
+                '8': '🎭 Драма',
+                '21': '😂 Комедия',
+                '10': '🧙 Фэнтези',
+                '22': '💕 Романтика'
+            };
+            titleEl.textContent = genreNames[genreId] || '🎭 ' + btn.textContent;
+        } else {
+            titleEl.textContent = '📚 ВСЕ АНИМЕ';
+        }
+    }
+    
+    loadCatalog();
+}
+
+function applyFilters() {
+    page = 1;
+    loadCatalog();
+}
+
+function resetFilters() {
+    document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#filterPanel select').forEach(sel => sel.value = '');
+    activeFilters = {};
+    page = 1;
+    loadCatalog();
+}
+
+// ============================================
+// 8. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -705,7 +738,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// ИЗБРАННОЕ
+// 9. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -781,7 +814,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// ДОСТИЖЕНИЯ
+// 10. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -885,7 +918,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// ПРОФИЛЬ
+// 11. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -976,7 +1009,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 12. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1130,7 +1163,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// АВАТАР
+// 13. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1178,7 +1211,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// TOAST
+// 14. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1210,7 +1243,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// МОДАЛЬНЫЕ ОКНА
+// 15. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1274,7 +1307,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 16. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1394,7 +1427,7 @@ function saveEdit() {
 }
 
 // ============================================
-// ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 17. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -1431,7 +1464,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 18. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     console.log('🔄 Обновление статистики соцсетей...');
@@ -1470,7 +1503,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// ЗАПУСК
+// 19. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -1485,7 +1518,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// ЭКСПОРТ
+// 20. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -1508,6 +1541,8 @@ window.loadCatalog = loadCatalog;
 window.loadRecommendations = loadRecommendations;
 window.randomAnime = randomAnime;
 window.setGenre = setGenre;
+window.applyFilters = applyFilters;
+window.resetFilters = resetFilters;
 window.goToPage = goToPage;
 window.scrollToTop = scrollToTop;
 window.closeModal = closeModal;
