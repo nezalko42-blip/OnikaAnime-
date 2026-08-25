@@ -1,18 +1,24 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (Jikan + Anilibria.tv)
-// Основной - Anilibria.tv (работает)
-// Запасной - Jikan API
+// API МОДУЛЬ ONIKAANIME (УНИВЕРСАЛЬНЫЙ)
+// Использует: Anilibria (POST/GET), Jikan, Kodik, Anime365
+// Автоматическое переключение между API
 // ============================================
 
 const API = {
-    // Anilibria v1 (основной, работает)
-    ANILIBRIA_V1_URL: 'https://www.anilibria.tv/public/api/index.php',
-    // Anilibria v1 (альтернативный)
-    ANILIBRIA_ALT_URL: 'https://anilibria.top/api/v1',
-    // Jikan API (запасной)
+    // ===== ИСТОЧНИКИ API =====
+    ANILIBRIA_POST: 'https://www.anilibria.tv/public/api/index.php',
+    ANILIBRIA_GET: 'https://anilibria.top/api/v1',
     JIKAN_URL: 'https://api.jikan.moe/v4',
+    KODIK_URL: 'https://kodikapi.com',
+    ANIME365_URL: 'https://anime365.ru/api', // через враппер
     
-    // ===== БАЗОВЫЙ POST-ЗАПРОС (Anilibria v1) =====
+    // ===== КЭШ =====
+    _cache: new Map(),
+    _cacheTTL: 5 * 60 * 1000, // 5 минут
+
+    // ============================================
+    // 1. ANILIBRIA POST (ОСНОВНОЙ)
+    // ============================================
     async _postAnilibria(params = {}) {
         const formData = new URLSearchParams();
         for (const key in params) {
@@ -26,8 +32,8 @@ const API = {
         }
 
         try {
-            console.log('📡 POST Anilibria:', this.ANILIBRIA_V1_URL, params);
-            const response = await fetch(this.ANILIBRIA_V1_URL, {
+            console.log('📡 POST Anilibria:', params);
+            const response = await fetch(this.ANILIBRIA_POST, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -37,18 +43,31 @@ const API = {
             });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
-            console.log('📦 Ответ Anilibria:', data);
+            console.log('📦 Ответ Anilibria POST:', data);
             return data;
         } catch (error) {
-            console.error('❌ Anilibria Error:', error.message);
+            console.error('❌ Anilibria POST Error:', error.message);
             return null;
         }
     },
 
-    // ===== БАЗОВЫЙ GET-ЗАПРОС (Anilibria alt / Jikan) =====
+    // ============================================
+    // 2. БАЗОВЫЙ GET-ЗАПРОС (С КЭШЕМ)
+    // ============================================
     async _fetch(url, options = {}) {
+        const cacheKey = url;
+        if (this._cache.has(cacheKey)) {
+            const cached = this._cache.get(cacheKey);
+            if (Date.now() - cached.time < this._cacheTTL) {
+                console.log('💾 Кэш:', url);
+                return cached.data;
+            } else {
+                this._cache.delete(cacheKey);
+            }
+        }
+
         try {
-            console.log('📡 Запрос:', url);
+            console.log('📡 GET:', url);
             const response = await fetch(url, {
                 ...options,
                 headers: {
@@ -63,47 +82,28 @@ const API = {
             }
             const data = await response.json();
             console.log('📦 Ответ:', data);
+            
+            if (data) {
+                this._cache.set(cacheKey, { data, time: Date.now() });
+            }
+            
             return data;
         } catch (error) {
-            console.error('❌ API Error:', error.message);
+            console.error('❌ GET Error:', error.message);
             return null;
         }
     },
 
     // ============================================
-    // 1. КАТАЛОГ И ПОИСК (основной - Anilibria)
+    // 3. ПОИСК ЧЕРЕЗ ANILIBRIA POST
     // ============================================
-    async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        // Сначала пробуем Anilibria v1 (основной)
-        const result = await this._searchAnilibriaV1(query, genre, page);
-        if (result && result.items && result.items.length > 0) {
-            console.log('✅ Найдено через Anilibria v1:', result.items.length);
-            return result;
-        }
-
-        // Пробуем Anilibria alt
-        console.log('🔄 Пробуем Anilibria alt...');
-        const altResult = await this._searchAnilibriaAlt(query, genre, page);
-        if (altResult && altResult.items && altResult.items.length > 0) {
-            console.log('✅ Найдено через Anilibria alt:', altResult.items.length);
-            return altResult;
-        }
-
-        // Если ничего не нашли, пробуем Jikan
-        console.log('🔄 Пробуем Jikan...');
-        return await this._searchJikan(query, genre, page);
-    },
-
-    // ============================================
-    // 2. ПОИСК ЧЕРЕЗ ANILIBRIA V1 (основной)
-    // ============================================
-    async _searchAnilibriaV1(query = '', genre = null, page = 1) {
+    async _searchAnilibriaPost(query = '', genre = null, page = 1) {
         const perPage = 24;
         const params = {
             query: 'catalog',
             page: page,
             perPage: perPage,
-            sort: '2', // сортировка по новизне
+            sort: '2',
             xpage: 'catalog'
         };
 
@@ -118,7 +118,7 @@ const API = {
 
         const data = await this._postAnilibria(params);
         if (data && data.status === true && data.data && data.data.items) {
-            const items = data.data.items.map(item => this._convertAnilibriaV1Item(item));
+            const items = data.data.items.map(item => this._convertAnilibriaItem(item));
             const pagination = data.data.pagination || {};
             const totalPages = pagination.allPages || 1;
             return {
@@ -130,11 +130,11 @@ const API = {
     },
 
     // ============================================
-    // 3. ПОИСК ЧЕРЕЗ ANILIBRIA ALT (запасной)
+    // 4. ПОИСК ЧЕРЕЗ ANILIBRIA GET
     // ============================================
-    async _searchAnilibriaAlt(query = '', genre = null, page = 1) {
+    async _searchAnilibriaGet(query = '', genre = null, page = 1) {
         try {
-            let url = `${this.ANILIBRIA_ALT_URL}/anime/catalog/releases?page=${page}&limit=24`;
+            let url = `${this.ANILIBRIA_GET}/anime/catalog/releases?page=${page}&limit=24`;
             if (query && query.length > 1) {
                 url += `&f[search]=${encodeURIComponent(query)}`;
             }
@@ -143,7 +143,7 @@ const API = {
             }
             const data = await this._fetch(url);
             if (data && data.data && data.data.length > 0) {
-                const items = data.data.map(item => this._convertAnilibriaAltItem(item));
+                const items = data.data.map(item => this._convertAnilibriaGetItem(item));
                 const totalPages = data.meta?.pagination?.total_pages || 1;
                 return {
                     items: items,
@@ -151,13 +151,13 @@ const API = {
                 };
             }
         } catch (e) {
-            console.log('⚠️ Anilibria alt не удался');
+            console.log('⚠️ Anilibria GET не удался');
         }
         return { items: [], totalPages: 1 };
     },
 
     // ============================================
-    // 4. ПОИСК ЧЕРЕЗ JIKAN (запасной)
+    // 5. ПОИСК ЧЕРЕЗ JIKAN
     // ============================================
     async _searchJikan(query = '', genre = null, page = 1) {
         const limit = 24;
@@ -195,44 +195,100 @@ const API = {
     },
 
     // ============================================
-    // 5. ДЕТАЛИ (Anilibria v1)
+    // 6. ПОИСК ВИДЕО ЧЕРЕЗ KODIK
     // ============================================
-    async getAnimeDetails(id) {
-        const cleanId = id.toString().replace('anilibria_', '').replace('jikan_', '');
+    async _searchKodik(title, episode = 1) {
+        if (!title) return null;
         
-        // Пробуем Anilibria v1
-        const params = {
-            query: 'release',
-            id: cleanId
-        };
-        const data = await this._postAnilibria(params);
-        if (data && data.status === true && data.data) {
-            return this._convertAnilibriaV1Item(data.data);
+        try {
+            const url = `${this.KODIK_URL}/search?title=${encodeURIComponent(title)}&types=anime&limit=1`;
+            const data = await this._fetch(url);
+            if (data && data.results && data.results.length > 0) {
+                const result = data.results[0];
+                if (result.link) {
+                    return result.link;
+                }
+                if (result.last_episode && result.last_episode.link) {
+                    return result.last_episode.link;
+                }
+            }
+        } catch (e) {
+            console.log('⚠️ Kodik не найден для:', title);
         }
-
-        // Пробуем Anilibria alt
-        try {
-            const url = `${this.ANILIBRIA_ALT_URL}/anime/releases/${cleanId}`;
-            const altData = await this._fetch(url);
-            if (altData && altData.id) {
-                return this._convertAnilibriaAltItem(altData);
-            }
-        } catch (e) {}
-
-        // Пробуем Jikan
-        try {
-            const url = `${this.JIKAN_URL}/anime/${cleanId}/full`;
-            const jikanData = await this._fetch(url);
-            if (jikanData && jikanData.data) {
-                return this._convertJikanItem(jikanData.data);
-            }
-        } catch (e) {}
-
         return null;
     },
 
     // ============================================
-    // 6. РАСПИСАНИЕ (Anilibria v1)
+    // 7. ПОЛУЧЕНИЕ ССЫЛКИ НА ВИДЕО (ВСЕ ИСТОЧНИКИ)
+    // ============================================
+    async getVideoUrl(title, episode = 1) {
+        // 1. Пробуем Kodik
+        const kodikUrl = await this._searchKodik(title, episode);
+        if (kodikUrl) {
+            console.log('✅ Видео найдено через Kodik');
+            return kodikUrl;
+        }
+
+        // 2. Пробуем Anilibria (если есть external_player)
+        try {
+            const params = { query: 'search', search: title, page: 1, perPage: 1 };
+            const data = await this._postAnilibria(params);
+            if (data && data.status === true && data.data && data.data.items && data.data.items.length > 0) {
+                const item = data.data.items[0];
+                if (item.moon) {
+                    console.log('✅ Видео найдено через Anilibria');
+                    return item.moon;
+                }
+            }
+        } catch (e) {}
+
+        // 3. Пробуем Jikan (ссылка на MAL)
+        try {
+            const url = `${this.JIKAN_URL}/anime?q=${encodeURIComponent(title)}&limit=1`;
+            const data = await this._fetch(url);
+            if (data && data.data && data.data.length > 0) {
+                const malId = data.data[0].mal_id;
+                console.log('✅ Ссылка на MAL найдена');
+                return `https://myanimelist.net/anime/${malId}`;
+            }
+        } catch (e) {}
+
+        console.log('❌ Видео не найдено');
+        return null;
+    },
+
+    // ============================================
+    // 8. ОСНОВНАЯ ФУНКЦИЯ (ВСЕ API)
+    // ============================================
+    async searchAll(query = '', genre = null, page = 1, filters = {}) {
+        // 1. Anilibria POST (основной, работает)
+        const result1 = await this._searchAnilibriaPost(query, genre, page);
+        if (result1 && result1.items && result1.items.length > 0) {
+            console.log('✅ Найдено через Anilibria POST:', result1.items.length);
+            return result1;
+        }
+
+        // 2. Anilibria GET
+        const result2 = await this._searchAnilibriaGet(query, genre, page);
+        if (result2 && result2.items && result2.items.length > 0) {
+            console.log('✅ Найдено через Anilibria GET:', result2.items.length);
+            return result2;
+        }
+
+        // 3. Jikan
+        console.log('🔄 Пробуем Jikan...');
+        const result3 = await this._searchJikan(query, genre, page);
+        if (result3 && result3.items && result3.items.length > 0) {
+            console.log('✅ Найдено через Jikan:', result3.items.length);
+            return result3;
+        }
+
+        console.log('❌ Ничего не найдено ни в одном API');
+        return { items: [], totalPages: 1 };
+    },
+
+    // ============================================
+    // 9. РАСПИСАНИЕ (Anilibria POST)
     // ============================================
     async getSchedule() {
         const params = { query: 'schedule' };
@@ -240,14 +296,14 @@ const API = {
         if (data && data.status === true && Array.isArray(data.data)) {
             return data.data.map(dayObj => ({
                 day: parseInt(dayObj.day) - 1,
-                list: dayObj.items.map(item => this._convertAnilibriaV1Item(item))
+                list: dayObj.items.map(item => this._convertAnilibriaItem(item))
             }));
         }
         return [];
     },
 
     // ============================================
-    // 7. РЕКОМЕНДАЦИИ (Anilibria v1)
+    // 10. РЕКОМЕНДАЦИИ (Anilibria POST)
     // ============================================
     async getRecommended(limit = 6) {
         const params = {
@@ -259,13 +315,13 @@ const API = {
         };
         const data = await this._postAnilibria(params);
         if (data && data.status === true && data.data && data.data.items) {
-            return data.data.items.map(item => this._convertAnilibriaV1Item(item));
+            return data.data.items.map(item => this._convertAnilibriaItem(item));
         }
         return [];
     },
 
     // ============================================
-    // 8. СЛУЧАЙНОЕ (Anilibria v1)
+    // 11. СЛУЧАЙНОЕ (Anilibria POST)
     // ============================================
     async getRandomReleases(limit = 1) {
         const params = { query: 'random_release' };
@@ -280,7 +336,41 @@ const API = {
     },
 
     // ============================================
-    // 9. АВТОДОПОЛНЕНИЕ (Anilibria v1)
+    // 12. ДЕТАЛИ (ВСЕ API)
+    // ============================================
+    async getAnimeDetails(id) {
+        const cleanId = id.toString().replace('anilibria_', '').replace('jikan_', '');
+        
+        // 1. Anilibria POST
+        const params = { query: 'release', id: cleanId };
+        const data = await this._postAnilibria(params);
+        if (data && data.status === true && data.data) {
+            return this._convertAnilibriaItem(data.data);
+        }
+
+        // 2. Anilibria GET
+        try {
+            const url = `${this.ANILIBRIA_GET}/anime/releases/${cleanId}`;
+            const getData = await this._fetch(url);
+            if (getData && getData.id) {
+                return this._convertAnilibriaGetItem(getData);
+            }
+        } catch (e) {}
+
+        // 3. Jikan
+        try {
+            const url = `${this.JIKAN_URL}/anime/${cleanId}/full`;
+            const jikanData = await this._fetch(url);
+            if (jikanData && jikanData.data) {
+                return this._convertJikanItem(jikanData.data);
+            }
+        } catch (e) {}
+
+        return null;
+    },
+
+    // ============================================
+    // 13. АВТОДОПОЛНЕНИЕ (Anilibria POST)
     // ============================================
     async searchAutocomplete(query, limit = 5) {
         if (!query || query.length < 2) return [];
@@ -302,9 +392,9 @@ const API = {
     },
 
     // ============================================
-    // 10. КОНВЕРТАЦИЯ ANILIBRIA V1
+    // 14. КОНВЕРТАЦИЯ ANILIBRIA POST
     // ============================================
-    _convertAnilibriaV1Item(item) {
+    _convertAnilibriaItem(item) {
         let img = '';
         if (item.poster) {
             img = item.poster;
@@ -335,15 +425,15 @@ const API = {
             genres: genres,
             score: 0,
             russian: title_russian,
-            source: 'Anilibria v1',
+            source: 'Anilibria POST',
             _raw: item
         };
     },
 
     // ============================================
-    // 11. КОНВЕРТАЦИЯ ANILIBRIA ALT
+    // 15. КОНВЕРТАЦИЯ ANILIBRIA GET
     // ============================================
-    _convertAnilibriaAltItem(item) {
+    _convertAnilibriaGetItem(item) {
         let img = '';
         if (item.poster) {
             const poster = item.poster.optimized || item.poster;
@@ -372,13 +462,13 @@ const API = {
             genres: genres,
             score: 0,
             russian: item.name?.main || '',
-            source: 'Anilibria alt',
+            source: 'Anilibria GET',
             _raw: item
         };
     },
 
     // ============================================
-    // 12. КОНВЕРТАЦИЯ JIKAN
+    // 16. КОНВЕРТАЦИЯ JIKAN
     // ============================================
     _convertJikanItem(item) {
         let img = '';
@@ -411,10 +501,14 @@ const API = {
         };
     },
 
+    // ============================================
+    // 17. ОЧИСТКА КЭША
+    // ============================================
     clearCache() {
+        this._cache.clear();
         console.log('🗑️ Кэш API очищен');
     }
 };
 
 window.API = API;
-console.log('✅ API модуль (Jikan + Anilibria.tv) загружен');
+console.log('✅ API модуль (универсальный) загружен');
