@@ -14,6 +14,7 @@ let startTime = Date.now();
 let scheduleCache = null;
 let scheduleCacheTime = 0;
 let isLoading = false;
+let activeFilters = {};
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
