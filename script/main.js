@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Anilibria v2)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С ФИЛЬТРАМИ)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -11,8 +11,6 @@ let query = '';
 let totalPages = 1;
 let onlineTimer = null;
 let startTime = Date.now();
-let currentPlayer = null;
-let currentAnimeId = null;
 let scheduleCache = null;
 let scheduleCacheTime = 0;
 let isLoading = false;
@@ -184,8 +182,10 @@ async function loadCatalog() {
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка...</div>';
     
     try {
-        console.log('🔍 Запрос каталога:', { query, genre, page });
-        const result = await API.searchAll(query, genre, page);
+        const filters = getFiltersFromUI();
+        
+        console.log('🔍 Запрос каталога:', { query, genre, page, filters });
+        const result = await API.searchAll(query, genre, page, filters);
         console.log('📦 Ответ API:', result);
         
         if (result && result.items && result.items.length > 0) {
@@ -220,6 +220,56 @@ async function loadCatalog() {
     } finally {
         isLoading = false;
     }
+}
+
+function getFiltersFromUI() {
+    const filters = {};
+
+    const genreChecks = document.querySelectorAll('#filterGenres input:checked');
+    if (genreChecks.length) {
+        filters.genres = Array.from(genreChecks).map(cb => parseInt(cb.value));
+    }
+
+    const typeChecks = document.querySelectorAll('#filterTypes input:checked');
+    if (typeChecks.length) {
+        filters.types = Array.from(typeChecks).map(cb => cb.value);
+    }
+
+    const seasonChecks = document.querySelectorAll('#filterSeasons input:checked');
+    if (seasonChecks.length) {
+        filters.seasons = Array.from(seasonChecks).map(cb => cb.value);
+    }
+
+    const yearFrom = document.getElementById('filterYearFrom');
+    const yearTo = document.getElementById('filterYearTo');
+    if (yearFrom && yearFrom.value) {
+        filters.year_from = parseInt(yearFrom.value);
+    }
+    if (yearTo && yearTo.value) {
+        filters.year_to = parseInt(yearTo.value);
+    }
+
+    const pubChecks = document.querySelectorAll('#filterPublishStatuses input:checked');
+    if (pubChecks.length) {
+        filters.publish_statuses = Array.from(pubChecks).map(cb => cb.value);
+    }
+
+    const prodChecks = document.querySelectorAll('#filterProductionStatuses input:checked');
+    if (prodChecks.length) {
+        filters.production_statuses = Array.from(prodChecks).map(cb => cb.value);
+    }
+
+    const ageChecks = document.querySelectorAll('#filterAgeRatings input:checked');
+    if (ageChecks.length) {
+        filters.age_ratings = Array.from(ageChecks).map(cb => cb.value);
+    }
+
+    const sortSelect = document.getElementById('filterSorting');
+    if (sortSelect && sortSelect.value) {
+        filters.sorting = sortSelect.value;
+    }
+
+    return filters;
 }
 
 function showError(msg) {
@@ -535,18 +585,16 @@ function showDetail(anime) {
     btn.onclick = () => toggleFav(anime.title);
     renderComments(anime.title);
     
-    // Ссылка на Anilibria
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
-        const code = anime._raw?.code || '';
+        const code = anime._raw?.code || anime._raw?.alias || '';
+        const externalPlayer = anime.external_player || '';
         wrapper.innerHTML = `
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
                 <span style="font-size:48px;">🎬</span>
                 <span style="font-size:16px;color:#aaa;">Смотреть на Anilibria</span>
-                <a href="https://www.anilibria.tv/release/${code}" target="_blank" 
-                   style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
-                    🌐 Открыть на Anilibria
-                </a>
+                ${externalPlayer ? `<a href="${externalPlayer}" target="_blank" class="video-link">▶️ Открыть плеер</a>` : ''}
+                ${code ? `<a href="https://www.anilibria.tv/release/${code}" target="_blank" class="video-link">🌐 Открыть на Anilibria</a>` : ''}
             </div>
         `;
     }
@@ -648,63 +696,6 @@ function deleteComment(id) {
 }
 
 // ============================================
-// МОИ КОММЕНТАРИИ
-// ============================================
-function renderMyComments() {
-    const user = DB.get('currentUser');
-    const container = document.getElementById('myCommentsList');
-    if (!container) return;
-    if (!user) {
-        container.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
-        const countEl = document.getElementById('myCommentsCount');
-        if (countEl) countEl.textContent = '0 комментариев';
-        return;
-    }
-    fetch('/api/comments/all')
-        .then(res => res.json())
-        .then(comments => {
-            const myComments = comments.filter(c => c.user_name === user.name);
-            myComments.sort((a, b) => b.date.localeCompare(a.date));
-            const countEl = document.getElementById('myCommentsCount');
-            if (countEl) countEl.textContent = myComments.length + ' комментариев';
-            if (myComments.length === 0) {
-                container.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>';
-                return;
-            }
-            let html = '';
-            myComments.forEach(c => {
-                html += `
-                    <div class="my-comment-item">
-                        <div class="my-comment-header">
-                            <span class="my-comment-anime" onclick="searchAndOpen('${c.anime}')">📺 ${c.anime}</span>
-                            <button class="c-delete-btn" onclick="deleteComment(${c.id})">✕</button>
-                        </div>
-                        <div class="my-comment-text">${c.text}</div>
-                        <div class="my-comment-date">${c.date}</div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        })
-        .catch(() => {
-            container.innerHTML = '<div class="empty-state"><p>⚠️ Ошибка</p></div>';
-        });
-}
-
-function searchAndOpen(name) {
-    if (!name) return;
-    query = name;
-    page = 1;
-    genre = '';
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) searchInput.value = name;
-    const titleEl = document.getElementById('title');
-    if (titleEl) titleEl.textContent = '🔍 Поиск: ' + name;
-    navigate('catalog');
-    loadCatalog();
-}
-
-// ============================================
 // ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
@@ -765,6 +756,19 @@ function renderFavorites() {
         `;
     });
     grid.innerHTML = html;
+}
+
+function searchAndOpen(name) {
+    if (!name) return;
+    query = name;
+    page = 1;
+    genre = '';
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = name;
+    const titleEl = document.getElementById('title');
+    if (titleEl) titleEl.textContent = '🔍 Поиск: ' + name;
+    navigate('catalog');
+    loadCatalog();
 }
 
 // ============================================
@@ -832,7 +836,7 @@ function setActiveTitle(achId) {
 function checkAchievements(animeName) {
     const user = DB.get('currentUser');
     if (!user) return;
-    // ... (стандартная логика)
+    // ... стандартная логика
 }
 
 function showAchievementPopup(ach) {
@@ -968,7 +972,7 @@ function renderProfileAchievements(user) {
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
     if (!container) return;
-    // ... (стандартный код)
+    // ... стандартный код
 }
 
 // ============================================
