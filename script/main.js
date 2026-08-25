@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Anilibria v1)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (УНИВЕРСАЛЬНЫЙ API)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -15,6 +15,7 @@ let currentPlayer = null;
 let currentAnimeId = null;
 let scheduleCache = null;
 let scheduleCacheTime = 0;
+let isLoading = false;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -48,9 +49,11 @@ function navigate(pageName) {
     });
     
     if (pageName === 'catalog') {
-        loadCatalog();
-        loadRecommendations();
-        loadSchedule();
+        Promise.all([
+            loadCatalog(),
+            loadRecommendations(),
+            loadSchedule()
+        ]).catch(console.error);
     }
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
@@ -172,10 +175,13 @@ window.addEventListener('beforeunload', function() {
 // 1. КАТАЛОГ
 // ============================================
 async function loadCatalog() {
+    if (isLoading) return;
+    isLoading = true;
+    
     const grid = document.getElementById('grid');
     if (!grid) return;
     
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка...</div>';
     
     try {
         console.log('🔍 Запрос каталога:', { query, genre, page });
@@ -211,6 +217,8 @@ async function loadCatalog() {
     } catch (error) {
         console.error('❌ Ошибка загрузки:', error);
         showError('⚠️ Ошибка загрузки: ' + error.message);
+    } finally {
+        isLoading = false;
     }
 }
 
@@ -498,6 +506,11 @@ async function openDetail(id) {
         if (data) {
             if (!allData[id]) allData[id] = data;
             showDetail(data);
+            // Пытаемся найти видео
+            const videoUrl = await API.getVideoUrl(data.title, 1);
+            if (videoUrl) {
+                showVideo(videoUrl);
+            }
         } else {
             showToast('❌ Не найдено', 'error');
         }
@@ -526,28 +539,58 @@ function showDetail(anime) {
     btn.className = 'fav-btn' + (isFav ? ' active' : '');
     btn.onclick = () => toggleFav(anime.title);
     renderComments(anime.title);
-    
-    // Ссылка на Anilibria
+}
+
+function showVideo(url) {
     const wrapper = document.getElementById('playerWrapper');
-    if (wrapper) {
-        wrapper.innerHTML = `
-            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
-                <span style="font-size:48px;">🎬</span>
-                <span style="font-size:16px;color:#aaa;">Смотреть на Anilibria</span>
-                <a href="https://www.anilibria.tv/release/${anime._raw?.code || ''}" target="_blank" 
-                   style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
-                    🌐 Открыть на Anilibria
-                </a>
-            </div>
-        `;
+    if (!wrapper) return;
+    
+    // Определяем тип ссылки
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        // YouTube
+        const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
+        if (videoId) {
+            wrapper.innerHTML = `
+                <iframe src="https://www.youtube.com/embed/${videoId[1]}" 
+                        allowfullscreen 
+                        allow="autoplay; encrypted-media" 
+                        style="width:100%;height:100%;border:none;"
+                        frameborder="0">
+                </iframe>
+            `;
+            return;
+        }
     }
+    
+    // Если ссылка на плеер Anilibria или Kodik
+    if (url.includes('anilibria') || url.includes('kodik')) {
+        wrapper.innerHTML = `
+            <iframe src="${url}" 
+                    allowfullscreen 
+                    allow="autoplay; encrypted-media" 
+                    style="width:100%;height:100%;border:none;"
+                    frameborder="0">
+            </iframe>
+        `;
+        return;
+    }
+    
+    // Если ссылка на MAL или другая
+    wrapper.innerHTML = `
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+            <span style="font-size:48px;">🎬</span>
+            <span style="font-size:16px;color:#aaa;">Смотреть онлайн</span>
+            <a href="${url}" target="_blank" 
+               style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
+                🌐 Открыть плеер
+            </a>
+        </div>
+    `;
 }
 
 // ============================================
-// ОСТАЛЬНЫЕ ФУНКЦИИ (комментарии, избранное, достижения, профиль)
+// 7. КОММЕНТАРИИ
 // ============================================
-
-// КОММЕНТАРИИ
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
     if (!container) return;
@@ -640,7 +683,66 @@ function deleteComment(id) {
     });
 }
 
-// ИЗБРАННОЕ
+// ============================================
+// 8. МОИ КОММЕНТАРИИ
+// ============================================
+function renderMyComments() {
+    const user = DB.get('currentUser');
+    const container = document.getElementById('myCommentsList');
+    if (!container) return;
+    if (!user) {
+        container.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
+        const countEl = document.getElementById('myCommentsCount');
+        if (countEl) countEl.textContent = '0 комментариев';
+        return;
+    }
+    fetch('/api/comments/all')
+        .then(res => res.json())
+        .then(comments => {
+            const myComments = comments.filter(c => c.user_name === user.name);
+            myComments.sort((a, b) => b.date.localeCompare(a.date));
+            const countEl = document.getElementById('myCommentsCount');
+            if (countEl) countEl.textContent = myComments.length + ' комментариев';
+            if (myComments.length === 0) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>';
+                return;
+            }
+            let html = '';
+            myComments.forEach(c => {
+                html += `
+                    <div class="my-comment-item">
+                        <div class="my-comment-header">
+                            <span class="my-comment-anime" onclick="searchAndOpen('${c.anime}')">📺 ${c.anime}</span>
+                            <button class="c-delete-btn" onclick="deleteComment(${c.id})">✕</button>
+                        </div>
+                        <div class="my-comment-text">${c.text}</div>
+                        <div class="my-comment-date">${c.date}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        })
+        .catch(() => {
+            container.innerHTML = '<div class="empty-state"><p>⚠️ Ошибка загрузки</p></div>';
+        });
+}
+
+function searchAndOpen(name) {
+    if (!name) return;
+    query = name;
+    page = 1;
+    genre = '';
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = name;
+    const titleEl = document.getElementById('title');
+    if (titleEl) titleEl.textContent = '🔍 Поиск: ' + name;
+    navigate('catalog');
+    loadCatalog();
+}
+
+// ============================================
+// 9. ИЗБРАННОЕ
+// ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
     if (!user) {
@@ -663,29 +765,298 @@ function toggleFav(name) {
 }
 
 function renderFavorites() {
-    // ... (стандартный код)
+    const user = DB.get('currentUser');
+    const grid = document.getElementById('favGrid');
+    if (!grid) return;
+    if (!user) {
+        grid.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
+        return;
+    }
+    const favs = DB.getUserData(user.name, 'favorites', []);
+    document.getElementById('favCount').textContent = favs.length + ' аниме';
+    if (favs.length === 0) {
+        grid.innerHTML = '<div class="empty-state"><span class="empty-icon">💔</span><p>Пусто</p></div>';
+        return;
+    }
+    let html = '';
+    favs.forEach((name, index) => {
+        let img = '';
+        const colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
+        const color = colors[index % colors.length];
+        for (const id in allData) {
+            if (allData[id] && allData[id].title === name) {
+                img = allData[id].images?.jpg?.image_url || '';
+                break;
+            }
+        }
+        html += `
+            <div class="card" onclick="searchAndOpen('${name}')">
+                <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:40px;' : ''}">
+                    ${img ? '<img src="' + img + '" loading="lazy">' : '❤️'}
+                </div>
+                <div class="card-body">
+                    <div class="title">${name}</div>
+                </div>
+            </div>
+        `;
+    });
+    grid.innerHTML = html;
 }
 
-// ДОСТИЖЕНИЯ
+// ============================================
+// 10. ДОСТИЖЕНИЯ
+// ============================================
 function renderAchievements() {
-    // ... (стандартный код)
+    const user = DB.get('currentUser');
+    const grid = document.getElementById('achievementsGrid');
+    if (!grid) return;
+    if (!user) {
+        grid.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
+        updateAchievementStats([], ACHIEVEMENTS_LIST.length);
+        return;
+    }
+    const earned = DB.getAchievements(user.name);
+    const total = ACHIEVEMENTS_LIST.length;
+    const activeTitle = DB.getActiveTitle(user.name);
+    updateAchievementStats(earned, total);
+    if (ACHIEVEMENTS_LIST.length === 0) {
+        grid.innerHTML = '<div class="empty-state"><p>🏆 Достижения временно недоступны</p></div>';
+        return;
+    }
+    let html = '';
+    ACHIEVEMENTS_LIST.forEach(ach => {
+        const isEarned = earned.indexOf(ach.id) !== -1;
+        const isActive = activeTitle === ach.id;
+        html += `
+            <div class="ach-card ${isEarned ? 'earned' : 'locked'}">
+                <div class="ach-icon">${ach.icon}</div>
+                <div class="ach-name">${ach.name}</div>
+                <div class="ach-desc">${ach.desc}</div>
+                ${ach.title ? `<div class="ach-title">🎖️ Титул: ${ach.title}</div>` : ''}
+                <div class="ach-status">${isEarned ? '✅ Получено' : '🔒 Закрыто'}</div>
+                ${isEarned ? `<button class="ach-btn ${isActive ? 'active' : ''}" onclick="setActiveTitle('${ach.id}')">${isActive ? '✅ Активен' : '👑 Установить титул'}</button>` : ''}
+            </div>
+        `;
+    });
+    grid.innerHTML = html;
 }
 
-// ПРОФИЛЬ
+function updateAchievementStats(earned, total) {
+    document.getElementById('achEarnedCount').textContent = earned.length;
+    document.getElementById('achTotalCount').textContent = total;
+    document.getElementById('achProgress').textContent = total > 0 ? Math.round((earned.length / total) * 100) + '%' : '0%';
+    document.getElementById('achProgressFill').style.width = total > 0 ? (earned.length / total) * 100 + '%' : '0%';
+}
+
+function setActiveTitle(achId) {
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    const earned = DB.getAchievements(user.name);
+    if (earned.indexOf(achId) === -1) {
+        showToast('❌ Достижение не получено!', 'error');
+        return;
+    }
+    DB.setActiveTitle(user.name, achId);
+    renderAchievements();
+    renderProfile();
+    showToast('👑 Титул установлен!', 'success');
+}
+
+function checkAchievements(animeName) {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    // ... (стандартная логика)
+}
+
+function showAchievementPopup(ach) {
+    const popup = document.getElementById('achievementPopup');
+    if (!popup) return;
+    document.getElementById('popupIcon').textContent = ach.icon;
+    document.getElementById('popupName').textContent = ach.name;
+    document.getElementById('popupDesc').textContent = ach.desc;
+    document.getElementById('popupBadge').textContent = '🎖️ ' + (ach.title || 'Новое достижение!');
+    popup.classList.add('show');
+    spawnConfetti();
+    clearTimeout(window._popupTimer);
+    window._popupTimer = setTimeout(() => { popup.classList.remove('show'); }, 5000);
+}
+
+function hidePopup() {
+    document.getElementById('achievementPopup').classList.remove('show');
+}
+
+function spawnConfetti() {
+    const container = document.getElementById('confetti');
+    if (!container) return;
+    const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#a29bfe', '#fd79a8'];
+    let html = '';
+    for (let i = 0; i < 30; i++) {
+        const x = Math.random() * 100;
+        const size = 4 + Math.random() * 8;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const duration = 1.5 + Math.random() * 2;
+        const delay = Math.random() * 1.5;
+        html += `
+            <div style="position:absolute;left:${x}vw;top:-20px;width:${size}px;height:${size}px;background:${color};border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation:confettiFall ${duration}s ease-out forwards;animation-delay:${delay}s;transform:rotate(${Math.random() * 360}deg);"></div>
+        `;
+    }
+    container.innerHTML = html;
+    setTimeout(() => { container.innerHTML = ''; }, 4000);
+}
+
+// ============================================
+// 11. ПРОФИЛЬ
+// ============================================
 function renderProfile() {
-    // ... (стандартный код)
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'warning');
+        navigate('catalog');
+        return;
+    }
+    const profiles = DB.get('profiles', {});
+    const profile = profiles[user.name] || { bio: '', avatar: '' };
+    document.getElementById('profileName').textContent = user.name;
+    document.getElementById('profileEmail').textContent = '📧 ' + user.email;
+    document.getElementById('profileBio').textContent = profile.bio || 'Нажмите чтобы добавить описание';
+    const img = document.getElementById('avatarImg');
+    const letter = document.getElementById('avatarLetter');
+    let avatarFound = false;
+    if (profile.avatar && profile.avatar.length > 100) {
+        img.src = profile.avatar;
+        img.style.display = 'block';
+        if (letter) letter.style.display = 'none';
+        avatarFound = true;
+    }
+    if (!avatarFound) {
+        const backupAvatar = localStorage.getItem('avatar_' + user.name);
+        if (backupAvatar && backupAvatar.length > 100) {
+            img.src = backupAvatar;
+            img.style.display = 'block';
+            if (letter) letter.style.display = 'none';
+            if (!profiles[user.name]) profiles[user.name] = {};
+            profiles[user.name].avatar = backupAvatar;
+            DB.set('profiles', profiles);
+            DB.save();
+            avatarFound = true;
+        }
+    }
+    if (!avatarFound) {
+        img.style.display = 'none';
+        if (letter) {
+            letter.style.display = 'flex';
+            letter.textContent = user.name[0].toUpperCase();
+        }
+    }
+    const favs = DB.getUserData(user.name, 'favorites', []);
+    document.getElementById('statFav').textContent = favs.length;
+    document.getElementById('statComments').textContent = 0;
+    document.getElementById('statAchievements').textContent = DB.getAchievements(user.name).length;
+    const activeTitle = DB.getActiveTitle(user.name);
+    const titleBadge = document.getElementById('profileTitle');
+    if (titleBadge && activeTitle) {
+        const ach = ACHIEVEMENTS_LIST.find(a => a.id === activeTitle);
+        if (ach) {
+            titleBadge.textContent = '🎖️ ' + ach.title;
+            titleBadge.style.display = 'inline';
+            titleBadge.className = 'title-badge';
+        } else {
+            titleBadge.style.display = 'none';
+        }
+    } else if (titleBadge) {
+        titleBadge.style.display = 'none';
+    }
+    renderProfileAchievements(user.name);
+    renderTopUsers();
 }
 
-function renderMyComments() {
-    // ... (стандартный код)
+function renderProfileAchievements(user) {
+    const grid = document.getElementById('profileAchievementsGrid');
+    if (!grid) return;
+    const earned = DB.getAchievements(user);
+    const recent = earned.slice(-3).reverse();
+    if (recent.length === 0) {
+        grid.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Нет достижений</div>';
+        return;
+    }
+    let html = '';
+    recent.forEach(id => {
+        const ach = ACHIEVEMENTS_LIST.find(a => a.id === id);
+        if (ach) {
+            html += `
+                <div class="profile-ach-item">
+                    <span class="ach-icon">${ach.icon}</span>
+                    <div class="ach-name">${ach.name}</div>
+                    ${ach.title ? `<div class="ach-title">🎖️ ${ach.title}</div>` : ''}
+                </div>
+            `;
+        }
+    });
+    grid.innerHTML = html;
 }
 
+// ============================================
+// 12. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// ============================================
 function renderTopUsers() {
+    const container = document.getElementById('topUsers');
+    if (!container) return;
     // ... (стандартный код)
 }
 
 // ============================================
-// TOAST
+// 13. АВАТАР
+// ============================================
+function uploadAvatar(input) {
+    if (!input || !input.files || input.files.length === 0) {
+        showToast('Выберите файл!', 'error');
+        return;
+    }
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    const file = input.files[0];
+    if (file.size > 20 * 1024 * 1024) {
+        showToast('Файл слишком большой! Максимум 20MB', 'error');
+        return;
+    }
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (validTypes.indexOf(file.type) === -1) {
+        showToast('Поддерживаются только изображения', 'error');
+        return;
+    }
+    showToast('⏳ Загрузка...', 'info');
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const avatarData = e.target.result;
+        const profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        profiles[user.name].avatar = avatarData;
+        DB.set('profiles', profiles);
+        localStorage.setItem('avatar_' + user.name, avatarData);
+        DB.save();
+        const img = document.getElementById('avatarImg');
+        const letter = document.getElementById('avatarLetter');
+        if (img) {
+            img.src = avatarData;
+            img.style.display = 'block';
+        }
+        if (letter) letter.style.display = 'none';
+        showToast('✅ Аватар обновлен!', 'success');
+    };
+    reader.onerror = function() {
+        showToast('Ошибка загрузки файла', 'error');
+    };
+    reader.readAsDataURL(file);
+}
+
+// ============================================
+// 14. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -717,7 +1088,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// МОДАЛЬНЫЕ ОКНА
+// 15. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -732,13 +1103,252 @@ function showConfirmModal(title, text, callback, icon) {
     modal.style.display = 'flex';
 }
 
+function deleteAccount() {
+    if (!DB.get('currentUser')) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    if (confirm('Вы уверены, что хотите удалить аккаунт? Это действие необратимо!')) {
+        const user = DB.get('currentUser');
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/delete-account');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            DB.set('currentUser', null);
+            localStorage.removeItem('onika_currentUser');
+            localStorage.removeItem('onika_data');
+            updateUI();
+            navigate('catalog');
+            showToast('✅ Аккаунт удален', 'success');
+            if (typeof stopOnlineTracking === 'function') {
+                stopOnlineTracking();
+            }
+            setTimeout(() => { location.reload(); }, 500);
+        };
+        xhr.send(JSON.stringify({ userId: user.id }));
+    }
+}
+
 function closeModal(id) {
     const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+    if (el) {
+        el.style.display = 'none';
+    }
+}
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+    }
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            }
+        });
+    }
+});
+
+// ============================================
+// 16. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// ============================================
+function editProfile(type) {
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    window._editType = type;
+    const input = document.getElementById('editInput');
+    const textarea = document.getElementById('editTextarea');
+    const title = document.getElementById('editTitle');
+    if (!input || !textarea || !title) return;
+    input.style.display = type === 'bio' ? 'none' : 'block';
+    textarea.style.display = type === 'bio' ? 'block' : 'none';
+    if (type === 'name') {
+        title.textContent = '✏️ Изменить никнейм';
+        input.value = user.name;
+        input.placeholder = 'Введите новый никнейм';
+        input.type = 'text';
+    } else if (type === 'email') {
+        title.textContent = '✏️ Изменить email';
+        input.value = user.email;
+        input.placeholder = 'Введите новый email';
+        input.type = 'email';
+    } else if (type === 'pass') {
+        title.textContent = '🔑 Изменить пароль';
+        input.value = '';
+        input.placeholder = 'Введите новый пароль';
+        input.type = 'password';
+    } else if (type === 'bio') {
+        title.textContent = '📝 Изменить описание';
+        input.style.display = 'none';
+        textarea.style.display = 'block';
+        const profiles = DB.get('profiles', {});
+        textarea.value = (profiles[user.name] && profiles[user.name].bio) || '';
+        textarea.placeholder = 'Введите описание';
+    }
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function saveEdit() {
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    const input = document.getElementById('editInput');
+    const textarea = document.getElementById('editTextarea');
+    const type = window._editType || 'bio';
+    const val = type === 'bio' ? textarea.value.trim() : input.value.trim();
+    if (!val) {
+        showToast('Поле не может быть пустым!', 'error');
+        return;
+    }
+    if (type === 'name') {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/update-name');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            try {
+                const data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    const oldName = user.name;
+                    user.name = val;
+                    localStorage.setItem('onika_currentUser', JSON.stringify(user));
+                    DB._data.currentUser = user;
+                    if (DB._data.favorites[oldName]) {
+                        DB._data.favorites[val] = DB._data.favorites[oldName];
+                        delete DB._data.favorites[oldName];
+                    }
+                    if (DB._data.achievements[oldName]) {
+                        DB._data.achievements[val] = DB._data.achievements[oldName];
+                        delete DB._data.achievements[oldName];
+                    }
+                    if (DB._data.activeTitle[oldName]) {
+                        DB._data.activeTitle[val] = DB._data.activeTitle[oldName];
+                        delete DB._data.activeTitle[oldName];
+                    }
+                    if (DB._data.profiles[oldName]) {
+                        DB._data.profiles[val] = DB._data.profiles[oldName];
+                        delete DB._data.profiles[oldName];
+                    }
+                    const backupFavs = localStorage.getItem('favorites_' + oldName);
+                    if (backupFavs) {
+                        localStorage.setItem('favorites_' + val, backupFavs);
+                        localStorage.removeItem('favorites_' + oldName);
+                    }
+                    const backupAvatar = localStorage.getItem('avatar_' + oldName);
+                    if (backupAvatar) {
+                        localStorage.setItem('avatar_' + val, backupAvatar);
+                        localStorage.removeItem('avatar_' + oldName);
+                    }
+                    DB.save();
+                    closeModal('editModal');
+                    renderProfile();
+                    updateUI();
+                    showToast('✅ Никнейм изменен на ' + val, 'success');
+                } else {
+                    showToast(data.error || 'Ошибка', 'error');
+                }
+            } catch(e) {
+                showToast('Ошибка сервера', 'error');
+            }
+        };
+        xhr.send(JSON.stringify({ userId: user.id, newName: val }));
+    } else if (type === 'bio') {
+        const profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        profiles[user.name].bio = val;
+        DB.set('profiles', profiles);
+        closeModal('editModal');
+        renderProfile();
+        showToast('✅ Описание обновлено!', 'success');
+    } else {
+        showToast('❌ Изменение этого поля пока не поддерживается', 'warning');
+    }
 }
 
 // ============================================
-// ЗАПУСК
+// 17. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// ============================================
+function restoreAllData() {
+    console.log('🔄 Восстановление данных...');
+    const user = DB.get('currentUser');
+    if (!user) return;
+    const backupFavs = localStorage.getItem('favorites_' + user.name);
+    if (backupFavs) {
+        try {
+            const parsed = JSON.parse(backupFavs);
+            if (parsed && parsed.length > 0) {
+                const currentFavs = DB.getUserData(user.name, 'favorites', []);
+                if (currentFavs.length === 0) {
+                    DB.setUserData(user.name, 'favorites', parsed);
+                    console.log('📚 Восстановлено избранное:', parsed.length);
+                }
+            }
+        } catch(e) {}
+    }
+    const backupAvatar = localStorage.getItem('avatar_' + user.name);
+    if (backupAvatar) {
+        const profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        if (!profiles[user.name].avatar) {
+            profiles[user.name].avatar = backupAvatar;
+            DB.set('profiles', profiles);
+            console.log('🖼️ Восстановлена аватарка');
+        }
+    }
+    DB.save();
+    if (typeof renderProfile === 'function') renderProfile();
+    if (typeof renderFavorites === 'function') renderFavorites();
+    if (typeof renderAchievements === 'function') renderAchievements();
+    console.log('✅ Восстановление завершено');
+}
+
+// ============================================
+// 18. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// ============================================
+function updateSocialStats() {
+    console.log('🔄 Обновление статистики соцсетей...');
+    const tgElement = document.getElementById('tgStats');
+    if (tgElement) {
+        const tgBase = 1200;
+        const tgGrowth = Math.floor(Math.random() * 30);
+        const tgCurrent = tgBase + tgGrowth;
+        tgElement.textContent = '👥 ' + formatNumber(tgCurrent) + ' подписчиков';
+        tgElement.classList.add('pulse');
+        setTimeout(() => { tgElement.classList.remove('pulse'); }, 500);
+    }
+    const vkElement = document.getElementById('vkStats');
+    if (vkElement) {
+        const vkBase = 856;
+        const vkGrowth = Math.floor(Math.random() * 20);
+        const vkCurrent = vkBase + vkGrowth;
+        vkElement.textContent = '👥 ' + formatNumber(vkCurrent) + ' подписчиков';
+        vkElement.classList.add('pulse');
+        setTimeout(() => { vkElement.classList.remove('pulse'); }, 500);
+    }
+    const ttElement = document.getElementById('ttStats');
+    if (ttElement) {
+        const ttBase = 2400;
+        const ttGrowth = Math.floor(Math.random() * 50);
+        const ttCurrent = ttBase + ttGrowth;
+        ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
+        ttElement.classList.add('pulse');
+        setTimeout(() => { ttElement.classList.remove('pulse'); }, 500);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updateSocialStats, 1000);
+    setInterval(updateSocialStats, 30000);
+});
+
+// ============================================
+// 19. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -746,11 +1356,14 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUI();
     navigate('catalog');
     const user = DB.get('currentUser');
-    if (user) startOnlineTracking();
+    if (user) {
+        startOnlineTracking();
+    }
+    console.log('✅ OnikaAnime готов!');
 });
 
 // ============================================
-// ЭКСПОРТ
+// 20. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -759,6 +1372,9 @@ window.toggleMenu = toggleMenu;
 window.closeMenu = closeMenu;
 window.showLoginModal = showLoginModal;
 window.logout = logout;
+window.deleteAccount = deleteAccount;
+window.editProfile = editProfile;
+window.saveEdit = saveEdit;
 window.toggleFav = toggleFav;
 window.addComment = addComment;
 window.deleteComment = deleteComment;
@@ -775,3 +1391,6 @@ window.scrollToTop = scrollToTop;
 window.closeModal = closeModal;
 window.showToast = showToast;
 window.showConfirmModal = showConfirmModal;
+window.formatNumber = formatNumber;
+window.formatTime = formatTime;
+window.formatFullTime = formatFullTime;
