@@ -1,16 +1,31 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (Anilibria API v1)
-// Полностью рабочий, с поддержкой русского поиска
+// API МОДУЛЬ ONIKAANIME (Anilibria v1 с кэшированием)
 // ============================================
 
 const API = {
-    // Anilibria API v1 через POST
     ANILIBRIA_URL: 'https://www.anilibria.tv/public/api/index.php',
-    // Альтернативный URL (если основной не работает)
     ANILIBRIA_ALT_URL: 'https://api.anilibria.tv/v1',
+    
+    // Кэш для результатов
+    _cache: new Map(),
+    _cacheTTL: 5 * 60 * 1000, // 5 минут
 
-    // ===== БАЗОВЫЙ POST-ЗАПРОС =====
-    async _post(url, params = {}) {
+    // ===== БАЗОВЫЙ POST-ЗАПРОС С КЭШИРОВАНИЕМ =====
+    async _post(url, params = {}, useCache = true) {
+        // Генерируем ключ кэша
+        const cacheKey = url + '|' + JSON.stringify(params);
+        
+        // Проверяем кэш
+        if (useCache && this._cache.has(cacheKey)) {
+            const cached = this._cache.get(cacheKey);
+            if (Date.now() - cached.time < this._cacheTTL) {
+                console.log('💾 Кэш:', cacheKey);
+                return cached.data;
+            } else {
+                this._cache.delete(cacheKey);
+            }
+        }
+
         const formData = new URLSearchParams();
         for (const key in params) {
             if (params[key] !== undefined && params[key] !== null) {
@@ -35,6 +50,12 @@ const API = {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
             console.log('📦 Ответ:', data);
+            
+            // Сохраняем в кэш
+            if (useCache && data && data.status === true) {
+                this._cache.set(cacheKey, { data, time: Date.now() });
+            }
+            
             return data;
         } catch (error) {
             console.error('❌ API Error:', error.message);
@@ -42,8 +63,18 @@ const API = {
         }
     },
 
-    // ===== БАЗОВЫЙ GET-ЗАПРОС =====
-    async _get(url) {
+    // ===== БАЗОВЫЙ GET-ЗАПРОС С КЭШИРОВАНИЕМ =====
+    async _get(url, useCache = true) {
+        if (useCache && this._cache.has(url)) {
+            const cached = this._cache.get(url);
+            if (Date.now() - cached.time < this._cacheTTL) {
+                console.log('💾 Кэш GET:', url);
+                return cached.data;
+            } else {
+                this._cache.delete(url);
+            }
+        }
+
         try {
             console.log('📡 GET:', url);
             const response = await fetch(url, {
@@ -55,6 +86,11 @@ const API = {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
             console.log('📦 Ответ:', data);
+            
+            if (useCache && data) {
+                this._cache.set(url, { data, time: Date.now() });
+            }
+            
             return data;
         } catch (error) {
             console.error('❌ API Error:', error.message);
@@ -63,22 +99,20 @@ const API = {
     },
 
     // ============================================
-    // 1. КАТАЛОГ И ПОИСК
+    // 1. КАТАЛОГ И ПОИСК (с кэшированием)
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
         const perPage = 24;
 
-        // Если есть поисковый запрос - используем search
         if (query && query.length > 0) {
             return await this._searchTitles(query, page);
         }
 
-        // Иначе - каталог через catalog
         const params = {
             query: 'catalog',
             page: page,
             perPage: perPage,
-            sort: '2', // сортировка по новизне
+            sort: '2',
             xpage: 'catalog'
         };
 
@@ -97,12 +131,11 @@ const API = {
             };
         }
 
-        // Если основной URL не работает, пробуем альтернативный
         return await this._searchAlt(query, genre, page);
     },
 
     // ============================================
-    // 2. ПОИСК ПО НАЗВАНИЮ
+    // 2. ПОИСК ПО НАЗВАНИЮ (с кэшированием)
     // ============================================
     async _searchTitles(query, page = 1) {
         const perPage = 24;
@@ -127,7 +160,7 @@ const API = {
     },
 
     // ============================================
-    // 3. АЛЬТЕРНАТИВНЫЙ ПОИСК (GET)
+    // 3. АЛЬТЕРНАТИВНЫЙ ПОИСК
     // ============================================
     async _searchAlt(query = '', genre = null, page = 1) {
         try {
@@ -154,7 +187,7 @@ const API = {
     },
 
     // ============================================
-    // 4. РАСПИСАНИЕ
+    // 4. РАСПИСАНИЕ (с кэшированием)
     // ============================================
     async getSchedule() {
         const params = { query: 'schedule' };
@@ -169,7 +202,7 @@ const API = {
     },
 
     // ============================================
-    // 5. ДЕТАЛИ
+    // 5. ДЕТАЛИ (с кэшированием)
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('anilibria_', '');
@@ -200,15 +233,14 @@ const API = {
     },
 
     // ============================================
-    // 7. РЕКОМЕНДАЦИИ
+    // 7. РЕКОМЕНДАЦИИ (с кэшированием)
     // ============================================
     async getRecommended(limit = 6) {
-        // Используем catalog с сортировкой по популярности
         const params = {
             query: 'catalog',
             page: 1,
             perPage: limit,
-            sort: '1', // по популярности
+            sort: '1',
             xpage: 'catalog'
         };
         const data = await this._post(this.ANILIBRIA_URL, params);
@@ -219,7 +251,7 @@ const API = {
     },
 
     // ============================================
-    // 8. АВТОДОПОЛНЕНИЕ
+    // 8. АВТОДОПОЛНЕНИЕ (с кэшированием)
     // ============================================
     async searchAutocomplete(query, limit = 5) {
         if (!query || query.length < 2) return [];
@@ -316,10 +348,14 @@ const API = {
         };
     },
 
+    // ============================================
+    // 11. ОЧИСТКА КЭША
+    // ============================================
     clearCache() {
+        this._cache.clear();
         console.log('🗑️ Кэш API очищен');
     }
 };
 
 window.API = API;
-console.log('✅ API модуль (Anilibria v1) загружен');
+console.log('✅ API модуль (Anilibria v1 с кэшем) загружен');
