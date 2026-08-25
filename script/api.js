@@ -1,6 +1,6 @@
 // ============================================
 // API МОДУЛЬ ONIKAANIME (Anilibria API v1)
-// С ИСПРАВЛЕННЫМИ ЖАНРАМИ И НОВИНКАМИ
+// С ПРАВИЛЬНОЙ ФИЛЬТРАЦИЕЙ ПО ЖАНРАМ
 // ============================================
 
 const API = {
@@ -63,16 +63,11 @@ const API = {
     },
 
     // ============================================
-    // 1. КАТАЛОГ (С ПРАВИЛЬНЫМИ ЖАНРАМИ И НОВИНКАМИ)
+    // 1. КАТАЛОГ (ВСЕ АНИМЕ)
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        // Если выбраны НОВИНКИ (genre === 'latest')
+        // Если выбран жанр "Новинки" (genre === 'latest')
         if (genre === 'latest') {
-            return await this._getLatestReleases(24);
-        }
-
-        // Если это первая страница и нет поиска и фильтров — показываем новинки
-        if (page === 1 && !query && !genre && Object.keys(filters).length === 0) {
             return await this._getLatestReleases(24);
         }
 
@@ -87,15 +82,17 @@ const API = {
             params['f[search]'] = query;
         }
 
-        // ===== ЖАНРЫ — ПРАВИЛЬНЫЙ ФОРМАТ =====
+        // ===== ФИЛЬТРАЦИЯ ПО ЖАНРАМ =====
         let genresArray = [];
         
+        // Если выбран конкретный жанр (не 'latest')
         if (genre && genre !== 'latest') {
             genresArray = [parseInt(genre)];
         } else if (filters.genres && filters.genres.length) {
             genresArray = filters.genres.map(g => parseInt(g));
         }
 
+        // Добавляем жанры в параметры запроса
         if (genresArray.length > 0) {
             genresArray.forEach((g, index) => {
                 params[`f[genres][${index}]`] = g;
@@ -181,11 +178,27 @@ const API = {
             };
         }
         
+        // Fallback
+        const fallbackParams = {
+            page: 1,
+            limit: limit,
+            'f[sorting]': 'CREATED_AT_DESC',
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
+        };
+        const fallbackData = await this._get('/anime/catalog/releases', fallbackParams, true);
+        if (fallbackData && fallbackData.data && fallbackData.data.length > 0) {
+            const items = fallbackData.data.map(item => this._convertItem(item));
+            return {
+                items: items,
+                totalPages: 1
+            };
+        }
+        
         return { items: [], totalPages: 1 };
     },
 
     // ============================================
-    // 2. ПОИСК (GET /app/search/releases)
+    // 2. ПОИСК
     // ============================================
     async searchTitles(query, page = 1) {
         if (!query || query.length < 2) return { items: [], totalPages: 1 };
@@ -211,7 +224,7 @@ const API = {
     },
 
     // ============================================
-    // 3. РАСПИСАНИЕ (GET /anime/schedule/week)
+    // 3. РАСПИСАНИЕ
     // ============================================
     async getSchedule() {
         const params = {
@@ -228,7 +241,7 @@ const API = {
     },
 
     // ============================================
-    // 4. ДЕТАЛИ (GET /anime/releases/{id})
+    // 4. ДЕТАЛИ
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('anilibria_', '');
@@ -243,7 +256,7 @@ const API = {
     },
 
     // ============================================
-    // 5. СЛУЧАЙНОЕ (GET /anime/releases/random)
+    // 5. СЛУЧАЙНОЕ
     // ============================================
     async getRandomReleases(limit = 1) {
         const params = {
@@ -276,7 +289,7 @@ const API = {
     },
 
     // ============================================
-    // 7. АВТОДОПОЛНЕНИЕ (GET /app/search/releases)
+    // 7. АВТОДОПОЛНЕНИЕ
     // ============================================
     async searchAutocomplete(query, limit = 5) {
         if (!query || query.length < 2) return [];
@@ -465,4 +478,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (с жанрами и новинками) загружен');
+console.log('✅ API модуль (с фильтрацией по жанрам) загружен');
