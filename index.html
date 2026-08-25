@@ -103,17 +103,17 @@
                 <!-- ===== КАТАЛОГ ===== -->
                 <div id="page-catalog">
                     <div class="genres" id="genresNav">
-                        <a class="active" data-genre="" onclick="setGenre('', this)">Все</a>
+                        <a class="active" data-genre="" onclick="setGenre('', this)">📚 Все</a>
                         <a data-genre="latest" onclick="setGenre('latest', this)">🔥 Новинки</a>
-                        <a data-genre="1" onclick="setGenre('1', this)">Экшен</a>
-                        <a data-genre="8" onclick="setGenre('8', this)">Драма</a>
-                        <a data-genre="21" onclick="setGenre('21', this)">Комедия</a>
-                        <a data-genre="10" onclick="setGenre('10', this)">Фэнтези</a>
-                        <a data-genre="22" onclick="setGenre('22', this)">Романтика</a>
+                        <a data-genre="1" onclick="setGenre('1', this)">🎬 Экшен</a>
+                        <a data-genre="8" onclick="setGenre('8', this)">🎭 Драма</a>
+                        <a data-genre="21" onclick="setGenre('21', this)">😂 Комедия</a>
+                        <a data-genre="10" onclick="setGenre('10', this)">🧙 Фэнтези</a>
+                        <a data-genre="22" onclick="setGenre('22', this)">💕 Романтика</a>
                     </div>
-                    <h2 id="title">🔥 НОВИНКИ АНИМЕ</h2>
+                    <h2 id="title">📚 ВСЕ АНИМЕ</h2>
 
-                    <!-- ===== ПАНЕЛЬ ФИЛЬТРОВ ===== -->
+                    <!-- ===== ПАНЕЛЬ ФИЛЬТРОВ (скрыта, но можно показать при необходимости) ===== -->
                     <div class="filter-panel" id="filterPanel" style="background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:16px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.04);display:none;">
                         <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;">
                             <span style="font-weight:600;color:var(--text-secondary);">Фильтры:</span>
@@ -918,15 +918,15 @@
                     titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
                 } else if (genreId) {
                     const genreNames = {
-                        '1': '🎭 Экшен',
+                        '1': '🎬 Экшен',
                         '8': '🎭 Драма',
-                        '21': '🎭 Комедия',
-                        '10': '🎭 Фэнтези',
-                        '22': '🎭 Романтика'
+                        '21': '😂 Комедия',
+                        '10': '🧙 Фэнтези',
+                        '22': '💕 Романтика'
                     };
                     titleEl.textContent = genreNames[genreId] || '🎭 ' + btn.textContent;
                 } else {
-                    titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
+                    titleEl.textContent = '📚 ВСЕ АНИМЕ';
                 }
             }
             
