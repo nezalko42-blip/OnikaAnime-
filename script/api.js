@@ -1,5 +1,6 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (С КЭШИРОВАНИЕМ)
+// API МОДУЛЬ ONIKAANIME (Anilibria API v1)
+// С ИСПРАВЛЕННЫМИ ЖАНРАМИ И НОВИНКАМИ
 // ============================================
 
 const API = {
@@ -7,14 +8,12 @@ const API = {
 
     // ===== КЭШ =====
     _cache: new Map(),
-    _cacheTTL: 5 * 60 * 1000, // 5 минут
+    _cacheTTL: 5 * 60 * 1000,
 
     // ===== БАЗОВЫЙ GET-ЗАПРОС С КЭШИРОВАНИЕМ =====
     async _get(endpoint, params = {}, useCache = true) {
-        // Формируем ключ кэша
         const cacheKey = endpoint + '|' + JSON.stringify(params);
         
-        // Проверяем кэш
         if (useCache && this._cache.has(cacheKey)) {
             const cached = this._cache.get(cacheKey);
             if (Date.now() - cached.time < this._cacheTTL) {
@@ -52,7 +51,6 @@ const API = {
             const data = await response.json();
             console.log('📦 Ответ:', data);
             
-            // Сохраняем в кэш
             if (useCache && data) {
                 this._cache.set(cacheKey, { data, time: Date.now() });
             }
@@ -65,10 +63,15 @@ const API = {
     },
 
     // ============================================
-    // 1. КАТАЛОГ (НОВИНКИ) — С КЭШИРОВАНИЕМ
+    // 1. КАТАЛОГ (С ПРАВИЛЬНЫМИ ЖАНРАМИ И НОВИНКАМИ)
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        // Если это первая страница и нет поиска — используем отдельный эндпоинт для новинок
+        // Если выбраны НОВИНКИ (genre === 'latest')
+        if (genre === 'latest') {
+            return await this._getLatestReleases(24);
+        }
+
+        // Если это первая страница и нет поиска и фильтров — показываем новинки
         if (page === 1 && !query && !genre && Object.keys(filters).length === 0) {
             return await this._getLatestReleases(24);
         }
@@ -79,24 +82,41 @@ const API = {
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing,player,status'
         };
 
+        // Поисковый запрос
         if (query && query.length > 1) {
             params['f[search]'] = query;
         }
 
-        if (genre) {
-            params['f[genres]'] = [parseInt(genre)];
+        // ===== ЖАНРЫ — ПРАВИЛЬНЫЙ ФОРМАТ =====
+        let genresArray = [];
+        
+        if (genre && genre !== 'latest') {
+            genresArray = [parseInt(genre)];
         } else if (filters.genres && filters.genres.length) {
-            params['f[genres]'] = filters.genres.map(g => parseInt(g));
+            genresArray = filters.genres.map(g => parseInt(g));
         }
 
+        if (genresArray.length > 0) {
+            genresArray.forEach((g, index) => {
+                params[`f[genres][${index}]`] = g;
+            });
+        }
+
+        // Типы
         if (filters.types && filters.types.length) {
-            params['f[types]'] = filters.types;
+            filters.types.forEach((t, index) => {
+                params[`f[types][${index}]`] = t;
+            });
         }
 
+        // Сезоны
         if (filters.seasons && filters.seasons.length) {
-            params['f[seasons]'] = filters.seasons;
+            filters.seasons.forEach((s, index) => {
+                params[`f[seasons][${index}]`] = s;
+            });
         }
 
+        // Годы
         if (filters.year_from) {
             params['f[years][from_year]'] = filters.year_from;
         }
@@ -104,18 +124,28 @@ const API = {
             params['f[years][to_year]'] = filters.year_to;
         }
 
+        // Сортировка
         params['f[sorting]'] = filters.sorting || 'CREATED_AT_DESC';
 
+        // Возрастные рейтинги
         if (filters.age_ratings && filters.age_ratings.length) {
-            params['f[age_ratings]'] = filters.age_ratings;
+            filters.age_ratings.forEach((a, index) => {
+                params[`f[age_ratings][${index}]`] = a;
+            });
         }
 
+        // Статусы публикации
         if (filters.publish_statuses && filters.publish_statuses.length) {
-            params['f[publish_statuses]'] = filters.publish_statuses;
+            filters.publish_statuses.forEach((p, index) => {
+                params[`f[publish_statuses][${index}]`] = p;
+            });
         }
 
+        // Статусы производства
         if (filters.production_statuses && filters.production_statuses.length) {
-            params['f[production_statuses]'] = filters.production_statuses;
+            filters.production_statuses.forEach((p, index) => {
+                params[`f[production_statuses][${index}]`] = p;
+            });
         }
 
         const data = await this._get('/anime/catalog/releases', params);
@@ -141,27 +171,10 @@ const API = {
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing'
         };
         
-        // Используем GET с кэшированием на 2 минуты для новинок
         const data = await this._get('/anime/releases/latest', params, true);
         
         if (data && Array.isArray(data) && data.length > 0) {
             const items = data.map(item => this._convertItem(item));
-            return {
-                items: items,
-                totalPages: 1
-            };
-        }
-        
-        // Fallback: если /latest не работает, используем каталог
-        const fallbackParams = {
-            page: 1,
-            limit: limit,
-            'f[sorting]': 'CREATED_AT_DESC',
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
-        };
-        const fallbackData = await this._get('/anime/catalog/releases', fallbackParams);
-        if (fallbackData && fallbackData.data && fallbackData.data.length > 0) {
-            const items = fallbackData.data.map(item => this._convertItem(item));
             return {
                 items: items,
                 totalPages: 1
@@ -183,7 +196,7 @@ const API = {
             page: page,
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
         };
-        const data = await this._get('/app/search/releases', params, false); // Поиск не кэшируем
+        const data = await this._get('/app/search/releases', params, false);
         console.log('🔍 Поиск данных:', data);
         
         if (data && data.data && data.data.length > 0) {
@@ -245,10 +258,9 @@ const API = {
     },
 
     // ============================================
-    // 6. РЕКОМЕНДАЦИИ (С КЭШИРОВАНИЕМ)
+    // 6. РЕКОМЕНДАЦИИ
     // ============================================
     async getRecommended(limit = 6) {
-        // Используем кэш для рекомендаций (3 минуты)
         const params = {
             limit: limit,
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,publish_day,added_in_users_favorites'
@@ -258,17 +270,6 @@ const API = {
         
         if (data && Array.isArray(data) && data.length > 0) {
             return data.map(item => this._convertItem(item));
-        }
-        
-        // Fallback: берём последние релизы
-        const fallbackParams = {
-            limit: limit,
-            'f[sorting]': 'CREATED_AT_DESC',
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,publish_day'
-        };
-        const fallbackData = await this._get('/anime/releases/latest', fallbackParams, true);
-        if (fallbackData && Array.isArray(fallbackData) && fallbackData.length > 0) {
-            return fallbackData.map(item => this._convertItem(item));
         }
         
         return [];
@@ -457,9 +458,6 @@ const API = {
         return data || [];
     },
 
-    // ============================================
-    // 10. ОЧИСТКА КЭША
-    // ============================================
     clearCache() {
         this._cache.clear();
         console.log('🗑️ Кэш API очищен');
@@ -467,4 +465,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (с кэшированием) загружен');
+console.log('✅ API модуль (с жанрами и новинками) загружен');
