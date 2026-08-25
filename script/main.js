@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Anilibria v1)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С УСКОРЕННОЙ ЗАГРУЗКОЙ)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -15,6 +15,7 @@ let currentPlayer = null;
 let currentAnimeId = null;
 let scheduleCache = null;
 let scheduleCacheTime = 0;
+let isLoading = false;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -48,9 +49,11 @@ function navigate(pageName) {
     });
     
     if (pageName === 'catalog') {
-        loadCatalog();
-        loadRecommendations();
-        loadSchedule();
+        Promise.all([
+            loadCatalog(),
+            loadRecommendations(),
+            loadSchedule()
+        ]).catch(console.error);
     }
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
@@ -172,10 +175,13 @@ window.addEventListener('beforeunload', function() {
 // 1. КАТАЛОГ
 // ============================================
 async function loadCatalog() {
+    if (isLoading) return;
+    isLoading = true;
+    
     const grid = document.getElementById('grid');
     if (!grid) return;
     
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка...</div>';
     
     try {
         console.log('🔍 Запрос каталога:', { query, genre, page });
@@ -211,6 +217,8 @@ async function loadCatalog() {
     } catch (error) {
         console.error('❌ Ошибка загрузки:', error);
         showError('⚠️ Ошибка загрузки: ' + error.message);
+    } finally {
+        isLoading = false;
     }
 }
 
@@ -303,7 +311,7 @@ async function loadSchedule() {
         return;
     }
 
-    container.innerHTML = '<div class="schedule-loading">⏳ Загрузка расписания...</div>';
+    container.innerHTML = '<div class="schedule-loading">⏳ Загрузка...</div>';
 
     try {
         const data = await API.getSchedule();
@@ -312,25 +320,23 @@ async function loadSchedule() {
             scheduleCacheTime = Date.now();
             renderScheduleCompact(data);
         } else {
-            container.innerHTML = '<div class="schedule-loading">📅 Расписание временно недоступно</div>';
+            container.innerHTML = '<div class="schedule-loading">📅 Нет данных</div>';
         }
     } catch (e) {
         console.error('Ошибка загрузки расписания:', e);
-        container.innerHTML = '<div class="schedule-loading">⚠️ Ошибка загрузки расписания</div>';
+        container.innerHTML = '<div class="schedule-loading">⚠️ Ошибка</div>';
     }
 }
 
 function renderScheduleCompact(scheduleData) {
     const container = document.getElementById('scheduleGrid');
     if (!container) return;
-
     if (!scheduleData || !scheduleData.length) {
         container.innerHTML = '<div class="schedule-loading">📅 Нет данных</div>';
         return;
     }
 
     const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
-    const dayClasses = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const today = new Date().getDay();
     const currentDayIndex = today === 0 ? 6 : today - 1;
 
@@ -352,7 +358,7 @@ function renderScheduleCompact(scheduleData) {
         const dayIndex = dayObj.dayIndex;
         const dayName = days[dayIndex] || 'Неизвестно';
         const isToday = dayIndex === currentDayIndex;
-        const dayClass = dayClasses[dayIndex] || '';
+        const dayClass = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][dayIndex] || '';
 
         const items = dayObj.items.slice(0, 2);
         const hasMore = dayObj.items.length > 2;
@@ -406,22 +412,21 @@ async function loadRecommendations() {
         });
         container.innerHTML = html;
     } catch (e) {
-        container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">Ошибка загрузки</div>';
+        container.innerHTML = '<div style="color:var(--text-muted);text-align:center;">Ошибка</div>';
     }
 }
 
 // ============================================
-// 4. СЛУЧАЙНОЕ АНИМЕ
+// 4. СЛУЧАЙНОЕ
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
     if (!resultContainer) return;
     resultContainer.innerHTML = '<div style="color:#888;">⏳ Ищем...</div>';
-
     try {
         const items = await API.getRandomReleases(1);
         if (!items || !items.length) {
-            resultContainer.innerHTML = '<div style="color:#888;">😅 Не удалось найти случайное аниме</div>';
+            resultContainer.innerHTML = '<div style="color:#888;">😅 Не найдено</div>';
             return;
         }
         const random = items[0];
@@ -430,12 +435,9 @@ async function randomAnime() {
         const img = random.images?.jpg?.image_url || '';
         const year = random.year || '--';
         const episodes = random.episodes || '?';
-
         resultContainer.innerHTML = `
             <div class="random-result-card" onclick="openDetail('${id}')">
-                <div class="random-result-img">
-                    ${img ? '<img src="' + img + '" alt="' + title + '">' : '<div class="random-no-img">🎬</div>'}
-                </div>
+                <div class="random-result-img">${img ? '<img src="' + img + '" alt="' + title + '">' : '<div class="random-no-img">🎬</div>'}</div>
                 <div class="random-result-info">
                     <div class="random-result-title">🎯 ${title}</div>
                     <div class="random-result-meta">${year} • ${episodes} эп.</div>
@@ -449,26 +451,17 @@ async function randomAnime() {
 }
 
 // ============================================
-// 5. АВТОДОПОЛНЕНИЕ ПОИСКА
+// 5. АВТОДОПОЛНЕНИЕ
 // ============================================
 let autocompleteTimeout = null;
 const searchInput = document.getElementById('searchInput');
 const autocompleteList = document.createElement('div');
 autocompleteList.className = 'autocomplete-list';
 autocompleteList.style.cssText = `
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--bg-card);
-    border-radius: 10px;
-    border: 1px solid rgba(108,92,231,0.1);
-    max-height: 300px;
-    overflow-y: auto;
-    z-index: 1000;
-    display: none;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card);
+    border-radius: 10px; border: 1px solid rgba(108,92,231,0.1);
+    max-height: 300px; overflow-y: auto; z-index: 1000; display: none;
+    backdrop-filter: blur(20px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
 `;
 searchInput?.parentNode?.appendChild(autocompleteList);
 
@@ -476,38 +469,24 @@ searchInput?.addEventListener('input', function(e) {
     const value = this.value.trim();
     clearTimeout(autocompleteTimeout);
     autocompleteList.style.display = 'none';
-
     if (value.length < 2) return;
-
     autocompleteTimeout = setTimeout(async () => {
-        try {
-            const suggestions = await API.searchAutocomplete(value, 5);
-            if (!suggestions.length) {
-                autocompleteList.style.display = 'none';
-                return;
-            }
-
-            let html = '';
-            suggestions.forEach(item => {
-                html += `
-                    <div class="autocomplete-item" onclick="selectAutocomplete('${item.id}')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);">
-                        ${item.poster ? `<img src="${item.poster}" style="width:30px;height:40px;object-fit:cover;border-radius:4px;">` : '<span style="font-size:20px;">🎬</span>'}
-                        <span>${item.title}</span>
-                    </div>
-                `;
-            });
-            autocompleteList.innerHTML = html;
-            autocompleteList.style.display = 'block';
-        } catch (e) {
-            console.error('Автодополнение ошибка:', e);
-        }
+        const suggestions = await API.searchAutocomplete(value, 5);
+        if (!suggestions.length) { autocompleteList.style.display = 'none'; return; }
+        let html = '';
+        suggestions.forEach(item => {
+            html += `<div class="autocomplete-item" onclick="selectAutocomplete('${item.id}')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);">
+                ${item.poster ? `<img src="${item.poster}" style="width:30px;height:40px;object-fit:cover;border-radius:4px;">` : '<span style="font-size:20px;">🎬</span>'}
+                <span>${item.title}</span>
+            </div>`;
+        });
+        autocompleteList.innerHTML = html;
+        autocompleteList.style.display = 'block';
     }, 300);
 });
 
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.search-wrapper')) {
-        autocompleteList.style.display = 'none';
-    }
+    if (!e.target.closest('.search-wrapper')) { autocompleteList.style.display = 'none'; }
 });
 
 function selectAutocomplete(id) {
@@ -516,143 +495,53 @@ function selectAutocomplete(id) {
 }
 
 // ============================================
-// 6. ДЕТАЛЬНАЯ СТРАНИЦА
+// 6. ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
-    if (!id) {
-        showToast('Ошибка: ID не указан', 'error');
-        return;
-    }
+    if (!id) return showToast('Ошибка ID', 'error');
     navigate('detail');
-    const titleEl = document.getElementById('detailTitle');
-    if (titleEl) titleEl.textContent = 'Загрузка...';
-    
-    if (allData[id]) {
-        showDetail(allData[id]);
-        return;
-    }
-    
+    document.getElementById('detailTitle').textContent = 'Загрузка...';
     try {
         const data = await API.getAnimeDetails(id);
         if (data) {
-            if (allData[id]) {
-                Object.assign(allData[id], data);
-            } else {
-                allData[id] = data;
-            }
-            showDetail(allData[id]);
+            if (!allData[id]) allData[id] = data;
+            showDetail(data);
         } else {
-            showToast('❌ Не удалось загрузить данные', 'error');
+            showToast('❌ Не найдено', 'error');
         }
-    } catch (error) {
-        console.error('❌ Ошибка загрузки деталей:', error);
-        showToast('❌ Ошибка загрузки', 'error');
+    } catch (e) {
+        console.error(e);
+        showToast('❌ Ошибка', 'error');
     }
 }
 
 function showDetail(anime) {
+    document.getElementById('detailTitle').textContent = anime.title;
+    document.getElementById('detailEng').textContent = anime.title_english || '';
+    document.getElementById('detailMeta').textContent = `${anime.year} | ${anime.episodes} эп.`;
+    document.getElementById('detailDesc').textContent = anime.synopsis || 'Описание отсутствует';
+    const poster = document.getElementById('detailPoster');
     const img = anime.images?.jpg?.image_url || '';
-    const posterEl = document.getElementById('detailPoster');
-    if (posterEl) {
-        posterEl.src = img || '';
-        posterEl.alt = anime.title || 'Постер';
-        posterEl.style.display = img ? 'block' : 'none';
-    }
-    
-    const title = anime.title;
-    const titleEl = document.getElementById('detailTitle');
-    if (titleEl) titleEl.textContent = title;
-    
-    const engEl = document.getElementById('detailEng');
-    if (engEl) {
-        const engTitle = anime.title_english || '';
-        engEl.textContent = engTitle;
-    }
-    
-    const metaEl = document.getElementById('detailMeta');
-    if (metaEl) {
-        const year = anime.year || '--';
-        const episodes = anime.episodes || '?';
-        metaEl.textContent = year + ' | ' + episodes + ' эп.';
-    }
-    
-    const descEl = document.getElementById('detailDesc');
-    if (descEl) {
-        let descText = anime.synopsis || 'Описание отсутствует';
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = descText;
-        descText = tempDiv.textContent || descText;
-        descEl.textContent = descText;
-        descEl.classList.remove('expanded');
-        const toggleBtn = document.getElementById('descToggle');
-        if (toggleBtn) {
-            if (descText.length > 200) {
-                toggleBtn.style.display = 'inline-flex';
-            } else {
-                toggleBtn.style.display = 'none';
-                descEl.classList.add('expanded');
-            }
-        }
-    }
-    
-    const ageEl = document.getElementById('detailAgeRestriction');
-    if (ageEl) {
-        let age = 0;
-        if (anime.rating) {
-            const ratingMap = {
-                'G': 0, 'PG': 6, 'PG-13': 12, 'R': 16, 'R+': 16, 'Rx': 18,
-                'R18': 18, 'R18+': 18, '18+': 18, '16+': 16, '12+': 12, '6+': 6, '0+': 0
-            };
-            age = ratingMap[anime.rating] || 0;
-        }
-        ageEl.innerHTML = '<span class="age-badge age-' + age + '">' + age + '+</span>';
-    }
-    
-    const tagColors = {
-        'Action': '#e74c3c', 'Drama': '#3498db', 'Comedy': '#f1c40f',
-        'Fantasy': '#9b59b6', 'Romance': '#e91e63', 'Adventure': '#2ecc71',
-        'Shounen': '#e67e22', 'Thriller': '#2c3e50', 'Horror': '#c0392b',
-        'Sci-Fi': '#1abc9c', 'Slice of Life': '#f39c12', 'Mystery': '#8e44ad',
-        'Sports': '#27ae60', 'Экшен': '#e74c3c', 'Драма': '#3498db',
-        'Комедия': '#f1c40f', 'Фэнтези': '#9b59b6', 'Романтика': '#e91e63',
-        'Приключения': '#2ecc71', 'Сёнен': '#e67e22', 'Триллер': '#2c3e50',
-        'Ужасы': '#c0392b', 'Научная фантастика': '#1abc9c'
-    };
-    
-    let tagsHtml = '';
-    if (anime.genres && anime.genres.length > 0) {
-        anime.genres.forEach(function(g) {
-            const name = typeof g === 'string' ? g : (g.name || g.id || '');
-            if (name) {
-                const color = tagColors[name] || '#6c5ce7';
-                tagsHtml += '<span class="detail-tag" style="background:' + color + '20;border-color:' + color + '40;color:' + color + ';">' + name + '</span>';
-            }
-        });
-    }
-    const tagsEl = document.getElementById('detailTags');
-    if (tagsEl) tagsEl.innerHTML = tagsHtml || '<span class="detail-tag">🎬 Аниме</span>';
+    poster.src = img;
+    poster.style.display = img ? 'block' : 'none';
+    document.getElementById('detailTags').innerHTML = (anime.genres || []).map(g => `<span class="detail-tag">${g}</span>`).join('');
     
     const user = DB.get('currentUser');
     const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
-    const isFav = favs.indexOf(title) > -1;
+    const isFav = favs.indexOf(anime.title) > -1;
     const btn = document.getElementById('favBtn');
-    if (btn) {
-        btn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
-        btn.className = 'fav-btn' + (isFav ? ' active' : '');
-        btn.onclick = function() { toggleFav(title); };
-        btn.style.display = 'inline-block';
-    }
+    btn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
+    btn.className = 'fav-btn' + (isFav ? ' active' : '');
+    btn.onclick = () => toggleFav(anime.title);
+    renderComments(anime.title);
     
-    renderComments(title);
-    checkAchievements(title);
-    
-    // Показываем информацию о видео
+    // Показываем ссылку на Anilibria
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
         wrapper.innerHTML = `
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
                 <span style="font-size:48px;">🎬</span>
-                <span style="font-size:16px;color:#aaa;">Видео доступно на Anilibria</span>
+                <span style="font-size:16px;color:#aaa;">Смотреть на Anilibria</span>
                 <a href="https://www.anilibria.tv/release/${anime._raw?.code || ''}" target="_blank" 
                    style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
                     🌐 Открыть на Anilibria
