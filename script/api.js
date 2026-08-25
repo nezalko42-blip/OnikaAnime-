@@ -1,6 +1,6 @@
 // ============================================
 // API МОДУЛЬ ONIKAANIME (Anilibria API v1)
-// POST /anime/catalog/releases для каталога
+// GET /anime/catalog/releases для каталога (быстрее)
 // НОВИНКИ — CREATED_AT_DESC
 // ============================================
 
@@ -9,6 +9,7 @@ const API = {
 
     // ===== БАЗОВЫЙ GET-ЗАПРОС =====
     async _get(endpoint, params = {}) {
+        // Очищаем параметры
         const cleanParams = {};
         for (const key in params) {
             if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
@@ -70,64 +71,65 @@ const API = {
     },
 
     // ============================================
-    // 1. КАТАЛОГ (POST /anime/catalog/releases) — НОВИНКИ
+    // 1. КАТАЛОГ (GET /anime/catalog/releases) — БЫСТРЫЙ
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        const body = {
+        // Формируем параметры для GET-запроса
+        const params = {
             page: page,
             limit: 24,
-            f: {},
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player'
         };
 
         // Поисковый запрос
         if (query && query.length > 1) {
-            body.f.search = query;
+            params['f[search]'] = query;
         }
 
         // Жанры
         if (genre) {
-            body.f.genres = [parseInt(genre)];
+            params['f[genres]'] = [parseInt(genre)];
         } else if (filters.genres && filters.genres.length) {
-            body.f.genres = filters.genres.map(g => parseInt(g));
+            params['f[genres]'] = filters.genres.map(g => parseInt(g));
         }
 
         // Типы
         if (filters.types && filters.types.length) {
-            body.f.types = filters.types;
+            params['f[types]'] = filters.types;
         }
 
         // Сезоны
         if (filters.seasons && filters.seasons.length) {
-            body.f.seasons = filters.seasons;
+            params['f[seasons]'] = filters.seasons;
         }
 
         // Годы
-        if (filters.year_from || filters.year_to) {
-            body.f.years = {};
-            if (filters.year_from) body.f.years.from_year = filters.year_from;
-            if (filters.year_to) body.f.years.to_year = filters.year_to;
+        if (filters.year_from) {
+            params['f[years][from_year]'] = filters.year_from;
+        }
+        if (filters.year_to) {
+            params['f[years][to_year]'] = filters.year_to;
         }
 
-        // НОВИНКИ — сортировка по дате создания (сначала новые)
-        body.f.sorting = filters.sorting || 'CREATED_AT_DESC';
+        // НОВИНКИ — сортировка по дате создания
+        params['f[sorting]'] = filters.sorting || 'CREATED_AT_DESC';
 
         // Возрастные рейтинги
         if (filters.age_ratings && filters.age_ratings.length) {
-            body.f.age_ratings = filters.age_ratings;
+            params['f[age_ratings]'] = filters.age_ratings;
         }
 
         // Статусы публикации
         if (filters.publish_statuses && filters.publish_statuses.length) {
-            body.f.publish_statuses = filters.publish_statuses;
+            params['f[publish_statuses]'] = filters.publish_statuses;
         }
 
         // Статусы производства
         if (filters.production_statuses && filters.production_statuses.length) {
-            body.f.production_statuses = filters.production_statuses;
+            params['f[production_statuses]'] = filters.production_statuses;
         }
 
-        const data = await this._post('/anime/catalog/releases', body);
+        const data = await this._get('/anime/catalog/releases', params);
         
         if (data && data.data && data.data.length > 0) {
             const items = data.data.map(item => this._convertItem(item));
@@ -228,10 +230,16 @@ const API = {
             return data.map(item => this._convertItem(item));
         }
         
-        // Если рекомендаций нет — берём случайные
-        const randomData = await this.getRandomReleases(limit);
-        if (randomData && randomData.length > 0) {
-            return randomData;
+        // Если рекомендаций нет — берём последние релизы (быстро)
+        const fallbackParams = {
+            page: 1,
+            limit: limit,
+            'f[sorting]': 'CREATED_AT_DESC',
+            include: 'id,type.genres,name,poster,year,episodes_total'
+        };
+        const fallbackData = await this._get('/anime/catalog/releases', fallbackParams);
+        if (fallbackData && fallbackData.data && fallbackData.data.length > 0) {
+            return fallbackData.data.map(item => this._convertItem(item));
         }
         
         return [];
@@ -354,4 +362,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (Anilibria v1 POST) загружен');
+console.log('✅ API модуль (GET каталог) загружен');
