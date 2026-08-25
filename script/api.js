@@ -1,28 +1,23 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (Shikimori API + Прокси)
+// API МОДУЛЬ ONIKAANIME (Anilibria API v1)
+// Современное REST API: https://anilibria.top/api/v1
 // ============================================
 
 const API = {
-    PROXY_URL: 'https://cors-anywhere.herokuapp.com/',
-    BASE_URL: 'https://shikimori.one/api',
+    BASE_URL: 'https://anilibria.top/api/v1',
 
-    // ===== БАЗОВЫЙ ЗАПРОС =====
-    async _fetch(url, options = {}) {
-        const headers = {
-            'Accept': 'application/json',
-            'User-Agent': 'OnikaAnime/2.0',
-            ...options.headers
-        };
-        
-        const proxyUrl = this.PROXY_URL + url;
+    // ===== БАЗОВЫЙ GET-ЗАПРОС =====
+    async _get(url, params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        const fullUrl = queryString ? `${url}?${queryString}` : url;
         
         try {
-            console.log('📡 Запрос:', proxyUrl);
-            const response = await fetch(proxyUrl, { 
-                ...options, 
+            console.log('📡 GET:', fullUrl);
+            const response = await fetch(fullUrl, {
+                method: 'GET',
                 headers: {
-                    ...headers,
-                    'Origin': window.location.origin
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
                 }
             });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -31,54 +26,70 @@ const API = {
             return data;
         } catch (error) {
             console.error('❌ API Error:', error.message);
-            try {
-                console.log('🔄 Пробуем без прокси...');
-                const response = await fetch(url, { ...options, headers });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                console.log('📦 Ответ (без прокси):', data);
-                return data;
-            } catch (e) {
-                console.error('❌ Вторая попытка ошибка:', e.message);
-                return null;
-            }
+            return null;
+        }
+    },
+
+    // ===== БАЗОВЫЙ POST-ЗАПРОС =====
+    async _post(url, body = {}) {
+        try {
+            console.log('📡 POST:', url, body);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            console.log('📦 Ответ:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ API Error:', error.message);
+            return null;
         }
     },
 
     // ============================================
-    // 1. КАТАЛОГ И ПОИСК
+    // 1. КАТАЛОГ (POST /anime/catalog/releases)
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        const limit = 24;
-        const offset = (page - 1) * limit;
-
-        let url = `${this.BASE_URL}/animes?limit=${limit}&offset=${offset}`;
+        const body = {
+            page: page,
+            limit: 24,
+            f: {}
+        };
 
         if (query && query.length > 1) {
-            url += `&search=${encodeURIComponent(query)}`;
+            body.f.search = query;
         }
 
         if (genre) {
-            const genreMap = {
-                '1': 'action',
-                '8': 'drama',
-                '21': 'comedy',
-                '10': 'fantasy',
-                '22': 'romance'
-            };
-            const genreName = genreMap[genre];
-            if (genreName) {
-                url += `&genre=${genreName}`;
-            }
+            body.f.genres = [parseInt(genre)];
         }
 
-        url += `&order=popularity`;
+        // Сортировка по умолчанию - свежие
+        body.f.sorting = filters.sorting || 'FRESH_AT_DESC';
 
-        const data = await this._fetch(url);
+        // Дополнительные фильтры
+        if (filters.types && filters.types.length) {
+            body.f.types = filters.types;
+        }
+        if (filters.seasons && filters.seasons.length) {
+            body.f.seasons = filters.seasons;
+        }
+        if (filters.years) {
+            if (filters.years.from) body.f.years = { from_year: filters.years.from };
+            if (filters.years.to) body.f.years = { ...body.f.years, to_year: filters.years.to };
+        }
 
-        if (data && Array.isArray(data)) {
-            const items = data.map(item => this._convertItem(item));
-            const totalPages = data.length < limit ? page : page + 1;
+        const data = await this._post(`${this.BASE_URL}/anime/catalog/releases`, body);
+        
+        if (data && data.list && data.list.length > 0) {
+            const items = data.list.map(item => this._convertItem(item));
+            const totalPages = data.pagination?.total_pages || 1;
             return {
                 items: items,
                 totalPages: totalPages
@@ -88,16 +99,19 @@ const API = {
     },
 
     // ============================================
-    // 2. ПОИСК
+    // 2. ПОИСК (GET /app/search/releases)
     // ============================================
-    async _searchTitles(query, page = 1) {
-        const limit = 24;
-        const offset = (page - 1) * limit;
-        const url = `${this.BASE_URL}/animes?search=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`;
-        const data = await this._fetch(url);
-        if (data && Array.isArray(data)) {
-            const items = data.map(item => this._convertItem(item));
-            const totalPages = data.length < limit ? page : page + 1;
+    async searchTitles(query, page = 1) {
+        const params = {
+            query: query,
+            limit: 24,
+            page: page,
+            include: 'id,type.genres'
+        };
+        const data = await this._get(`${this.BASE_URL}/app/search/releases`, params);
+        if (data && data.list && data.list.length > 0) {
+            const items = data.list.map(item => this._convertItem(item));
+            const totalPages = data.pagination?.total_pages || 1;
             return {
                 items: items,
                 totalPages: totalPages
@@ -107,12 +121,28 @@ const API = {
     },
 
     // ============================================
-    // 3. ДЕТАЛИ
+    // 3. РАСПИСАНИЕ (GET /anime/schedule/week)
+    // ============================================
+    async getSchedule() {
+        const data = await this._get(`${this.BASE_URL}/anime/schedule/week`);
+        if (data && Array.isArray(data)) {
+            return data.map(dayObj => ({
+                day: dayObj.day,
+                list: dayObj.list.map(item => this._convertItem(item))
+            }));
+        }
+        return [];
+    },
+
+    // ============================================
+    // 4. ДЕТАЛИ (GET /anime/releases/{id})
     // ============================================
     async getAnimeDetails(id) {
-        const cleanId = id.toString().replace('shikimori_', '');
-        const url = `${this.BASE_URL}/animes/${cleanId}`;
-        const data = await this._fetch(url);
+        const cleanId = id.toString().replace('anilibria_', '');
+        const params = {
+            include: 'id,type.genres,description,player,torrents'
+        };
+        const data = await this._get(`${this.BASE_URL}/anime/releases/${cleanId}`, params);
         if (data && data.id) {
             return this._convertItem(data);
         }
@@ -120,25 +150,14 @@ const API = {
     },
 
     // ============================================
-    // 4. СЛУЧАЙНОЕ
+    // 5. СЛУЧАЙНОЕ (GET /anime/releases/random)
     // ============================================
     async getRandomReleases(limit = 1) {
-        const randomPage = Math.floor(Math.random() * 100) + 1;
-        const offset = (randomPage - 1) * 24;
-        const url = `${this.BASE_URL}/animes?limit=${limit}&offset=${offset}`;
-        const data = await this._fetch(url);
-        if (data && Array.isArray(data) && data.length > 0) {
-            return data.slice(0, limit).map(item => this._convertItem(item));
-        }
-        return [];
-    },
-
-    // ============================================
-    // 5. РЕКОМЕНДАЦИИ
-    // ============================================
-    async getRecommended(limit = 6) {
-        const url = `${this.BASE_URL}/animes?limit=${limit}&order=popularity`;
-        const data = await this._fetch(url);
+        const params = {
+            limit: limit,
+            include: 'id,type.genres'
+        };
+        const data = await this._get(`${this.BASE_URL}/anime/releases/random`, params);
         if (data && Array.isArray(data)) {
             return data.map(item => this._convertItem(item));
         }
@@ -146,47 +165,98 @@ const API = {
     },
 
     // ============================================
-    // 6. АВТОДОПОЛНЕНИЕ
+    // 6. РЕКОМЕНДАЦИИ (GET /anime/releases/recommended)
+    // ============================================
+    async getRecommended(limit = 6) {
+        const params = {
+            limit: limit,
+            include: 'id,type.genres'
+        };
+        const data = await this._get(`${this.BASE_URL}/anime/releases/recommended`, params);
+        if (data && Array.isArray(data)) {
+            return data.map(item => this._convertItem(item));
+        }
+        return [];
+    },
+
+    // ============================================
+    // 7. АВТОДОПОЛНЕНИЕ (GET /app/search/releases)
     // ============================================
     async searchAutocomplete(query, limit = 5) {
         if (!query || query.length < 2) return [];
-        const url = `${this.BASE_URL}/animes?search=${encodeURIComponent(query)}&limit=${limit}`;
-        const data = await this._fetch(url);
-        if (data && Array.isArray(data)) {
-            return data.map(item => ({
+        const params = {
+            query: query,
+            limit: limit,
+            include: 'id,type.genres'
+        };
+        const data = await this._get(`${this.BASE_URL}/app/search/releases`, params);
+        if (data && data.list && data.list.length > 0) {
+            return data.list.map(item => ({
                 id: item.id,
-                title: item.russian || item.name || 'Без названия',
-                poster: item.poster?.medium?.url || item.poster?.small?.url || ''
+                title: this._convertItem(item).title,
+                poster: this._getPosterUrl(item.poster)
             }));
         }
         return [];
     },
 
     // ============================================
-    // 7. КОНВЕРТАЦИЯ
+    // 8. СПРАВОЧНИКИ
     // ============================================
+    async getGenres() {
+        const data = await this._get(`${this.BASE_URL}/anime/catalog/references/genres`);
+        return data || [];
+    },
+
+    async getTypes() {
+        const data = await this._get(`${this.BASE_URL}/anime/catalog/references/types`);
+        return data || [];
+    },
+
+    async getSeasons() {
+        const data = await this._get(`${this.BASE_URL}/anime/catalog/references/seasons`);
+        return data || [];
+    },
+
+    async getYears() {
+        const data = await this._get(`${this.BASE_URL}/anime/catalog/references/years`);
+        return data || [];
+    },
+
+    // ============================================
+    // 9. КОНВЕРТАЦИЯ ЭЛЕМЕНТА
+    // ============================================
+    _getPosterUrl(poster) {
+        if (!poster) return '';
+        const optimized = poster.optimized || poster;
+        return optimized.preview || optimized.thumbnail || poster.preview || poster.thumbnail || '';
+    },
+
     _convertItem(item) {
-        let img = '';
-        if (item.poster) {
-            const poster = item.poster.medium || item.poster.small || item.poster.original;
-            if (poster && poster.url) {
-                img = poster.url;
-                if (img.startsWith('/')) {
-                    img = 'https://shikimori.one' + img;
-                }
-            }
+        // Постер
+        let img = this._getPosterUrl(item.poster);
+        if (img && img.startsWith('/')) {
+            img = 'https://anilibria.top' + img;
         }
 
-        const title = item.russian || item.name || 'Без названия';
-        const title_russian = item.russian || '';
-        const title_english = item.name || '';
+        // Названия
+        const name = item.name || {};
+        const title = name.main || name.english || name.alternative || 'Без названия';
+        const title_russian = name.main || '';
+        const title_english = name.english || '';
 
-        const genres = (item.genres || []).map(g => g.russian || g.name);
-        const year = item.year || item.released_on?.split('-')[0] || '--';
-        const episodes = item.episodes || item.episodes_aired || '?';
+        // Жанры
+        const genres = (item.genres || []).map(g => g.name || g);
+
+        // Год и серии
+        const year = item.year || '--';
+        const episodes = item.episodes_total || item.episodes?.total || '?';
+
+        // Возрастной рейтинг
+        const ageRating = item.age_rating?.label || '0+';
 
         return {
-            mal_id: 'shikimori_' + item.id,
+            mal_id: 'anilibria_' + item.id,
             id: item.id,
             title: title,
             title_russian: title_russian,
@@ -194,11 +264,12 @@ const API = {
             year: year,
             episodes: episodes,
             images: { jpg: { image_url: img || '' } },
-            synopsis: item.description || item.description_en || 'Описание отсутствует',
+            synopsis: item.description || 'Описание отсутствует',
             genres: genres,
-            score: item.score || 0,
+            score: 0,
             russian: title_russian,
-            source: 'Shikimori',
+            age_rating: ageRating,
+            source: 'Anilibria v1',
             _raw: item
         };
     },
@@ -209,4 +280,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (Shikimori + прокси) загружен');
+console.log('✅ API модуль (Anilibria v1) загружен');
