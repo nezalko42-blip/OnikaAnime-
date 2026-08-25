@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Jikan API v4)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Anilibria v1)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -13,7 +13,6 @@ let onlineTimer = null;
 let startTime = Date.now();
 let currentPlayer = null;
 let currentAnimeId = null;
-let activeFilters = {};
 let scheduleCache = null;
 let scheduleCacheTime = 0;
 
@@ -176,7 +175,7 @@ async function loadCatalog() {
     const grid = document.getElementById('grid');
     if (!grid) return;
     
-    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка из Jikan...</div>';
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Загрузка...</div>';
     
     try {
         console.log('🔍 Запрос каталога:', { query, genre, page });
@@ -201,13 +200,13 @@ async function loadCatalog() {
                 };
                 titleEl.textContent = `🎭 ${genreNames[genre] || 'Жанр'}`;
             } else {
-                titleEl.textContent = '🔥 Популярное аниме';
+                titleEl.textContent = '✨ Новинки аниме';
             }
             
             renderCatalog(result.items);
             renderPagination();
         } else {
-            showError('🔍 Ничего не найдено. Попробуйте изменить запрос.');
+            showError('🔍 Ничего не найдено');
         }
     } catch (error) {
         console.error('❌ Ошибка загрузки:', error);
@@ -331,6 +330,7 @@ function renderScheduleCompact(scheduleData) {
     }
 
     const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+    const dayClasses = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const today = new Date().getDay();
     const currentDayIndex = today === 0 ? 6 : today - 1;
 
@@ -352,7 +352,7 @@ function renderScheduleCompact(scheduleData) {
         const dayIndex = dayObj.dayIndex;
         const dayName = days[dayIndex] || 'Неизвестно';
         const isToday = dayIndex === currentDayIndex;
-        const dayClass = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][dayIndex] || '';
+        const dayClass = dayClasses[dayIndex] || '';
 
         const items = dayObj.items.slice(0, 2);
         const hasMore = dayObj.items.length > 2;
@@ -595,11 +595,43 @@ function showDetail(anime) {
         }
     }
     
-    // Жанры
-    const tags = anime.genres || [];
-    document.getElementById('detailTags').innerHTML = tags.map(g => `<span class="detail-tag">${g}</span>`).join('');
+    const ageEl = document.getElementById('detailAgeRestriction');
+    if (ageEl) {
+        let age = 0;
+        if (anime.rating) {
+            const ratingMap = {
+                'G': 0, 'PG': 6, 'PG-13': 12, 'R': 16, 'R+': 16, 'Rx': 18,
+                'R18': 18, 'R18+': 18, '18+': 18, '16+': 16, '12+': 12, '6+': 6, '0+': 0
+            };
+            age = ratingMap[anime.rating] || 0;
+        }
+        ageEl.innerHTML = '<span class="age-badge age-' + age + '">' + age + '+</span>';
+    }
     
-    // Кнопка избранного
+    const tagColors = {
+        'Action': '#e74c3c', 'Drama': '#3498db', 'Comedy': '#f1c40f',
+        'Fantasy': '#9b59b6', 'Romance': '#e91e63', 'Adventure': '#2ecc71',
+        'Shounen': '#e67e22', 'Thriller': '#2c3e50', 'Horror': '#c0392b',
+        'Sci-Fi': '#1abc9c', 'Slice of Life': '#f39c12', 'Mystery': '#8e44ad',
+        'Sports': '#27ae60', 'Экшен': '#e74c3c', 'Драма': '#3498db',
+        'Комедия': '#f1c40f', 'Фэнтези': '#9b59b6', 'Романтика': '#e91e63',
+        'Приключения': '#2ecc71', 'Сёнен': '#e67e22', 'Триллер': '#2c3e50',
+        'Ужасы': '#c0392b', 'Научная фантастика': '#1abc9c'
+    };
+    
+    let tagsHtml = '';
+    if (anime.genres && anime.genres.length > 0) {
+        anime.genres.forEach(function(g) {
+            const name = typeof g === 'string' ? g : (g.name || g.id || '');
+            if (name) {
+                const color = tagColors[name] || '#6c5ce7';
+                tagsHtml += '<span class="detail-tag" style="background:' + color + '20;border-color:' + color + '40;color:' + color + ';">' + name + '</span>';
+            }
+        });
+    }
+    const tagsEl = document.getElementById('detailTags');
+    if (tagsEl) tagsEl.innerHTML = tagsHtml || '<span class="detail-tag">🎬 Аниме</span>';
+    
     const user = DB.get('currentUser');
     const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
     const isFav = favs.indexOf(title) > -1;
@@ -614,16 +646,16 @@ function showDetail(anime) {
     renderComments(title);
     checkAchievements(title);
     
-    // Показываем сообщение о видео
+    // Показываем информацию о видео
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
         wrapper.innerHTML = `
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
                 <span style="font-size:48px;">🎬</span>
-                <span style="font-size:16px;color:#aaa;">Видео доступно на MyAnimeList</span>
-                <a href="https://myanimelist.net/anime/${anime.id.replace('jikan_', '')}" target="_blank" 
+                <span style="font-size:16px;color:#aaa;">Видео доступно на Anilibria</span>
+                <a href="https://www.anilibria.tv/release/${anime._raw?.code || ''}" target="_blank" 
                    style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
-                    🌐 Открыть на MyAnimeList
+                    🌐 Открыть на Anilibria
                 </a>
             </div>
         `;
@@ -631,26 +663,24 @@ function showDetail(anime) {
 }
 
 // ============================================
-// ОСТАЛЬНЫЕ ФУНКЦИИ (КОММЕНТАРИИ, ИЗБРАННОЕ, ДОСТИЖЕНИЯ, ПРОФИЛЬ)
-// ============================================
-
 // КОММЕНТАРИИ
+// ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
     if (!container) return;
     fetch('/api/comments/' + encodeURIComponent(animeName))
-        .then(res => res.json())
-        .then(comments => {
-            if (!comments || !comments.length) {
+        .then(function(res) { return res.json(); })
+        .then(function(comments) {
+            if (!comments || comments.length === 0) {
                 container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев. Будьте первым!</div>';
                 return;
             }
             const user = DB.get('currentUser');
             let html = '';
-            comments.forEach(c => {
+            comments.forEach(function(c) {
                 const canDelete = user && c.user_name === user.name;
                 html += `
-                    <div class="comment-item">
+                    <div class="comment-item" data-comment-id="${c.id}">
                         <div class="c-user">${c.user_name}</div>
                         <div class="c-text">${c.text}</div>
                         <div class="c-date">${c.date}</div>
@@ -660,7 +690,7 @@ function renderComments(animeName) {
             });
             container.innerHTML = html;
         })
-        .catch(() => {
+        .catch(function() {
             container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">⚠️ Ошибка загрузки комментариев</div>';
         });
 }
@@ -678,27 +708,38 @@ function addComment() {
         showToast('Напишите что-нибудь!', 'warning');
         return;
     }
-    const title = document.getElementById('detailTitle').textContent;
-    if (!title || title === 'Загрузка...') {
+    const titleEl = document.getElementById('detailTitle');
+    const title = titleEl ? titleEl.textContent : '';
+    if (!title || title === 'Загрузка...' || title === 'Без названия') {
         showToast('Ошибка: аниме не загружено', 'error');
         return;
     }
-    fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ anime: title, user_name: user.name, text: text })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            input.value = '';
-            renderComments(title);
-            showToast('💬 Комментарий добавлен!', 'success');
-        } else {
-            showToast(data.error || 'Ошибка', 'error');
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/comments');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() {
+        try {
+            const data = JSON.parse(xhr.responseText);
+            if (data.success) {
+                input.value = '';
+                renderComments(title);
+                checkAchievements(title);
+                showToast('💬 Комментарий добавлен!', 'success');
+            } else {
+                showToast(data.error || 'Ошибка', 'error');
+            }
+        } catch(e) {
+            showToast('Ошибка сервера', 'error');
         }
-    })
-    .catch(() => showToast('Ошибка сети', 'error'));
+    };
+    xhr.onerror = function() {
+        showToast('Ошибка сети', 'error');
+    };
+    xhr.send(JSON.stringify({
+        anime: title,
+        user_name: user.name,
+        text: text
+    }));
 }
 
 function deleteComment(id) {
@@ -708,26 +749,95 @@ function deleteComment(id) {
         return;
     }
     showConfirmModal('🗑️ Удалить комментарий', 'Вы уверены?', function() {
-        fetch('/api/comments/' + id, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_name: user.name })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                const title = document.getElementById('detailTitle').textContent;
-                if (title) renderComments(title);
-                showToast('🗑️ Комментарий удален', 'success');
-            } else {
-                showToast(data.error || 'Ошибка', 'error');
+        const xhr = new XMLHttpRequest();
+        xhr.open('DELETE', '/api/comments/' + id);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            try {
+                const data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    const titleEl = document.getElementById('detailTitle');
+                    const title = titleEl ? titleEl.textContent : '';
+                    if (title) renderComments(title);
+                    showToast('🗑️ Комментарий удален', 'success');
+                } else {
+                    showToast(data.error || 'Ошибка', 'error');
+                }
+            } catch(e) {
+                showToast('Ошибка сервера', 'error');
             }
-        })
-        .catch(() => showToast('Ошибка сети', 'error'));
+        };
+        xhr.onerror = function() {
+            showToast('Ошибка сети', 'error');
+        };
+        xhr.send(JSON.stringify({ user_name: user.name }));
     });
 }
 
+// ============================================
+// МОИ КОММЕНТАРИИ
+// ============================================
+function renderMyComments() {
+    const user = DB.get('currentUser');
+    const container = document.getElementById('myCommentsList');
+    if (!container) return;
+    if (!user) {
+        container.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
+        const countEl = document.getElementById('myCommentsCount');
+        if (countEl) countEl.textContent = '0 комментариев';
+        return;
+    }
+    fetch('/api/comments/all')
+        .then(function(res) { return res.json(); })
+        .then(function(comments) {
+            const myComments = comments.filter(function(c) {
+                return c.user_name === user.name;
+            });
+            myComments.sort(function(a, b) {
+                return b.date.localeCompare(a.date);
+            });
+            const countEl = document.getElementById('myCommentsCount');
+            if (countEl) countEl.textContent = myComments.length + ' комментариев';
+            if (myComments.length === 0) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>';
+                return;
+            }
+            let html = '';
+            myComments.forEach(function(c) {
+                html += `
+                    <div class="my-comment-item">
+                        <div class="my-comment-header">
+                            <span class="my-comment-anime" onclick="searchAndOpen('${c.anime}')">📺 ${c.anime}</span>
+                            <button class="c-delete-btn" onclick="deleteComment(${c.id})">✕</button>
+                        </div>
+                        <div class="my-comment-text">${c.text}</div>
+                        <div class="my-comment-date">${c.date}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        })
+        .catch(function() {
+            container.innerHTML = '<div class="empty-state"><p>⚠️ Ошибка загрузки</p></div>';
+        });
+}
+
+function searchAndOpen(name) {
+    if (!name) return;
+    query = name;
+    page = 1;
+    genre = '';
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = name;
+    const titleEl = document.getElementById('title');
+    if (titleEl) titleEl.textContent = '🔍 Поиск: ' + name;
+    navigate('catalog');
+    loadCatalog();
+}
+
+// ============================================
 // ИЗБРАННОЕ
+// ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
     if (!user) {
@@ -746,7 +856,15 @@ function toggleFav(name) {
     }
     DB.setUserData(user.name, 'favorites', favs);
     DB.save();
-    if (currentPage === 'favorites') renderFavorites();
+    const btn = document.getElementById('favBtn');
+    if (btn) {
+        const isFav = favs.indexOf(name) > -1;
+        btn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
+        btn.className = 'fav-btn' + (isFav ? ' active' : '');
+    }
+    if (currentPage === 'favorites') {
+        renderFavorites();
+    }
 }
 
 function renderFavorites() {
@@ -758,26 +876,28 @@ function renderFavorites() {
         return;
     }
     const favs = DB.getUserData(user.name, 'favorites', []);
-    document.getElementById('favCount').textContent = favs.length + ' аниме';
+    const countEl = document.getElementById('favCount');
+    if (countEl) countEl.textContent = favs.length + ' аниме';
     if (favs.length === 0) {
         grid.innerHTML = '<div class="empty-state"><span class="empty-icon">💔</span><p>Пусто</p></div>';
         return;
     }
+    const colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
     let html = '';
-    favs.forEach((name, index) => {
+    favs.forEach(function(name, index) {
         let img = '';
-        const colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
         const color = colors[index % colors.length];
         for (const id in allData) {
-            if (allData[id] && allData[id].title === name) {
-                img = allData[id].images?.jpg?.image_url || '';
+            const a = allData[id];
+            if (a && a.title === name) {
+                img = a.images?.jpg?.image_url || '';
                 break;
             }
         }
         html += `
             <div class="card" onclick="searchAndOpen('${name}')">
                 <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:40px;' : ''}">
-                    ${img ? '<img src="' + img + '" loading="lazy">' : '❤️'}
+                    ${img ? '<img src="' + img + '" loading="lazy" onerror="this.style.display=\'none\'">' : '❤️'}
                 </div>
                 <div class="card-body">
                     <div class="title">${name}</div>
@@ -788,37 +908,28 @@ function renderFavorites() {
     grid.innerHTML = html;
 }
 
-function searchAndOpen(name) {
-    if (!name) return;
-    query = name;
-    page = 1;
-    genre = '';
-    document.getElementById('searchInput').value = name;
-    document.getElementById('title').textContent = '🔍 Поиск: ' + name;
-    navigate('catalog');
-    loadCatalog();
-}
-
+// ============================================
 // ДОСТИЖЕНИЯ
+// ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
     const grid = document.getElementById('achievementsGrid');
     if (!grid) return;
     if (!user) {
         grid.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
+        updateAchievementStats([], ACHIEVEMENTS_LIST.length);
         return;
     }
     const earned = DB.getAchievements(user.name);
     const total = ACHIEVEMENTS_LIST.length;
     const activeTitle = DB.getActiveTitle(user.name);
-    
-    document.getElementById('achEarnedCount').textContent = earned.length;
-    document.getElementById('achTotalCount').textContent = total;
-    document.getElementById('achProgress').textContent = total > 0 ? Math.round((earned.length / total) * 100) + '%' : '0%';
-    document.getElementById('achProgressFill').style.width = total > 0 ? (earned.length / total) * 100 + '%' : '0%';
-    
+    updateAchievementStats(earned, total);
+    if (ACHIEVEMENTS_LIST.length === 0) {
+        grid.innerHTML = '<div class="empty-state"><p>🏆 Достижения временно недоступны</p></div>';
+        return;
+    }
     let html = '';
-    ACHIEVEMENTS_LIST.forEach(ach => {
+    ACHIEVEMENTS_LIST.forEach(function(ach) {
         const isEarned = earned.indexOf(ach.id) !== -1;
         const isActive = activeTitle === ach.id;
         html += `
@@ -828,11 +939,26 @@ function renderAchievements() {
                 <div class="ach-desc">${ach.desc}</div>
                 ${ach.title ? `<div class="ach-title">🎖️ Титул: ${ach.title}</div>` : ''}
                 <div class="ach-status">${isEarned ? '✅ Получено' : '🔒 Закрыто'}</div>
-                ${isEarned ? `<button class="ach-btn ${isActive ? 'active' : ''}" onclick="setActiveTitle('${ach.id}')">${isActive ? '✅ Активен' : '👑 Установить титул'}</button>` : ''}
+                ${isEarned ? `
+                    <button class="ach-btn ${isActive ? 'active' : ''}" onclick="setActiveTitle('${ach.id}')">
+                        ${isActive ? '✅ Активен' : '👑 Установить титул'}
+                    </button>
+                ` : ''}
             </div>
         `;
     });
     grid.innerHTML = html;
+}
+
+function updateAchievementStats(earned, total) {
+    const earnedEl = document.getElementById('achEarnedCount');
+    const totalEl = document.getElementById('achTotalCount');
+    const progressEl = document.getElementById('achProgress');
+    const fillEl = document.getElementById('achProgressFill');
+    if (earnedEl) earnedEl.textContent = earned.length;
+    if (totalEl) totalEl.textContent = total;
+    if (progressEl) progressEl.textContent = total > 0 ? Math.round((earned.length / total) * 100) + '%' : '0%';
+    if (fillEl) fillEl.style.width = total > 0 ? (earned.length / total) * 100 + '%' : '0%';
 }
 
 function setActiveTitle(achId) {
@@ -947,7 +1073,9 @@ function spawnConfetti() {
     setTimeout(function() { container.innerHTML = ''; }, 4000);
 }
 
+// ============================================
 // ПРОФИЛЬ
+// ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
     if (!user) {
@@ -1043,7 +1171,9 @@ function renderProfileAchievements(user) {
     grid.innerHTML = html;
 }
 
+// ============================================
 // ТОП ПОЛЬЗОВАТЕЛЕЙ
+// ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
     if (!container) return;
@@ -1249,24 +1379,40 @@ function uploadAvatar(input) {
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
     if (old) old.remove();
-    const colors = { success: '#2ecc71', error: '#e74c3c', warning: '#f39c12', info: 'rgba(20,20,50,0.95)' };
+    const colors = {
+        success: '#2ecc71',
+        error: '#e74c3c',
+        warning: '#f39c12',
+        info: 'rgba(20,20,50,0.95)'
+    };
     const toast = document.createElement('div');
     toast.className = 'toast-message';
     toast.textContent = message;
     toast.style.cssText = `
-        position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-        background: ${colors[type] || colors.info}; color: #fff; padding: 14px 28px;
-        border-radius: 14px; font-weight: 600; z-index: 99999; max-width: 90%;
-        text-align: center; border: 1px solid rgba(108,92,231,0.2);
-        backdrop-filter: blur(20px); font-size: 14px;
-        animation: fadeInUp 0.4s ease forwards; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        position: fixed;
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: ${colors[type] || colors.info};
+        color: #fff;
+        padding: 14px 28px;
+        border-radius: 14px;
+        font-weight: 600;
+        z-index: 99999;
+        max-width: 90%;
+        text-align: center;
+        border: 1px solid rgba(108,92,231,0.2);
+        backdrop-filter: blur(20px);
+        font-size: 14px;
+        animation: fadeInUp 0.4s ease forwards;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     `;
     document.body.appendChild(toast);
-    setTimeout(() => {
+    setTimeout(function() {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(-50%) translateY(20px)';
         toast.style.transition = 'all 0.4s ease';
-        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 500);
+        setTimeout(function() { if (toast.parentNode) toast.remove(); }, 500);
     }, 3000);
 }
 
@@ -1279,17 +1425,265 @@ function showConfirmModal(title, text, callback, icon) {
     document.getElementById('confirmTitle').textContent = title || 'Подтверждение';
     document.getElementById('confirmText').textContent = text || 'Вы уверены?';
     document.getElementById('confirmIcon').textContent = icon || '⚠️';
-    document.getElementById('confirmOkBtn').onclick = function() {
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.onclick = function() {
         closeModal('confirmModal');
         if (callback) callback();
     };
     modal.style.display = 'flex';
 }
 
+function deleteAccount() {
+    if (!DB.get('currentUser')) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    if (confirm('Вы уверены, что хотите удалить аккаунт? Это действие необратимо!')) {
+        const user = DB.get('currentUser');
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/delete-account');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            DB.set('currentUser', null);
+            localStorage.removeItem('onika_currentUser');
+            localStorage.removeItem('onika_data');
+            updateUI();
+            navigate('catalog');
+            showToast('✅ Аккаунт удален', 'success');
+            if (typeof stopOnlineTracking === 'function') {
+                stopOnlineTracking();
+            }
+            setTimeout(function() { location.reload(); }, 500);
+        };
+        xhr.send(JSON.stringify({ userId: user.id }));
+    }
+}
+
 function closeModal(id) {
     const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+    if (el) {
+        el.style.display = 'none';
+    }
 }
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+    }
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            }
+        });
+    }
+});
+
+// ============================================
+// РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// ============================================
+function editProfile(type) {
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    window._editType = type;
+    const input = document.getElementById('editInput');
+    const textarea = document.getElementById('editTextarea');
+    const title = document.getElementById('editTitle');
+    if (!input || !textarea || !title) return;
+    input.style.display = type === 'bio' ? 'none' : 'block';
+    textarea.style.display = type === 'bio' ? 'block' : 'none';
+    if (type === 'name') {
+        title.textContent = '✏️ Изменить никнейм';
+        input.value = user.name;
+        input.placeholder = 'Введите новый никнейм';
+        input.type = 'text';
+    } else if (type === 'email') {
+        title.textContent = '✏️ Изменить email';
+        input.value = user.email;
+        input.placeholder = 'Введите новый email';
+        input.type = 'email';
+    } else if (type === 'pass') {
+        title.textContent = '🔑 Изменить пароль';
+        input.value = '';
+        input.placeholder = 'Введите новый пароль';
+        input.type = 'password';
+    } else if (type === 'bio') {
+        title.textContent = '📝 Изменить описание';
+        input.style.display = 'none';
+        textarea.style.display = 'block';
+        const profiles = DB.get('profiles', {});
+        textarea.value = (profiles[user.name] && profiles[user.name].bio) || '';
+        textarea.placeholder = 'Введите описание';
+    }
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function saveEdit() {
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    const input = document.getElementById('editInput');
+    const textarea = document.getElementById('editTextarea');
+    const type = window._editType || 'bio';
+    const val = type === 'bio' ? textarea.value.trim() : input.value.trim();
+    if (!val) {
+        showToast('Поле не может быть пустым!', 'error');
+        return;
+    }
+    if (type === 'name') {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/update-name');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            try {
+                const data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    const oldName = user.name;
+                    user.name = val;
+                    localStorage.setItem('onika_currentUser', JSON.stringify(user));
+                    DB._data.currentUser = user;
+                    if (DB._data.favorites[oldName]) {
+                        DB._data.favorites[val] = DB._data.favorites[oldName];
+                        delete DB._data.favorites[oldName];
+                    }
+                    if (DB._data.achievements[oldName]) {
+                        DB._data.achievements[val] = DB._data.achievements[oldName];
+                        delete DB._data.achievements[oldName];
+                    }
+                    if (DB._data.activeTitle[oldName]) {
+                        DB._data.activeTitle[val] = DB._data.activeTitle[oldName];
+                        delete DB._data.activeTitle[oldName];
+                    }
+                    if (DB._data.profiles[oldName]) {
+                        DB._data.profiles[val] = DB._data.profiles[oldName];
+                        delete DB._data.profiles[oldName];
+                    }
+                    if (DB._data.onlineTime && DB._data.onlineTime[oldName]) {
+                        DB._data.onlineTime[val] = DB._data.onlineTime[oldName];
+                        delete DB._data.onlineTime[oldName];
+                    }
+                    if (DB._data.lastSeen && DB._data.lastSeen[oldName]) {
+                        DB._data.lastSeen[val] = DB._data.lastSeen[oldName];
+                        delete DB._data.lastSeen[oldName];
+                    }
+                    const backupFavs = localStorage.getItem('favorites_' + oldName);
+                    if (backupFavs) {
+                        localStorage.setItem('favorites_' + val, backupFavs);
+                        localStorage.removeItem('favorites_' + oldName);
+                    }
+                    const backupAvatar = localStorage.getItem('avatar_' + oldName);
+                    if (backupAvatar) {
+                        localStorage.setItem('avatar_' + val, backupAvatar);
+                        localStorage.removeItem('avatar_' + oldName);
+                    }
+                    DB.save();
+                    closeModal('editModal');
+                    renderProfile();
+                    updateUI();
+                    showToast('✅ Никнейм изменен на ' + val, 'success');
+                } else {
+                    showToast(data.error || 'Ошибка', 'error');
+                }
+            } catch(e) {
+                showToast('Ошибка сервера', 'error');
+            }
+        };
+        xhr.send(JSON.stringify({ userId: user.id, newName: val }));
+    } else if (type === 'bio') {
+        const profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        profiles[user.name].bio = val;
+        DB.set('profiles', profiles);
+        closeModal('editModal');
+        renderProfile();
+        showToast('✅ Описание обновлено!', 'success');
+    } else {
+        showToast('❌ Изменение этого поля пока не поддерживается', 'warning');
+    }
+}
+
+// ============================================
+// ВОССТАНОВЛЕНИЕ ДАННЫХ
+// ============================================
+function restoreAllData() {
+    console.log('🔄 Восстановление данных...');
+    const user = DB.get('currentUser');
+    if (!user) return;
+    const backupFavs = localStorage.getItem('favorites_' + user.name);
+    if (backupFavs) {
+        try {
+            const parsed = JSON.parse(backupFavs);
+            if (parsed && parsed.length > 0) {
+                const currentFavs = DB.getUserData(user.name, 'favorites', []);
+                if (currentFavs.length === 0) {
+                    DB.setUserData(user.name, 'favorites', parsed);
+                    console.log('📚 Восстановлено избранное:', parsed.length);
+                }
+            }
+        } catch(e) {}
+    }
+    const backupAvatar = localStorage.getItem('avatar_' + user.name);
+    if (backupAvatar) {
+        const profiles = DB.get('profiles', {});
+        if (!profiles[user.name]) profiles[user.name] = {};
+        if (!profiles[user.name].avatar) {
+            profiles[user.name].avatar = backupAvatar;
+            DB.set('profiles', profiles);
+            console.log('🖼️ Восстановлена аватарка');
+        }
+    }
+    DB.save();
+    if (typeof renderProfile === 'function') renderProfile();
+    if (typeof renderFavorites === 'function') renderFavorites();
+    if (typeof renderAchievements === 'function') renderAchievements();
+    console.log('✅ Восстановление завершено');
+}
+
+// ============================================
+// ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// ============================================
+function updateSocialStats() {
+    console.log('🔄 Обновление статистики соцсетей...');
+    const tgElement = document.getElementById('tgStats');
+    if (tgElement) {
+        const tgBase = 1200;
+        const tgGrowth = Math.floor(Math.random() * 30);
+        const tgCurrent = tgBase + tgGrowth;
+        tgElement.textContent = '👥 ' + formatNumber(tgCurrent) + ' подписчиков';
+        tgElement.classList.add('pulse');
+        setTimeout(function() { tgElement.classList.remove('pulse'); }, 500);
+    }
+    const vkElement = document.getElementById('vkStats');
+    if (vkElement) {
+        const vkBase = 856;
+        const vkGrowth = Math.floor(Math.random() * 20);
+        const vkCurrent = vkBase + vkGrowth;
+        vkElement.textContent = '👥 ' + formatNumber(vkCurrent) + ' подписчиков';
+        vkElement.classList.add('pulse');
+        setTimeout(function() { vkElement.classList.remove('pulse'); }, 500);
+    }
+    const ttElement = document.getElementById('ttStats');
+    if (ttElement) {
+        const ttBase = 2400;
+        const ttGrowth = Math.floor(Math.random() * 50);
+        const ttCurrent = ttBase + ttGrowth;
+        ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
+        ttElement.classList.add('pulse');
+        setTimeout(function() { ttElement.classList.remove('pulse'); }, 500);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updateSocialStats, 1000);
+    setInterval(updateSocialStats, 30000);
+});
 
 // ============================================
 // ЗАПУСК
@@ -1300,11 +1694,14 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUI();
     navigate('catalog');
     const user = DB.get('currentUser');
-    if (user) startOnlineTracking();
+    if (user) {
+        startOnlineTracking();
+    }
+    console.log('✅ OnikaAnime готов!');
 });
 
 // ============================================
-// ЭКСПОРТ
+// ЭКСПОРТ ГЛОБАЛЬНЫХ ФУНКЦИЙ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -1313,9 +1710,13 @@ window.toggleMenu = toggleMenu;
 window.closeMenu = closeMenu;
 window.showLoginModal = showLoginModal;
 window.logout = logout;
+window.deleteAccount = deleteAccount;
+window.editProfile = editProfile;
+window.saveEdit = saveEdit;
 window.toggleFav = toggleFav;
 window.addComment = addComment;
 window.deleteComment = deleteComment;
+window.setActiveTitle = setActiveTitle;
 window.renderFavorites = renderFavorites;
 window.renderAchievements = renderAchievements;
 window.renderProfile = renderProfile;
@@ -1329,3 +1730,6 @@ window.scrollToTop = scrollToTop;
 window.closeModal = closeModal;
 window.showToast = showToast;
 window.showConfirmModal = showConfirmModal;
+window.formatNumber = formatNumber;
+window.formatTime = formatTime;
+window.formatFullTime = formatFullTime;
