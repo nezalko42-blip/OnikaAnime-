@@ -15,6 +15,8 @@ let scheduleCache = null;
 let scheduleCacheTime = 0;
 let isLoading = false;
 let activeFilters = {};
+let allGenres = [];
+let _currentGenreId = null;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -40,7 +42,7 @@ const ACHIEVEMENTS_LIST = [
 // ============================================
 function navigate(pageName) {
     currentPage = pageName;
-    const pages = ['catalog', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings'];
+    const pages = ['catalog', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings', 'genres'];
     
     pages.forEach(p => {
         const el = document.getElementById(`page-${p}`);
@@ -51,11 +53,13 @@ function navigate(pageName) {
         loadCatalog();
         setTimeout(() => loadRecommendations(), 100);
         setTimeout(() => loadSchedule(), 200);
+        setTimeout(() => loadRandomGenres(), 500);
     }
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
     if (pageName === 'achievements') renderAchievements();
     if (pageName === 'mycomments') renderMyComments();
+    if (pageName === 'genres') loadGenres();
     
     closeMenu();
 }
@@ -78,6 +82,9 @@ function updateUI() {
         nav.innerHTML = `
             <a class="active" data-page="catalog" onclick="navigate('catalog'); closeMenu();">
                 <span class="icon">🏠</span> Главная
+            </a>
+            <a data-page="genres" onclick="navigate('genres'); closeMenu();">
+                <span class="icon">🎭</span> Жанры
             </a>
             <a data-page="favorites" onclick="navigate('favorites'); closeMenu();">
                 <span class="icon">❤️</span> Избранное
@@ -104,6 +111,9 @@ function updateUI() {
         nav.innerHTML = `
             <a class="active" data-page="catalog" onclick="navigate('catalog'); closeMenu();">
                 <span class="icon">🏠</span> Главная
+            </a>
+            <a data-page="genres" onclick="navigate('genres'); closeMenu();">
+                <span class="icon">🎭</span> Жанры
             </a>
         `;
         footer.innerHTML = `<button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">🚀 Войти</button>`;
@@ -614,14 +624,19 @@ function setGenre(genreId, btn) {
         if (genreId === 'latest') {
             titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
         } else if (genreId) {
-            const genreNames = {
-                '1': '🎬 Экшен',
-                '8': '🎭 Драма',
-                '21': '😂 Комедия',
-                '10': '🧙 Фэнтези',
-                '22': '💕 Романтика'
-            };
-            titleEl.textContent = genreNames[genreId] || '🎭 ' + btn.textContent;
+            const genre = window.allGenres?.find(g => g.id == genreId);
+            if (genre) {
+                titleEl.textContent = `${genre.icon || '🎭'} ${genre.name}`;
+            } else {
+                const genreNames = {
+                    '1': '🎬 Экшен',
+                    '8': '🎭 Драма',
+                    '21': '😂 Комедия',
+                    '10': '🧙 Фэнтези',
+                    '22': '💕 Романтика'
+                };
+                titleEl.textContent = genreNames[genreId] || '🎭 ' + (btn ? btn.textContent : 'Жанр');
+            }
         } else {
             titleEl.textContent = '📚 ВСЕ АНИМЕ';
         }
@@ -1212,7 +1227,131 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 14. TOAST
+// 14. ЖАНРЫ (НОВЫЕ ФУНКЦИИ)
+// ============================================
+
+// 14.1. Загрузка всех жанров
+async function loadGenres() {
+    const grid = document.getElementById('genresGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка жанров...</div>';
+    
+    try {
+        const genres = await API.getGenres();
+        window.allGenres = genres;
+        
+        if (!genres || genres.length === 0) {
+            grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">😅 Жанры не найдены</div>';
+            return;
+        }
+        
+        let html = '';
+        genres.forEach(genre => {
+            html += `
+                <div class="genre-card" onclick="openGenreDetail(${genre.id})">
+                    <div class="genre-icon">${genre.icon || '📚'}</div>
+                    <div class="genre-name">${genre.name}</div>
+                    ${genre.description ? `<div class="genre-desc">${genre.description}</div>` : ''}
+                    <div class="genre-stats">🔍 Подробнее</div>
+                </div>
+            `;
+        });
+        
+        grid.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Ошибка загрузки жанров:', error);
+        grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⚠️ Ошибка загрузки</div>';
+    }
+}
+
+// 14.2. Открыть детали жанра
+async function openGenreDetail(genreId) {
+    try {
+        const genre = await API.getGenreDetails(genreId);
+        if (!genre) {
+            showToast('❌ Жанр не найден', 'error');
+            return;
+        }
+        
+        document.getElementById('genreDetailName').textContent = genre.name;
+        document.getElementById('genreDetailDesc').textContent = genre.description || 'Описание отсутствует';
+        document.getElementById('genreDetailCount').textContent = genre.releases_count || 'неизвестно';
+        
+        _currentGenreId = genreId;
+        document.getElementById('genreDetailModal').style.display = 'flex';
+    } catch (error) {
+        console.error('❌ Ошибка загрузки деталей жанра:', error);
+        showToast('⚠️ Ошибка загрузки', 'error');
+    }
+}
+
+// 14.3. Загрузить релизы по жанру
+async function loadGenreReleases() {
+    if (!_currentGenreId) {
+        showToast('❌ Жанр не выбран', 'error');
+        return;
+    }
+    
+    closeModal('genreDetailModal');
+    
+    const genre = window.allGenres?.find(g => g.id === _currentGenreId);
+    if (genre) {
+        window.genre = _currentGenreId;
+        window.query = '';
+        window.page = 1;
+        const titleEl = document.getElementById('title');
+        if (titleEl) {
+            titleEl.textContent = `${genre.icon || '🎭'} ${genre.name}`;
+        }
+        loadCatalog();
+        navigate('catalog');
+    }
+}
+
+// 14.4. Случайные жанры на главной
+async function loadRandomGenres() {
+    const container = document.getElementById('randomGenresGrid');
+    if (!container) return;
+    
+    try {
+        const genres = await API.getRandomGenresForHome(4);
+        
+        if (!genres || genres.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">😅 Нет доступных жанров</div>';
+            return;
+        }
+        
+        let html = '';
+        genres.forEach(genre => {
+            html += `
+                <div class="genre-card" onclick="setGenre(${genre.id}, null)" style="padding:16px;">
+                    <div class="genre-icon" style="font-size:32px;">${genre.icon || '📚'}</div>
+                    <div class="genre-name" style="font-size:14px;">${genre.name}</div>
+                    ${genre.description ? `<div class="genre-desc" style="font-size:11px;">${genre.description}</div>` : ''}
+                    <div class="genre-stats" style="font-size:11px;">Посмотреть →</div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Ошибка загрузки случайных жанров:', error);
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">⚠️ Ошибка загрузки</div>';
+    }
+}
+
+async function refreshRandomGenres() {
+    const container = document.getElementById('randomGenresGrid');
+    if (container) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:#888;"><div class="spinner-small"></div><br>⏳ Обновление...</div>';
+    }
+    await loadRandomGenres();
+}
+
+// ============================================
+// 15. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1244,7 +1383,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 15. МОДАЛЬНЫЕ ОКНА
+// 16. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1308,7 +1447,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 16. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 17. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1428,7 +1567,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 17. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 18. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -1465,7 +1604,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 18. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 19. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     console.log('🔄 Обновление статистики соцсетей...');
@@ -1504,7 +1643,46 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 19. ЗАПУСК
+// 20. МОИ КОММЕНТАРИИ
+// ============================================
+function renderMyComments() {
+    const user = DB.get('currentUser');
+    const container = document.getElementById('myCommentsList');
+    if (!container) return;
+    if (!user) {
+        container.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
+        return;
+    }
+    fetch('/api/comments/all')
+        .then(res => res.json())
+        .then(comments => {
+            const myComments = comments.filter(c => c.user_name === user.name);
+            document.getElementById('myCommentsCount').textContent = myComments.length + ' комментариев';
+            if (myComments.length === 0) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>';
+                return;
+            }
+            let html = '';
+            myComments.forEach(c => {
+                html += `
+                    <div class="my-comment-item">
+                        <div class="my-comment-header">
+                            <span class="my-comment-anime" onclick="searchAndOpen('${c.anime}')">📺 ${c.anime}</span>
+                            <span style="font-size:11px;color:var(--text-muted);">${c.date}</span>
+                        </div>
+                        <div class="my-comment-text">${c.text}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        })
+        .catch(() => {
+            container.innerHTML = '<div class="empty-state"><span class="empty-icon">⚠️</span><p>Ошибка загрузки</p></div>';
+        });
+}
+
+// ============================================
+// 21. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -1519,7 +1697,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 20. ЭКСПОРТ
+// 22. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -1552,3 +1730,11 @@ window.showConfirmModal = showConfirmModal;
 window.formatNumber = formatNumber;
 window.formatTime = formatTime;
 window.formatFullTime = formatFullTime;
+window.loadGenres = loadGenres;
+window.openGenreDetail = openGenreDetail;
+window.loadGenreReleases = loadGenreReleases;
+window.loadRandomGenres = loadRandomGenres;
+window.refreshRandomGenres = refreshRandomGenres;
+window.uploadAvatar = uploadAvatar;
+
+console.log('✅ OnikaAnime полностью загружен!');
