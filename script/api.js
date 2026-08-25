@@ -1,6 +1,7 @@
 // ============================================
 // API МОДУЛЬ ONIKAANIME (Anilibria API v1)
 // POST /anime/catalog/releases для каталога
+// НОВИНКИ — CREATED_AT_DESC
 // ============================================
 
 const API = {
@@ -69,7 +70,7 @@ const API = {
     },
 
     // ============================================
-    // 1. КАТАЛОГ (POST /anime/catalog/releases)
+    // 1. КАТАЛОГ (POST /anime/catalog/releases) — НОВИНКИ
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
         const body = {
@@ -108,8 +109,8 @@ const API = {
             if (filters.year_to) body.f.years.to_year = filters.year_to;
         }
 
-        // Сортировка
-        body.f.sorting = filters.sorting || 'FRESH_AT_DESC';
+        // НОВИНКИ — сортировка по дате создания (сначала новые)
+        body.f.sorting = filters.sorting || 'CREATED_AT_DESC';
 
         // Возрастные рейтинги
         if (filters.age_ratings && filters.age_ratings.length) {
@@ -152,6 +153,8 @@ const API = {
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres'
         };
         const data = await this._get('/app/search/releases', params);
+        console.log('🔍 Поиск данных:', data);
+        
         if (data && data.data && data.data.length > 0) {
             const items = data.data.map(item => this._convertItem(item));
             const totalPages = data.meta?.pagination?.total_pages || 1;
@@ -219,9 +222,18 @@ const API = {
             include: 'id,type.genres,name,poster,year,episodes_total'
         };
         const data = await this._get('/anime/releases/recommended', params);
-        if (data && Array.isArray(data)) {
+        console.log('🔥 Рекомендации данные:', data);
+        
+        if (data && Array.isArray(data) && data.length > 0) {
             return data.map(item => this._convertItem(item));
         }
+        
+        // Если рекомендаций нет — берём случайные
+        const randomData = await this.getRandomReleases(limit);
+        if (randomData && randomData.length > 0) {
+            return randomData;
+        }
+        
         return [];
     },
 
