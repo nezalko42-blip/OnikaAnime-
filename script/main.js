@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (С УСКОРЕННОЙ ЗАГРУЗКОЙ)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (Jikan API v4)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -206,7 +206,7 @@ async function loadCatalog() {
                 };
                 titleEl.textContent = `🎭 ${genreNames[genre] || 'Жанр'}`;
             } else {
-                titleEl.textContent = '✨ Новинки аниме';
+                titleEl.textContent = '🔥 Популярное аниме';
             }
             
             renderCatalog(result.items);
@@ -535,16 +535,16 @@ function showDetail(anime) {
     btn.onclick = () => toggleFav(anime.title);
     renderComments(anime.title);
     
-    // Показываем ссылку на Anilibria
+    // Показываем ссылку на MyAnimeList
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
         wrapper.innerHTML = `
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
                 <span style="font-size:48px;">🎬</span>
-                <span style="font-size:16px;color:#aaa;">Смотреть на Anilibria</span>
-                <a href="https://www.anilibria.tv/release/${anime._raw?.code || ''}" target="_blank" 
+                <span style="font-size:16px;color:#aaa;">Смотреть на MyAnimeList</span>
+                <a href="https://myanimelist.net/anime/${anime.id.replace('jikan_', '')}" target="_blank" 
                    style="padding:10px 24px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);background:rgba(46,204,113,0.05);color:#2ecc71;cursor:pointer;font-size:14px;text-decoration:none;">
-                    🌐 Открыть на Anilibria
+                    🌐 Открыть на MyAnimeList
                 </a>
             </div>
         `;
