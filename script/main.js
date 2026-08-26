@@ -212,18 +212,20 @@ async function loadCatalog() {
         const filters = getCatalogFilters();
         const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
         
-        // Очищаем поисковый запрос если поле пустое
         const searchInput = document.getElementById('filterSearchInput');
         const searchValue = searchInput ? searchInput.value.trim() : '';
         
         let result;
         if (searchValue && searchValue.length > 0) {
-            // Используем поиск
             console.log(`🔍 Поиск: "${searchValue}"`);
             result = await API.searchTitles(searchValue, 1);
         } else {
-            // Обычный каталог
-            result = await API.searchAll('', '', 1, filters);
+            // Если выбран жанр 'latest', используем специальный метод
+            if (genre === 'latest') {
+                result = await API._getLatestReleases(limit || 48);
+            } else {
+                result = await API.searchAll('', '', 1, filters);
+            }
         }
         
         if (result && result.items && result.items.length > 0) {
@@ -307,6 +309,10 @@ async function loadMoreCatalog() {
         let result;
         if (searchValue && searchValue.length > 0) {
             result = await API.searchTitles(searchValue, nextPage);
+        } else if (genre === 'latest') {
+            // Для новинок загружаем все сразу
+            result = await API._getLatestReleases(limit || 48);
+            isAllLoaded = true;
         } else {
             result = await API.searchAll('', '', nextPage, filters);
         }
@@ -357,7 +363,6 @@ async function loadMoreCatalog() {
 function getCatalogFilters() {
     const filters = {};
     
-    // Год
     const yearFrom = document.getElementById('filterYearFrom');
     const yearTo = document.getElementById('filterYearTo');
     if (yearFrom && yearFrom.value) {
@@ -367,19 +372,16 @@ function getCatalogFilters() {
         filters.year_to = parseInt(yearTo.value);
     }
     
-    // Жанры
     const genreChecks = document.querySelectorAll('#filterGenres input:checked');
     if (genreChecks.length) {
         filters.genres = Array.from(genreChecks).map(cb => parseInt(cb.value));
     }
     
-    // Возраст - исправлено
     const ageChecks = document.querySelectorAll('#filterAgeRatings input:checked');
     if (ageChecks.length) {
         filters.age_ratings = Array.from(ageChecks).map(cb => cb.value);
     }
     
-    // Сортировка
     const sortSelect = document.getElementById('filterSorting');
     if (sortSelect && sortSelect.value) {
         filters.sorting = sortSelect.value;
@@ -391,7 +393,6 @@ function getCatalogFilters() {
 // Загрузка опций для фильтров
 async function loadFilterOptions() {
     try {
-        // Жанры
         const genres = await API.getGenres();
         const genresContainer = document.getElementById('filterGenres');
         if (genresContainer && genres.length) {
@@ -403,7 +404,6 @@ async function loadFilterOptions() {
             `).join('');
         }
         
-        // Возраст - исправлено
         const ages = await API.getAgeRatings();
         const agesContainer = document.getElementById('filterAgeRatings');
         if (agesContainer && ages.length) {
@@ -425,13 +425,11 @@ async function loadFilterOptions() {
 
 // Применить фильтры
 function applyCatalogFilters() {
-    // Очищаем таймаут поиска
     if (searchTimeout) {
         clearTimeout(searchTimeout);
         searchTimeout = null;
     }
     
-    // Дебаунс для поиска (задержка 300ms)
     searchTimeout = setTimeout(() => {
         allItems = [];
         isAllLoaded = false;
@@ -442,10 +440,8 @@ function applyCatalogFilters() {
 
 // Сбросить фильтры
 function resetCatalogFilters() {
-    // Сбрасываем все чекбоксы
     document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
     
-    // Сбрасываем поля ввода
     const searchInput = document.getElementById('filterSearchInput');
     if (searchInput) {
         searchInput.value = '';
@@ -458,17 +454,25 @@ function resetCatalogFilters() {
     if (yearFrom) yearFrom.value = '';
     if (yearTo) yearTo.value = '';
     
-    // Сбрасываем селекты
     const sortSelect = document.getElementById('filterSorting');
     if (sortSelect) sortSelect.value = 'CREATED_AT_DESC';
     
     const limitSelect = document.getElementById('filterLimit');
     if (limitSelect) limitSelect.value = '24';
     
-    // Очищаем таймаут
     if (searchTimeout) {
         clearTimeout(searchTimeout);
         searchTimeout = null;
+    }
+    
+    // Если был выбран жанр, сбрасываем его
+    if (genre && genre !== 'latest') {
+        genre = '';
+        document.querySelectorAll('.genres a').forEach(el => el.classList.remove('active'));
+        const allBtn = document.querySelector('.genres a[data-genre=""]');
+        if (allBtn) allBtn.classList.add('active');
+        const titleEl = document.getElementById('title');
+        if (titleEl) titleEl.textContent = '📚 ВСЕ АНИМЕ';
     }
     
     searchQuery = '';
@@ -523,7 +527,62 @@ function renderCatalog(list) {
 }
 
 // ============================================
-// 2. РЕКОМЕНДАЦИИ
+// 2. УСТАНОВКА ЖАНРА / НОВИНОК
+// ============================================
+function setGenre(genreId, btn) {
+    document.querySelectorAll('.genres a').forEach(function(el) {
+        el.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+    
+    window.genre = genreId;
+    window.query = '';
+    window.page = 1;
+    
+    const searchInput = document.getElementById('filterSearchInput');
+    if (searchInput) searchInput.value = '';
+    
+    const titleEl = document.getElementById('title');
+    if (titleEl) {
+        if (genreId === 'latest') {
+            titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
+        } else if (genreId) {
+            const genre = window.allGenres?.find(g => g.id == genreId);
+            if (genre) {
+                titleEl.textContent = `${genre.icon || '🎭'} ${genre.name}`;
+            } else {
+                const genreNames = {
+                    '1': '⚔️ Экшен',
+                    '8': '🎭 Драма',
+                    '21': '😂 Комедия',
+                    '10': '🧙 Фэнтези',
+                    '22': '💕 Романтика'
+                };
+                titleEl.textContent = genreNames[genreId] || '🎭 ' + (btn ? btn.textContent : 'Жанр');
+            }
+        } else {
+            titleEl.textContent = '📚 ВСЕ АНИМЕ';
+        }
+    }
+    
+    // При выборе новинок сбрасываем фильтры
+    if (genreId === 'latest') {
+        document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
+        const yearFrom = document.getElementById('filterYearFrom');
+        const yearTo = document.getElementById('filterYearTo');
+        if (yearFrom) yearFrom.value = '';
+        if (yearTo) yearTo.value = '';
+        const sortSelect = document.getElementById('filterSorting');
+        if (sortSelect) sortSelect.value = 'CREATED_AT_DESC';
+    }
+    
+    allItems = [];
+    isAllLoaded = false;
+    loadCatalog();
+}
+
+// ============================================
+// 3. РЕКОМЕНДАЦИИ
 // ============================================
 async function loadRecommendations() {
     const container = document.getElementById('recommendationsGrid');
@@ -564,7 +623,7 @@ async function loadRecommendations() {
 }
 
 // ============================================
-// 3. СЛУЧАЙНОЕ АНИМЕ
+// 4. СЛУЧАЙНОЕ АНИМЕ
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
@@ -599,9 +658,8 @@ async function randomAnime() {
 }
 
 // ============================================
-// 4. АВТОДОПОЛНЕНИЕ ДЛЯ ПОИСКА
+// 5. АВТОДОПОЛНЕНИЕ ДЛЯ ПОИСКА
 // ============================================
-// Добавим автодополнение для поля поиска
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('filterSearchInput');
     const autocompleteContainer = document.createElement('div');
@@ -681,7 +739,7 @@ function selectSearchSuggestion(id) {
 }
 
 // ============================================
-// 5. ДЕТАЛИ
+// 6. ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
     if (!id) return showToast('Ошибка ID', 'error');
@@ -713,7 +771,6 @@ function showDetail(anime) {
     poster.src = img;
     poster.style.display = img ? 'block' : 'none';
     
-    // Показываем возрастной рейтинг
     const ageBadge = document.querySelector('.age-badge');
     if (ageBadge) {
         const age = anime.age_rating || '0+';
@@ -748,7 +805,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 6. КОММЕНТАРИИ
+// 7. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -843,7 +900,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 7. ИЗБРАННОЕ
+// 8. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -917,7 +974,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 8. ДОСТИЖЕНИЯ
+// 9. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1015,7 +1072,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 9. ПРОФИЛЬ
+// 10. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1106,7 +1163,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 10. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 11. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1260,7 +1317,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 11. АВАТАР
+// 12. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1308,7 +1365,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 12. TOAST
+// 13. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1340,7 +1397,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 13. МОДАЛЬНЫЕ ОКНА
+// 14. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1404,7 +1461,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 14. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 15. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1524,7 +1581,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 15. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 16. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -1561,7 +1618,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 16. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 17. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -1599,7 +1656,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 17. МОИ КОММЕНТАРИИ
+// 18. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -1638,7 +1695,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 18. ЗАПУСК
+// 19. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -1653,7 +1710,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 19. ЭКСПОРТ
+// 20. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -1691,5 +1748,6 @@ window.searchAndOpen = searchAndOpen;
 window.toggleCategory = toggleCategory;
 window.clearSearchInput = clearSearchInput;
 window.toggleFilterPanel = toggleFilterPanel;
+window.setGenre = setGenre;
 
 console.log('✅ OnikaAnime полностью загружен!');
