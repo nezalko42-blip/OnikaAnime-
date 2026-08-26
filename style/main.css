@@ -5412,3 +5412,260 @@ svg use {
         grid-template-columns: repeat(4, 1fr) !important;
     }
 }
+
+/* ============================================
+   СТИЛИ ДЛЯ ФИЛЬТРА КАТАЛОГА
+   ============================================ */
+
+/* Панель фильтра */
+.filter-panel {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 14px;
+}
+
+.filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.filter-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+}
+
+.filter-input {
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    transition: var(--transition);
+    width: 100%;
+}
+
+.filter-input:focus {
+    border-color: var(--accent);
+    background: rgba(108, 92, 231, 0.05);
+}
+
+.filter-input-small {
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    transition: var(--transition);
+    width: 70px;
+    text-align: center;
+}
+
+.filter-input-small:focus {
+    border-color: var(--accent);
+    background: rgba(108, 92, 231, 0.05);
+}
+
+.filter-year-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-year-group span {
+    color: var(--text-muted);
+}
+
+.filter-select {
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+}
+
+.filter-select:focus {
+    border-color: var(--accent);
+}
+
+.filter-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.filter-checkboxes label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: var(--transition);
+}
+
+.filter-checkboxes label:hover {
+    background: rgba(108, 92, 231, 0.05);
+    border-color: rgba(108, 92, 231, 0.1);
+}
+
+.filter-checkboxes input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.filter-checkboxes label:has(input:checked) {
+    background: rgba(108, 92, 231, 0.1);
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.filter-apply-btn {
+    padding: 8px 24px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 14px;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.filter-apply-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(108, 92, 231, 0.2);
+}
+
+.filter-reset-btn {
+    padding: 8px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.filter-reset-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+/* Статистика каталога */
+.catalog-stats {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+}
+
+/* Кнопка "Загрузить ещё" */
+.load-more-btn {
+    display: none;
+    width: 100%;
+    padding: 14px;
+    margin-top: 24px;
+    border-radius: var(--radius);
+    border: 2px solid rgba(108, 92, 231, 0.15);
+    background: transparent;
+    color: var(--accent-glow);
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.load-more-btn:hover {
+    background: rgba(108, 92, 231, 0.05);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(108, 92, 231, 0.05);
+}
+
+.load-more-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+    transform: none !important;
+}
+
+/* Заголовок каталога */
+.catalog-header h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Адаптив для фильтра */
+@media (max-width: 768px) {
+    .filter-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .filter-group {
+        min-width: 100%;
+    }
+    
+    .filter-year-group {
+        justify-content: center;
+    }
+    
+    .filter-apply-btn,
+    .filter-reset-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .filter-checkboxes {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-panel {
+        padding: 14px;
+    }
+    
+    .filter-input-small {
+        width: 60px;
+    }
+}
