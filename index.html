@@ -74,10 +74,7 @@
             </button>
         </div>
         <div class="header-center">
-            <div class="search-wrapper">
-                <svg class="search-icon" width="18" height="18"><use href="icons/icons.svg#icon-search"/></svg>
-                <input type="text" id="searchInput" placeholder="Поиск аниме..." autocomplete="off" spellcheck="false">
-            </div>
+            <!-- Поиск убран из верхней панели -->
         </div>
         <div class="header-right">
             <span class="site-title">OnikaAnime</span>
@@ -227,60 +224,30 @@
 
                     <!-- ===== ФИЛЬТР ===== -->
                     <div class="filter-panel" id="filterPanel">
-                        <div class="filter-row">
-                            <div class="filter-group">
-                                <label>🔍 Поиск</label>
-                                <input type="text" id="filterSearchInput" placeholder="Название аниме..." class="filter-input">
+                        <!-- Строка поиска -->
+                        <div class="filter-search-row">
+                            <div class="filter-search-wrapper">
+                                <span class="filter-search-icon">🔍</span>
+                                <input type="text" id="filterSearchInput" placeholder="Поиск аниме по названию..." class="filter-search-input" oninput="applyCatalogFilters()">
+                                <button class="filter-search-clear" id="filterSearchClear" onclick="clearSearchInput()" style="display:none;">✕</button>
                             </div>
+                        </div>
+
+                        <div class="filter-divider"></div>
+
+                        <!-- Основные фильтры -->
+                        <div class="filter-row">
                             <div class="filter-group">
                                 <label>📅 Год</label>
                                 <div class="filter-year-group">
-                                    <input type="number" id="filterYearFrom" placeholder="От" class="filter-input-small" min="1900" max="2100">
+                                    <input type="number" id="filterYearFrom" placeholder="От" class="filter-input-small" min="1900" max="2100" onchange="applyCatalogFilters()">
                                     <span>—</span>
-                                    <input type="number" id="filterYearTo" placeholder="До" class="filter-input-small" min="1900" max="2100">
+                                    <input type="number" id="filterYearTo" placeholder="До" class="filter-input-small" min="1900" max="2100" onchange="applyCatalogFilters()">
                                 </div>
                             </div>
-                            <button class="filter-apply-btn" onclick="applyCatalogFilters()">🔍 Применить</button>
-                            <button class="filter-reset-btn" onclick="resetCatalogFilters()">✕ Сбросить</button>
-                        </div>
-
-                        <div class="filter-row">
-                            <div class="filter-group">
-                                <label>🎭 Жанры</label>
-                                <div id="filterGenres" class="filter-checkboxes"></div>
-                            </div>
-                        </div>
-
-                        <div class="filter-row">
-                            <div class="filter-group">
-                                <label>📺 Тип</label>
-                                <div id="filterTypes" class="filter-checkboxes"></div>
-                            </div>
-                            <div class="filter-group">
-                                <label>📅 Сезон</label>
-                                <div id="filterSeasons" class="filter-checkboxes"></div>
-                            </div>
-                            <div class="filter-group">
-                                <label>🔞 Возраст</label>
-                                <div id="filterAgeRatings" class="filter-checkboxes"></div>
-                            </div>
-                        </div>
-
-                        <div class="filter-row">
-                            <div class="filter-group">
-                                <label>📌 Статус</label>
-                                <div id="filterPublishStatuses" class="filter-checkboxes"></div>
-                            </div>
-                            <div class="filter-group">
-                                <label>🎬 Производство</label>
-                                <div id="filterProductionStatuses" class="filter-checkboxes"></div>
-                            </div>
-                        </div>
-
-                        <div class="filter-row">
                             <div class="filter-group">
                                 <label>📊 Сортировка</label>
-                                <select id="filterSorting" class="filter-select">
+                                <select id="filterSorting" class="filter-select" onchange="applyCatalogFilters()">
                                     <option value="CREATED_AT_DESC">Новинки</option>
                                     <option value="FRESH_AT_DESC">Свежие</option>
                                     <option value="RATING_DESC">Популярные</option>
@@ -289,12 +256,66 @@
                             </div>
                             <div class="filter-group">
                                 <label>📦 Количество</label>
-                                <select id="filterLimit" class="filter-select">
+                                <select id="filterLimit" class="filter-select" onchange="applyCatalogFilters()">
                                     <option value="24">24</option>
                                     <option value="48">48</option>
                                     <option value="96">96</option>
                                     <option value="0">Все</option>
                                 </select>
+                            </div>
+                            <button class="filter-reset-btn" onclick="resetCatalogFilters()">✕ Сбросить фильтры</button>
+                        </div>
+
+                        <div class="filter-divider"></div>
+
+                        <!-- Фильтры-категории -->
+                        <div class="filter-categories">
+                            <div class="filter-category">
+                                <div class="filter-category-header" onclick="toggleCategory(this)">
+                                    <span>🎭 Жанры</span>
+                                    <span class="filter-category-arrow">▼</span>
+                                </div>
+                                <div class="filter-category-body" id="filterGenres"></div>
+                            </div>
+
+                            <div class="filter-category">
+                                <div class="filter-category-header" onclick="toggleCategory(this)">
+                                    <span>📺 Тип</span>
+                                    <span class="filter-category-arrow">▼</span>
+                                </div>
+                                <div class="filter-category-body" id="filterTypes"></div>
+                            </div>
+
+                            <div class="filter-category">
+                                <div class="filter-category-header" onclick="toggleCategory(this)">
+                                    <span>📅 Сезон</span>
+                                    <span class="filter-category-arrow">▼</span>
+                                </div>
+                                <div class="filter-category-body" id="filterSeasons"></div>
+                            </div>
+
+                            <div class="filter-category">
+                                <div class="filter-category-header" onclick="toggleCategory(this)">
+                                    <span>🔞 Возраст</span>
+                                    <span class="filter-category-arrow">▼</span>
+                                </div>
+                                <div class="filter-category-body" id="filterAgeRatings"></div>
+                            </div>
+
+                            <div class="filter-category">
+                                <div class="filter-category-header" onclick="toggleCategory(this)">
+                                    <span>📌 Статус</span>
+                                    <span class="filter-category-arrow">▼</span>
+                                </div>
+                                <div class="filter-category-body" id="filterPublishStatuses"></div>
+                            </div>
+
+                            <div class="filter-category">
+                                <div class="filter-category-header" onclick="toggleCategory(this)">
+                                    <span>🎬 Производство</span>
+                                    <span class="filter-category-arrow">▼</span>
+                                </div>
+                                <div class="filter-category-body" id="filterProductionStatuses"></div>
                             </div>
                         </div>
                     </div>
@@ -834,7 +855,6 @@
                 updateUI();
             }
             
-            // Запускаем главную страницу
             if (typeof navigate === 'function') {
                 setTimeout(function() {
                     navigate('home');
@@ -909,6 +929,39 @@
             if (sidebar) sidebar.classList.remove('open');
             if (overlay) overlay.classList.remove('open');
         };
+
+        window.toggleCategory = function(header) {
+            const body = header.nextElementSibling;
+            const arrow = header.querySelector('.filter-category-arrow');
+            if (body) {
+                body.classList.toggle('open');
+                if (arrow) {
+                    arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+                }
+            }
+        };
+
+        window.clearSearchInput = function() {
+            const input = document.getElementById('filterSearchInput');
+            const clearBtn = document.getElementById('filterSearchClear');
+            if (input) {
+                input.value = '';
+                input.focus();
+                if (clearBtn) clearBtn.style.display = 'none';
+                applyCatalogFilters();
+            }
+        };
+
+        // Отслеживаем ввод в поиске для показа кнопки очистки
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('filterSearchInput');
+            const clearBtn = document.getElementById('filterSearchClear');
+            if (searchInput && clearBtn) {
+                searchInput.addEventListener('input', function() {
+                    clearBtn.style.display = this.value.length > 0 ? 'flex' : 'none';
+                });
+            }
+        });
 
         console.log('🌟 OnikaAnime загружен!');
         console.log('💡 Используйте checkData() для проверки данных');
