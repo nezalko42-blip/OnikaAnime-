@@ -101,7 +101,7 @@ const API = {
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
         if (genre === 'latest') {
-            return await this._getLatestReleases(24);
+            return await this._getLatestReleases(48);
         }
 
         const body = {
@@ -154,142 +154,77 @@ const API = {
     },
 
     // ============================================
-    // 2. ПОИСК (ИСПРАВЛЕННЫЙ)
+    // 2. НОВИНКИ (ИСПРАВЛЕННЫЕ)
+    // ============================================
+    async _getLatestReleases(limit = 48) {
+        // Пробуем получить через эндпоинт latest
+        const params = {
+            limit: limit,
+            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing,player,status'
+        };
+        
+        let data = await this._get('/anime/releases/latest', params, false);
+        
+        // Если через latest не получилось или мало данных
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            // Пробуем через каталог с сортировкой по дате создания
+            const body = {
+                page: 1,
+                limit: limit,
+                f: { 
+                    sorting: 'CREATED_AT_DESC'
+                },
+                include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing,player,status'
+            };
+            const fallbackData = await this._post('/anime/catalog/releases', body);
+            if (fallbackData && fallbackData.data && fallbackData.data.length > 0) {
+                data = fallbackData.data;
+            }
+        }
+        
+        // Если data это массив, конвертируем
+        if (data && Array.isArray(data) && data.length > 0) {
+            const items = data.map(item => this._convertItem(item));
+            // Сортируем по дате создания (новые сверху)
+            items.sort((a, b) => {
+                const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+                const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+                return dateB - dateA;
+            });
+            return {
+                items: items,
+                totalPages: 1,
+                totalCount: items.length
+            };
+        }
+        
+        return { items: [], totalPages: 1, totalCount: 0 };
+    },
+
+    // ============================================
+    // 3. ПОИСК
     // ============================================
     async searchTitles(query, page = 1) {
         if (!query || query.length < 1) return { items: [], totalPages: 1, totalCount: 0 };
         
-        // Пробуем разные варианты поиска
-        const searchMethods = [
-            // 1. Прямой поиск через search/releases
-            async () => {
-                const params = {
-                    query: query,
-                    limit: 48,
-                    page: page,
-                    include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
-                };
-                return await this._get('/app/search/releases', params, false);
-            },
-            // 2. Поиск через каталог с фильтром
-            async () => {
-                const body = {
-                    page: page,
-                    limit: 48,
-                    f: { search: query },
-                    include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
-                };
-                return await this._post('/anime/catalog/releases', body);
-            }
-        ];
-
-        // Перебираем методы поиска
-        for (const method of searchMethods) {
-            try {
-                const data = await method();
-                
-                if (data && data.data && data.data.length > 0) {
-                    const items = data.data.map(item => this._convertItem(item));
-                    const totalCount = data.meta?.pagination?.total_items || items.length;
-                    const totalPages = data.meta?.pagination?.total_pages || 1;
-                    
-                    console.log(`🔍 Поиск "${query}" нашёл ${items.length} результатов`);
-                    return {
-                        items: items,
-                        totalPages: totalPages,
-                        totalCount: totalCount
-                    };
-                }
-            } catch(e) {
-                console.warn('Метод поиска не сработал:', e.message);
-            }
-        }
-
-        // Если ничего не найдено, пробуем поиск по названиям в кэше
-        const cachedResults = this._searchInCache(query);
-        if (cachedResults.length > 0) {
-            return {
-                items: cachedResults,
-                totalPages: 1,
-                totalCount: cachedResults.length
-            };
-        }
-
-        return { items: [], totalPages: 1, totalCount: 0 };
-    },
-
-    // Поиск в кэше (для случаев, когда API не находит)
-    _searchInCache(query) {
-        const results = [];
-        const searchLower = query.toLowerCase().trim();
-        
-        for (const [key, item] of this._cache) {
-            if (item.data && item.data.name) {
-                const name = item.data.name.main || item.data.name.english || '';
-                const nameLower = name.toLowerCase();
-                
-                if (nameLower.includes(searchLower) || 
-                    searchLower.includes(nameLower) ||
-                    this._translitMatch(nameLower, searchLower)) {
-                    results.push(this._convertItem(item.data));
-                }
-            }
-        }
-        
-        return results.slice(0, 20);
-    },
-
-    // Простое сопоставление транслитерации
-    _translitMatch(str1, str2) {
-        // Упрощенная проверка
-        const translitMap = {
-            'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д',
-            'e': 'е', 'yo': 'ё', 'zh': 'ж', 'z': 'з', 'i': 'и',
-            'y': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н',
-            'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т',
-            'u': 'у', 'f': 'ф', 'h': 'х', 'c': 'ц', 'ch': 'ч',
-            'sh': 'ш', 'sch': 'щ', 'yu': 'ю', 'ya': 'я'
-        };
-        return false; // Упрощенно
-    },
-
-    // ============================================
-    // 3. НОВИНКИ
-    // ============================================
-    async _getLatestReleases(limit = 24) {
         const params = {
-            limit: limit,
-            'f[sorting]': 'CREATED_AT_DESC',
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing'
-        };
-        
-        const data = await this._get('/anime/releases/latest', params, true);
-        
-        if (data && Array.isArray(data) && data.length > 0) {
-            const items = data.map(item => this._convertItem(item));
-            return {
-                items: items,
-                totalPages: 1,
-                totalCount: items.length
-            };
-        }
-        
-        const fallbackBody = {
-            page: 1,
-            limit: limit,
-            f: { sorting: 'CREATED_AT_DESC' },
+            query: query,
+            limit: 48,
+            page: page,
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
         };
-        const fallbackData = await this._post('/anime/catalog/releases', fallbackBody);
-        if (fallbackData && fallbackData.data && fallbackData.data.length > 0) {
-            const items = fallbackData.data.map(item => this._convertItem(item));
+        const data = await this._get('/app/search/releases', params, false);
+        
+        if (data && data.data && data.data.length > 0) {
+            const items = data.data.map(item => this._convertItem(item));
+            const totalCount = data.meta?.pagination?.total_items || items.length;
+            const totalPages = data.meta?.pagination?.total_pages || 1;
             return {
                 items: items,
-                totalPages: 1,
-                totalCount: items.length
+                totalPages: totalPages,
+                totalCount: totalCount
             };
         }
-        
         return { items: [], totalPages: 1, totalCount: 0 };
     },
 
@@ -358,7 +293,7 @@ const API = {
     },
 
     // ============================================
-    // 8. АВТОДОПОЛНЕНИЕ (ДЛЯ ПОИСКА)
+    // 8. АВТОДОПОЛНЕНИЕ
     // ============================================
     async searchAutocomplete(query, limit = 10) {
         if (!query || query.length < 1) return [];
@@ -401,7 +336,6 @@ const API = {
         const data = await this._get('/anime/catalog/references/age-ratings', {}, false);
         if (data && Array.isArray(data)) {
             return data.map(item => {
-                // Обрабатываем разные форматы данных
                 if (typeof item === 'object' && item !== null) {
                     return {
                         value: item.value || item,
@@ -438,7 +372,7 @@ const API = {
     },
 
     // ============================================
-    // 10. КОНВЕРТАЦИЯ ДАННЫХ (ИСПРАВЛЕННАЯ)
+    // 10. КОНВЕРТАЦИЯ ДАННЫХ
     // ============================================
     _getPosterUrl(poster) {
         if (!poster) return '';
@@ -461,7 +395,7 @@ const API = {
         const year = item.year || '--';
         const episodes = item.episodes_total || item.episodes?.total || '?';
         
-        // ПРАВИЛЬНАЯ ОБРАБОТКА ВОЗРАСТА
+        // Правильная обработка возраста
         let ageRating = '0+';
         if (item.age_rating) {
             if (typeof item.age_rating === 'object' && item.age_rating !== null) {
@@ -470,7 +404,6 @@ const API = {
                 ageRating = item.age_rating;
             }
         }
-        // Преобразуем в читаемый формат
         if (typeof ageRating === 'string' && ageRating.startsWith('R')) {
             const ageMap = {
                 'R0_PLUS': '0+',
@@ -484,7 +417,6 @@ const API = {
 
         const status = item.status?.string || item.status || 'Неизвестно';
         const isOngoing = item.is_ongoing || false;
-
         const publishDay = item.publish_day?.description || null;
         const favoritesCount = item.added_in_users_favorites || 0;
         const duration = item.average_duration_of_episode || null;
@@ -563,7 +495,6 @@ const API = {
             status: status,
             russian: title_russian,
             source: 'Anilibria v1',
-            
             publish_day: publishDay,
             favorites_count: favoritesCount,
             duration: duration,
@@ -571,13 +502,10 @@ const API = {
             updated_at: updatedAt,
             is_ongoing: isOngoing,
             external_player: externalPlayer,
-            
             video_links: videoLinks,
             episodes_list: episodesList,
             total_episodes: totalEpisodes,
-            
             torrents: torrents,
-            
             _raw: item
         };
     },
