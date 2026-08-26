@@ -154,10 +154,92 @@ const API = {
     },
 
     // ============================================
-    // 2. НОВИНКИ (ИСПРАВЛЕННЫЕ)
+    // 2. ПОИСК (ИСПРАВЛЕННЫЙ)
+    // ============================================
+    async searchTitles(query, page = 1) {
+        if (!query || query.length < 1) return { items: [], totalPages: 1, totalCount: 0 };
+        
+        console.log(`🔍 API поиск: "${query}"`);
+        
+        // Пробуем несколько вариантов
+        const searchVariants = [
+            query,
+            query.toLowerCase(),
+            query.toUpperCase(),
+            query.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, ''),
+        ];
+        
+        const uniqueVariants = [...new Set(searchVariants)];
+        
+        for (const variant of uniqueVariants) {
+            try {
+                const params = {
+                    query: variant,
+                    limit: 48,
+                    page: page,
+                    include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
+                };
+                
+                const data = await this._get('/app/search/releases', params, false);
+                
+                if (data && data.data && data.data.length > 0) {
+                    const items = data.data.map(item => this._convertItem(item));
+                    const totalCount = data.meta?.pagination?.total_items || items.length;
+                    const totalPages = data.meta?.pagination?.total_pages || 1;
+                    
+                    console.log(`✅ Найдено ${items.length} результатов для "${variant}"`);
+                    return {
+                        items: items,
+                        totalPages: totalPages,
+                        totalCount: totalCount
+                    };
+                }
+            } catch(e) {
+                console.warn(`❌ Поиск "${variant}" не сработал:`, e.message);
+            }
+        }
+        
+        // Если ничего не найдено, пробуем искать по частям
+        if (query.length > 10) {
+            const words = query.split(' ');
+            for (const word of words) {
+                if (word.length > 3) {
+                    try {
+                        const params = {
+                            query: word,
+                            limit: 48,
+                            page: page,
+                            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
+                        };
+                        
+                        const data = await this._get('/app/search/releases', params, false);
+                        
+                        if (data && data.data && data.data.length > 0) {
+                            const items = data.data.map(item => this._convertItem(item));
+                            const totalCount = data.meta?.pagination?.total_items || items.length;
+                            const totalPages = data.meta?.pagination?.total_pages || 1;
+                            
+                            console.log(`✅ Найдено ${items.length} результатов по слову "${word}"`);
+                            return {
+                                items: items,
+                                totalPages: totalPages,
+                                totalCount: totalCount
+                            };
+                        }
+                    } catch(e) {
+                        console.warn(`❌ Поиск по слову "${word}" не сработал:`, e.message);
+                    }
+                }
+            }
+        }
+        
+        return { items: [], totalPages: 1, totalCount: 0 };
+    },
+
+    // ============================================
+    // 3. НОВИНКИ
     // ============================================
     async _getLatestReleases(limit = 48) {
-        // Пробуем получить через эндпоинт latest
         const params = {
             limit: limit,
             include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing,player,status'
@@ -165,9 +247,7 @@ const API = {
         
         let data = await this._get('/anime/releases/latest', params, false);
         
-        // Если через latest не получилось или мало данных
         if (!data || !Array.isArray(data) || data.length === 0) {
-            // Пробуем через каталог с сортировкой по дате создания
             const body = {
                 page: 1,
                 limit: limit,
@@ -182,10 +262,8 @@ const API = {
             }
         }
         
-        // Если data это массив, конвертируем
         if (data && Array.isArray(data) && data.length > 0) {
             const items = data.map(item => this._convertItem(item));
-            // Сортируем по дате создания (новые сверху)
             items.sort((a, b) => {
                 const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
                 const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
@@ -198,33 +276,6 @@ const API = {
             };
         }
         
-        return { items: [], totalPages: 1, totalCount: 0 };
-    },
-
-    // ============================================
-    // 3. ПОИСК
-    // ============================================
-    async searchTitles(query, page = 1) {
-        if (!query || query.length < 1) return { items: [], totalPages: 1, totalCount: 0 };
-        
-        const params = {
-            query: query,
-            limit: 48,
-            page: page,
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
-        };
-        const data = await this._get('/app/search/releases', params, false);
-        
-        if (data && data.data && data.data.length > 0) {
-            const items = data.data.map(item => this._convertItem(item));
-            const totalCount = data.meta?.pagination?.total_items || items.length;
-            const totalPages = data.meta?.pagination?.total_pages || 1;
-            return {
-                items: items,
-                totalPages: totalPages,
-                totalCount: totalCount
-            };
-        }
         return { items: [], totalPages: 1, totalCount: 0 };
     },
 
@@ -395,7 +446,6 @@ const API = {
         const year = item.year || '--';
         const episodes = item.episodes_total || item.episodes?.total || '?';
         
-        // Правильная обработка возраста
         let ageRating = '0+';
         if (item.age_rating) {
             if (typeof item.age_rating === 'object' && item.age_rating !== null) {
