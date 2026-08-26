@@ -16,6 +16,7 @@ let isLoading = false;
 let activeFilters = {};
 let isAllLoaded = false;
 let searchQuery = '';
+let filterPanelVisible = false;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -54,6 +55,15 @@ function navigate(pageName) {
     if (pageName === 'catalog') {
         loadCatalog();
         loadFilterOptions();
+        // При переходе в каталог скрываем фильтр по умолчанию
+        const panel = document.getElementById('filterPanel');
+        const icon = document.getElementById('filterToggleIcon');
+        const text = document.getElementById('filterToggleText');
+        if (panel) {
+            panel.style.display = 'none';
+            if (icon) icon.textContent = '🔽';
+            if (text) text.textContent = 'Показать фильтры';
+        }
     }
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
@@ -361,34 +371,10 @@ function getCatalogFilters() {
         filters.genres = Array.from(genreChecks).map(cb => parseInt(cb.value));
     }
     
-    // Типы
-    const typeChecks = document.querySelectorAll('#filterTypes input:checked');
-    if (typeChecks.length) {
-        filters.types = Array.from(typeChecks).map(cb => cb.value);
-    }
-    
-    // Сезоны
-    const seasonChecks = document.querySelectorAll('#filterSeasons input:checked');
-    if (seasonChecks.length) {
-        filters.seasons = Array.from(seasonChecks).map(cb => cb.value);
-    }
-    
     // Возраст
     const ageChecks = document.querySelectorAll('#filterAgeRatings input:checked');
     if (ageChecks.length) {
         filters.age_ratings = Array.from(ageChecks).map(cb => cb.value);
-    }
-    
-    // Статус публикации
-    const pubChecks = document.querySelectorAll('#filterPublishStatuses input:checked');
-    if (pubChecks.length) {
-        filters.publish_statuses = Array.from(pubChecks).map(cb => cb.value);
-    }
-    
-    // Статус производства
-    const prodChecks = document.querySelectorAll('#filterProductionStatuses input:checked');
-    if (prodChecks.length) {
-        filters.production_statuses = Array.from(prodChecks).map(cb => cb.value);
     }
     
     // Сортировка
@@ -415,64 +401,29 @@ async function loadFilterOptions() {
             `).join('');
         }
         
-        // Типы
-        const types = await API.getTypes();
-        const typesContainer = document.getElementById('filterTypes');
-        if (typesContainer && types.length) {
-            typesContainer.innerHTML = types.map(t => `
-                <label>
-                    <input type="checkbox" value="${t}" onchange="applyCatalogFilters()">
-                    <span>${t}</span>
-                </label>
-            `).join('');
-        }
-        
-        // Сезоны
-        const seasons = await API.getSeasons();
-        const seasonsContainer = document.getElementById('filterSeasons');
-        if (seasonsContainer && seasons.length) {
-            seasonsContainer.innerHTML = seasons.map(s => `
-                <label>
-                    <input type="checkbox" value="${s}" onchange="applyCatalogFilters()">
-                    <span>${s}</span>
-                </label>
-            `).join('');
-        }
-        
         // Возраст
         const ages = await API.getAgeRatings();
         const agesContainer = document.getElementById('filterAgeRatings');
         if (agesContainer && ages.length) {
-            agesContainer.innerHTML = ages.map(a => `
-                <label>
-                    <input type="checkbox" value="${a}" onchange="applyCatalogFilters()">
-                    <span>${a}+</span>
-                </label>
-            `).join('');
-        }
-        
-        // Статус публикации
-        const pubStatuses = await API.getPublishStatuses();
-        const pubContainer = document.getElementById('filterPublishStatuses');
-        if (pubContainer && pubStatuses.length) {
-            pubContainer.innerHTML = pubStatuses.map(s => `
-                <label>
-                    <input type="checkbox" value="${s}" onchange="applyCatalogFilters()">
-                    <span>${s}</span>
-                </label>
-            `).join('');
-        }
-        
-        // Статус производства
-        const prodStatuses = await API.getProductionStatuses();
-        const prodContainer = document.getElementById('filterProductionStatuses');
-        if (prodContainer && prodStatuses.length) {
-            prodContainer.innerHTML = prodStatuses.map(s => `
-                <label>
-                    <input type="checkbox" value="${s}" onchange="applyCatalogFilters()">
-                    <span>${s}</span>
-                </label>
-            `).join('');
+            agesContainer.innerHTML = ages.map(a => {
+                // Проверяем, что a это объект с label
+                if (typeof a === 'object' && a !== null) {
+                    const label = a.label || a.value || String(a);
+                    return `
+                        <label>
+                            <input type="checkbox" value="${a.value || a}" onchange="applyCatalogFilters()">
+                            <span>${label}</span>
+                        </label>
+                    `;
+                }
+                // Если это просто строка
+                return `
+                    <label>
+                        <input type="checkbox" value="${a}" onchange="applyCatalogFilters()">
+                        <span>${a}</span>
+                    </label>
+                `;
+            }).join('');
         }
     } catch (e) {
         console.error('Ошибка загрузки опций фильтров:', e);
@@ -637,12 +588,7 @@ async function randomAnime() {
 }
 
 // ============================================
-// 4. АВТОДОПОЛНЕНИЕ (убрано из верхней панели, оставлено для функциональности)
-// ============================================
-// Поиск теперь работает через фильтр в каталоге
-
-// ============================================
-// 5. ДЕТАЛИ
+// 4. ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
     if (!id) return showToast('Ошибка ID', 'error');
@@ -700,7 +646,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 6. КОММЕНТАРИИ
+// 5. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -795,7 +741,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 7. ИЗБРАННОЕ
+// 6. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -870,7 +816,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 8. ДОСТИЖЕНИЯ
+// 7. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -968,7 +914,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 9. ПРОФИЛЬ
+// 8. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1059,7 +1005,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 10. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 9. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1213,7 +1159,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 11. АВАТАР
+// 10. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1261,7 +1207,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 12. TOAST
+// 11. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1293,7 +1239,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 13. МОДАЛЬНЫЕ ОКНА
+// 12. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1357,7 +1303,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 14. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 13. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1477,7 +1423,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 15. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 14. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -1514,7 +1460,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 16. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 15. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -1552,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 17. МОИ КОММЕНТАРИИ
+// 16. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -1591,7 +1537,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 18. ЗАПУСК
+// 17. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -1606,7 +1552,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 19. ЭКСПОРТ
+// 18. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -1643,5 +1589,6 @@ window.updateSocialStats = updateSocialStats;
 window.searchAndOpen = searchAndOpen;
 window.toggleCategory = toggleCategory;
 window.clearSearchInput = clearSearchInput;
+window.toggleFilterPanel = toggleFilterPanel;
 
 console.log('✅ OnikaAnime полностью загружен!');
