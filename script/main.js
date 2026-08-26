@@ -7,8 +7,6 @@ const allData = {};
 let currentPage = 'home';
 let previousPage = null;
 let page = 1;
-let genre = '';
-let query = '';
 let totalCount = 0;
 let loadedCount = 0;
 let allItems = [];
@@ -17,6 +15,7 @@ let startTime = Date.now();
 let isLoading = false;
 let activeFilters = {};
 let isAllLoaded = false;
+let searchQuery = '';
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -184,7 +183,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// 1. КАТАЛОГ С ФИЛЬТРОМ
+// 1. КАТАЛОГ С ПОИСКОМ И ФИЛЬТРАМИ
 // ============================================
 async function loadCatalog() {
     if (isLoading) return;
@@ -203,30 +202,33 @@ async function loadCatalog() {
         const filters = getCatalogFilters();
         const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
         
-        // Загружаем первую партию
-        const result = await API.searchAll(filters.search || '', '', 1, filters);
+        // Используем поиск из API
+        let result;
+        if (searchQuery && searchQuery.length > 1) {
+            // Если есть поисковый запрос — используем поиск
+            result = await API.searchTitles(searchQuery, 1);
+        } else {
+            // Иначе обычный каталог с фильтрами
+            result = await API.searchAll(filters.search || '', '', 1, filters);
+        }
         
         if (result && result.items && result.items.length > 0) {
             allItems = result.items;
             totalCount = result.totalCount || result.items.length;
             
-            // Сохраняем все данные
             allItems.forEach(item => {
                 allData[item.mal_id] = item;
             });
             
-            // Отображаем
             renderCatalog(allItems);
             
-            // Обновляем статистику
             if (stats) {
                 const shown = allItems.length;
-                stats.textContent = `📊 Показано ${shown} из ${totalCount} аниме`;
+                stats.textContent = `📊 Найдено ${totalCount} аниме`;
             }
             
-            // Показываем кнопку "Загрузить ещё", если есть ещё
             if (loadMoreBtn) {
-                if (allItems.length < totalCount && totalCount > limit) {
+                if (allItems.length < totalCount && totalCount > limit && limit > 0) {
                     loadMoreBtn.style.display = 'block';
                     loadMoreBtn.textContent = `📥 Загрузить ещё (${allItems.length}/${totalCount})`;
                 } else {
@@ -234,9 +236,15 @@ async function loadCatalog() {
                 }
             }
             
-            isAllLoaded = allItems.length >= totalCount;
+            isAllLoaded = allItems.length >= totalCount || limit === 0;
         } else {
-            grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">🔍 Ничего не найдено</div>';
+            grid.innerHTML = `
+                <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+                    <div style="font-size:64px;margin-bottom:16px;">🔍</div>
+                    <p style="font-size:18px;font-weight:600;margin-bottom:8px;">Ничего не найдено</p>
+                    <p style="font-size:14px;">Попробуйте изменить параметры поиска или фильтры</p>
+                </div>
+            `;
             if (stats) stats.textContent = '📊 Найдено 0 аниме';
             if (loadMoreBtn) loadMoreBtn.style.display = 'none';
             allItems = [];
@@ -244,7 +252,13 @@ async function loadCatalog() {
         }
     } catch (error) {
         console.error('❌ Ошибка загрузки:', error);
-        grid.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">⚠️ Ошибка загрузки: ${error.message}</div>`;
+        grid.innerHTML = `
+            <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+                <div style="font-size:64px;margin-bottom:16px;">⚠️</div>
+                <p style="font-size:18px;font-weight:600;margin-bottom:8px;">Ошибка загрузки</p>
+                <p style="font-size:14px;">${error.message || 'Попробуйте позже'}</p>
+            </div>
+        `;
     } finally {
         isLoading = false;
     }
@@ -268,12 +282,16 @@ async function loadMoreCatalog() {
         const filters = getCatalogFilters();
         const currentCount = allItems.length;
         const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
-        const nextPage = Math.floor(currentCount / limit) + 1;
+        const nextPage = Math.floor(currentCount / Math.max(limit, 24)) + 1;
         
-        const result = await API.searchAll(filters.search || '', '', nextPage, filters);
+        let result;
+        if (searchQuery && searchQuery.length > 1) {
+            result = await API.searchTitles(searchQuery, nextPage);
+        } else {
+            result = await API.searchAll(filters.search || '', '', nextPage, filters);
+        }
         
         if (result && result.items && result.items.length > 0) {
-            // Добавляем новые элементы
             const newItems = result.items;
             newItems.forEach(item => {
                 if (!allData[item.mal_id]) {
@@ -281,20 +299,16 @@ async function loadMoreCatalog() {
                 }
             });
             
-            // Обновляем список всех элементов
             allItems = [...allItems, ...newItems];
             totalCount = result.totalCount || totalCount;
             
-            // Перерисовываем
             renderCatalog(allItems);
             
-            // Обновляем статистику
             if (stats) {
-                stats.textContent = `📊 Показано ${allItems.length} из ${totalCount} аниме`;
+                stats.textContent = `📊 Найдено ${totalCount} аниме`;
             }
             
-            // Проверяем, все ли загружены
-            isAllLoaded = allItems.length >= totalCount || newItems.length < limit;
+            isAllLoaded = allItems.length >= totalCount || newItems.length < Math.max(limit, 24);
             
             if (loadMoreBtn) {
                 if (!isAllLoaded) {
@@ -325,7 +339,10 @@ function getCatalogFilters() {
     // Поиск по названию
     const searchInput = document.getElementById('filterSearchInput');
     if (searchInput && searchInput.value.trim()) {
-        filters.search = searchInput.value.trim();
+        searchQuery = searchInput.value.trim();
+        filters.search = searchQuery;
+    } else {
+        searchQuery = '';
     }
     
     // Год
@@ -466,6 +483,7 @@ async function loadFilterOptions() {
 function applyCatalogFilters() {
     allItems = [];
     isAllLoaded = false;
+    page = 1;
     loadCatalog();
 }
 
@@ -476,7 +494,11 @@ function resetCatalogFilters() {
     
     // Сбрасываем поля ввода
     const searchInput = document.getElementById('filterSearchInput');
-    if (searchInput) searchInput.value = '';
+    if (searchInput) {
+        searchInput.value = '';
+        const clearBtn = document.getElementById('filterSearchClear');
+        if (clearBtn) clearBtn.style.display = 'none';
+    }
     
     const yearFrom = document.getElementById('filterYearFrom');
     const yearTo = document.getElementById('filterYearTo');
@@ -490,8 +512,10 @@ function resetCatalogFilters() {
     const limitSelect = document.getElementById('filterLimit');
     if (limitSelect) limitSelect.value = '24';
     
+    searchQuery = '';
     allItems = [];
     isAllLoaded = false;
+    page = 1;
     loadCatalog();
 }
 
@@ -499,7 +523,13 @@ function renderCatalog(list) {
     const grid = document.getElementById('grid');
     if (!grid) return;
     if (!list || list.length === 0) {
-        grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">🔍 Ничего не найдено</div>';
+        grid.innerHTML = `
+            <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+                <div style="font-size:64px;margin-bottom:16px;">🔍</div>
+                <p style="font-size:18px;font-weight:600;margin-bottom:8px;">Ничего не найдено</p>
+                <p style="font-size:14px;">Попробуйте изменить параметры поиска или фильтры</p>
+            </div>
+        `;
         return;
     }
     
@@ -607,48 +637,9 @@ async function randomAnime() {
 }
 
 // ============================================
-// 4. АВТОДОПОЛНЕНИЕ
+// 4. АВТОДОПОЛНЕНИЕ (убрано из верхней панели, оставлено для функциональности)
 // ============================================
-let autocompleteTimeout = null;
-const searchInput = document.getElementById('searchInput');
-const autocompleteList = document.createElement('div');
-autocompleteList.className = 'autocomplete-list';
-autocompleteList.style.cssText = `
-    position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card);
-    border-radius: 10px; border: 1px solid rgba(108,92,231,0.1);
-    max-height: 300px; overflow-y: auto; z-index: 1000; display: none;
-    backdrop-filter: blur(20px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-`;
-searchInput?.parentNode?.appendChild(autocompleteList);
-
-searchInput?.addEventListener('input', function(e) {
-    const value = this.value.trim();
-    clearTimeout(autocompleteTimeout);
-    autocompleteList.style.display = 'none';
-    if (value.length < 2) return;
-    autocompleteTimeout = setTimeout(async () => {
-        const suggestions = await API.searchAutocomplete(value, 5);
-        if (!suggestions.length) { autocompleteList.style.display = 'none'; return; }
-        let html = '';
-        suggestions.forEach(item => {
-            html += `<div class="autocomplete-item" onclick="selectAutocomplete('${item.id}')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);">
-                ${item.poster ? `<img src="${item.poster}" style="width:30px;height:40px;object-fit:cover;border-radius:4px;">` : '<span style="font-size:20px;">🎬</span>'}
-                <span>${item.title}</span>
-            </div>`;
-        });
-        autocompleteList.innerHTML = html;
-        autocompleteList.style.display = 'block';
-    }, 300);
-});
-
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.search-wrapper')) { autocompleteList.style.display = 'none'; }
-});
-
-function selectAutocomplete(id) {
-    autocompleteList.style.display = 'none';
-    openDetail(id);
-}
+// Поиск теперь работает через фильтр в каталоге
 
 // ============================================
 // 5. ДЕТАЛИ
@@ -869,7 +860,12 @@ function searchAndOpen(name) {
     if (!name) return;
     navigate('catalog');
     const searchInput = document.getElementById('filterSearchInput');
-    if (searchInput) searchInput.value = name;
+    if (searchInput) {
+        searchInput.value = name;
+        const clearBtn = document.getElementById('filterSearchClear');
+        if (clearBtn) clearBtn.style.display = 'flex';
+    }
+    searchQuery = name;
     applyCatalogFilters();
 }
 
@@ -1546,7 +1542,7 @@ function updateSocialStats() {
         const ttCurrent = ttBase + ttGrowth;
         ttElement.textContent = '👥 ' + formatNumber(ttCurrent) + ' подписчиков';
         ttElement.classList.add('pulse');
-        setTimeout(() => { vkElement.classList.remove('pulse'); }, 500);
+        setTimeout(() => { ttElement.classList.remove('pulse'); }, 500);
     }
 }
 
@@ -1644,5 +1640,8 @@ window.formatTime = formatTime;
 window.formatFullTime = formatFullTime;
 window.uploadAvatar = uploadAvatar;
 window.updateSocialStats = updateSocialStats;
+window.searchAndOpen = searchAndOpen;
+window.toggleCategory = toggleCategory;
+window.clearSearchInput = clearSearchInput;
 
 console.log('✅ OnikaAnime полностью загружен!');
