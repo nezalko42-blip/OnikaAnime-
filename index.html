@@ -222,8 +222,16 @@
                         <h2 id="title">📚 ВСЕ АНИМЕ</h2>
                     </div>
 
-                    <!-- ===== ФИЛЬТР ===== -->
-                    <div class="filter-panel" id="filterPanel">
+                    <!-- ===== КНОПКА ПОКАЗАТЬ/СКРЫТЬ ФИЛЬТР ===== -->
+                    <div class="filter-toggle-wrapper">
+                        <button class="filter-toggle-btn" onclick="toggleFilterPanel()">
+                            <span id="filterToggleIcon">🔽</span>
+                            <span id="filterToggleText">Показать фильтры</span>
+                        </button>
+                    </div>
+
+                    <!-- ===== ФИЛЬТР (СКРЫВАЕМЫЙ) ===== -->
+                    <div class="filter-panel" id="filterPanel" style="display:none;">
                         <!-- Строка поиска -->
                         <div class="filter-search-row">
                             <div class="filter-search-wrapper">
@@ -268,7 +276,7 @@
 
                         <div class="filter-divider"></div>
 
-                        <!-- Фильтры-категории -->
+                        <!-- Фильтры-категории (только Жанры и Возраст) -->
                         <div class="filter-categories">
                             <div class="filter-category">
                                 <div class="filter-category-header" onclick="toggleCategory(this)">
@@ -280,42 +288,10 @@
 
                             <div class="filter-category">
                                 <div class="filter-category-header" onclick="toggleCategory(this)">
-                                    <span>📺 Тип</span>
-                                    <span class="filter-category-arrow">▼</span>
-                                </div>
-                                <div class="filter-category-body" id="filterTypes"></div>
-                            </div>
-
-                            <div class="filter-category">
-                                <div class="filter-category-header" onclick="toggleCategory(this)">
-                                    <span>📅 Сезон</span>
-                                    <span class="filter-category-arrow">▼</span>
-                                </div>
-                                <div class="filter-category-body" id="filterSeasons"></div>
-                            </div>
-
-                            <div class="filter-category">
-                                <div class="filter-category-header" onclick="toggleCategory(this)">
                                     <span>🔞 Возраст</span>
                                     <span class="filter-category-arrow">▼</span>
                                 </div>
                                 <div class="filter-category-body" id="filterAgeRatings"></div>
-                            </div>
-
-                            <div class="filter-category">
-                                <div class="filter-category-header" onclick="toggleCategory(this)">
-                                    <span>📌 Статус</span>
-                                    <span class="filter-category-arrow">▼</span>
-                                </div>
-                                <div class="filter-category-body" id="filterPublishStatuses"></div>
-                            </div>
-
-                            <div class="filter-category">
-                                <div class="filter-category-header" onclick="toggleCategory(this)">
-                                    <span>🎬 Производство</span>
-                                    <span class="filter-category-arrow">▼</span>
-                                </div>
-                                <div class="filter-category-body" id="filterProductionStatuses"></div>
                             </div>
                         </div>
                     </div>
@@ -937,6 +913,24 @@
                 body.classList.toggle('open');
                 if (arrow) {
                     arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+                }
+            }
+        };
+
+        window.toggleFilterPanel = function() {
+            const panel = document.getElementById('filterPanel');
+            const icon = document.getElementById('filterToggleIcon');
+            const text = document.getElementById('filterToggleText');
+            
+            if (panel) {
+                if (panel.style.display === 'none') {
+                    panel.style.display = 'block';
+                    if (icon) icon.textContent = '🔼';
+                    if (text) text.textContent = 'Скрыть фильтры';
+                } else {
+                    panel.style.display = 'none';
+                    if (icon) icon.textContent = '🔽';
+                    if (text) text.textContent = 'Показать фильтры';
                 }
             }
         };
