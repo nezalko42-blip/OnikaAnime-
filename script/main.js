@@ -7,7 +7,7 @@ const allData = {};
 let currentPage = 'home';
 let previousPage = null;
 let page = 1;
-let genre = ''; // <--- ЭТО БЫЛО ПРОПУЩЕНО!
+let genre = '';
 let query = '';
 let totalCount = 0;
 let loadedCount = 0;
@@ -220,9 +220,30 @@ async function loadCatalog() {
         let result;
         if (searchValue && searchValue.length > 0) {
             console.log(`🔍 Поиск: "${searchValue}"`);
-            result = await API.searchTitles(searchValue, 1);
+            result = await smartSearch(searchValue, 1);
+            
+            if (!result || !result.items || result.items.length === 0) {
+                const translit = transliterate(searchValue);
+                if (translit && translit !== searchValue) {
+                    console.log(`🔄 Пробуем транслитерацию: "${translit}"`);
+                    result = await smartSearch(translit, 1);
+                }
+            }
+            
+            if (!result || !result.items || result.items.length === 0) {
+                const words = searchValue.split(' ');
+                for (const word of words) {
+                    if (word.length > 2) {
+                        console.log(`🔍 Пробуем слово: "${word}"`);
+                        const partialResult = await smartSearch(word, 1);
+                        if (partialResult && partialResult.items && partialResult.items.length > 0) {
+                            result = partialResult;
+                            break;
+                        }
+                    }
+                }
+            }
         } else {
-            // Если выбран жанр 'latest', используем специальный метод
             if (genre === 'latest') {
                 result = await API._getLatestReleases(limit || 48);
             } else {
@@ -263,7 +284,7 @@ async function loadCatalog() {
                     <div style="font-size:64px;margin-bottom:16px;">🔍</div>
                     <p style="font-size:18px;font-weight:600;margin-bottom:8px;">Ничего не найдено${searchText}</p>
                     <p style="font-size:14px;">Попробуйте изменить параметры поиска или фильтры</p>
-                    ${searchValue ? `<p style="font-size:13px;color:var(--text-muted);margin-top:8px;">💡 Попробуйте искать на русском или английском языке</p>` : ''}
+                    ${searchValue ? `<p style="font-size:13px;color:var(--text-muted);margin-top:8px;">💡 Попробуйте ввести часть названия (например, "океан" вместо "Необъятный океан")</p>` : ''}
                 </div>
             `;
             if (stats) stats.textContent = `📊 Найдено 0 аниме`;
@@ -283,6 +304,73 @@ async function loadCatalog() {
     } finally {
         isLoading = false;
     }
+}
+
+// ============================================
+// УМНЫЙ ПОИСК
+// ============================================
+async function smartSearch(query, page = 1) {
+    const results = [];
+    const searchMethods = [
+        async () => {
+            return await API.searchTitles(query, page);
+        },
+        async () => {
+            const filters = { search: query };
+            return await API.searchAll(query, '', page, filters);
+        },
+        async () => {
+            if (query.length > 10) {
+                const parts = query.split(' ');
+                for (const part of parts) {
+                    if (part.length > 3) {
+                        const result = await API.searchTitles(part, page);
+                        if (result && result.items && result.items.length > 0) {
+                            return result;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+    ];
+
+    for (const method of searchMethods) {
+        try {
+            const result = await method();
+            if (result && result.items && result.items.length > 0) {
+                return result;
+            }
+        } catch(e) {
+            console.warn('Метод поиска не сработал:', e.message);
+        }
+    }
+    
+    return { items: [], totalPages: 1, totalCount: 0 };
+}
+
+// ============================================
+// ТРАНСЛИТЕРАЦИЯ
+// ============================================
+function transliterate(text) {
+    const map = {
+        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
+        'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i',
+        'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n',
+        'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't',
+        'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch',
+        'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '',
+        'э': 'e', 'ю': 'yu', 'я': 'ya',
+        'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D',
+        'Е': 'E', 'Ё': 'Yo', 'Ж': 'Zh', 'З': 'Z', 'И': 'I',
+        'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N',
+        'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T',
+        'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch',
+        'Ш': 'Sh', 'Щ': 'Sch', 'Ъ': '', 'Ы': 'Y', 'Ь': '',
+        'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya'
+    };
+    
+    return text.split('').map(char => map[char] || char).join('');
 }
 
 // Загрузка дополнительных аниме
@@ -310,9 +398,8 @@ async function loadMoreCatalog() {
         
         let result;
         if (searchValue && searchValue.length > 0) {
-            result = await API.searchTitles(searchValue, nextPage);
+            result = await smartSearch(searchValue, nextPage);
         } else if (genre === 'latest') {
-            // Для новинок загружаем все сразу
             result = await API._getLatestReleases(limit || 48);
             isAllLoaded = true;
         } else {
@@ -467,7 +554,6 @@ function resetCatalogFilters() {
         searchTimeout = null;
     }
     
-    // Если был выбран жанр, сбрасываем его
     if (genre && genre !== 'latest') {
         genre = '';
         document.querySelectorAll('.genres a').forEach(el => el.classList.remove('active'));
@@ -567,7 +653,6 @@ function setGenre(genreId, btn) {
         }
     }
     
-    // При выборе новинок сбрасываем фильтры
     if (genreId === 'latest') {
         document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
         const yearFrom = document.getElementById('filterYearFrom');
