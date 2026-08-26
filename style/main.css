@@ -6469,3 +6469,273 @@ svg use {
     0%, 100% { box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); }
     50% { box-shadow: 0 4px 30px rgba(231, 76, 60, 0.6); }
 }
+
+/* ============================================
+   КРАСИВЫЕ ЧЕКБОКСЫ ДЛЯ ФИЛЬТРА
+   ============================================ */
+
+/* Кастомные чекбоксы */
+.filter-category-body label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+    user-select: none;
+}
+
+.filter-category-body label:hover {
+    background: rgba(108, 92, 231, 0.06);
+    color: var(--text-primary);
+    transform: translateX(4px);
+}
+
+.filter-category-body label:has(input:checked) {
+    background: rgba(108, 92, 231, 0.1);
+    color: var(--text-primary);
+    border: 1px solid rgba(108, 92, 231, 0.15);
+}
+
+/* Скрываем стандартный чекбокс */
+.filter-category-body input[type="checkbox"] {
+    display: none;
+}
+
+/* Создаем кастомный чекбокс */
+.filter-category-body input[type="checkbox"] + span::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    transition: all 0.3s ease;
+    margin-right: 8px;
+    vertical-align: middle;
+    position: relative;
+}
+
+.filter-category-body input[type="checkbox"] + span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.filter-category-body input[type="checkbox"]:checked + span::before {
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    border-color: var(--accent);
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+}
+
+.filter-category-body input[type="checkbox"]:checked + span::after {
+    content: '✓';
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* Для checked состояния используем псевдоэлемент */
+.filter-category-body label {
+    position: relative;
+}
+
+.filter-category-body input[type="checkbox"]:checked + span {
+    position: relative;
+}
+
+.filter-category-body input[type="checkbox"]:checked + span::after {
+    content: '✓';
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Анимация при наведении */
+.filter-category-body label:hover input[type="checkbox"] + span::before {
+    border-color: var(--accent);
+    transform: scale(1.05);
+}
+
+.filter-category-body label:active input[type="checkbox"] + span::before {
+    transform: scale(0.9);
+}
+
+/* Анимированная галочка */
+.filter-category-body input[type="checkbox"]:checked + span::before {
+    animation: checkboxPop 0.3s ease;
+}
+
+@keyframes checkboxPop {
+    0% { transform: scale(0.8); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+/* Стили для категорий фильтра */
+.filter-category {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.filter-category:hover {
+    border-color: rgba(108, 92, 231, 0.08);
+}
+
+.filter-category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.filter-category-header:hover {
+    background: rgba(108, 92, 231, 0.04);
+    color: var(--text-primary);
+}
+
+.filter-category-header .filter-category-arrow {
+    font-size: 10px;
+    transition: transform 0.3s ease;
+    color: var(--text-muted);
+}
+
+.filter-category-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+    padding: 0 16px;
+}
+
+.filter-category-body.open {
+    max-height: 600px;
+    padding: 8px 16px 16px;
+}
+
+.filter-category-body label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.filter-category-body label:hover {
+    background: rgba(108, 92, 231, 0.05);
+    color: var(--text-primary);
+}
+
+.filter-category-body label:has(input:checked) {
+    background: rgba(108, 92, 231, 0.08);
+    color: var(--text-primary);
+}
+
+/* Скрываем стандартный чекбокс */
+.filter-category-body input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Кастомный чекбокс */
+.filter-category-body .custom-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.filter-category-body input[type="checkbox"]:checked + .custom-checkbox {
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    border-color: var(--accent);
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+    animation: checkboxPop 0.3s ease;
+}
+
+.filter-category-body input[type="checkbox"]:checked + .custom-checkbox::after {
+    content: '✓';
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.filter-category-body label:hover input[type="checkbox"] + .custom-checkbox {
+    border-color: var(--accent);
+    transform: scale(1.05);
+}
+
+.filter-category-body label:active input[type="checkbox"] + .custom-checkbox {
+    transform: scale(0.9);
+}
+
+/* Счетчик выбранных */
+.filter-category .filter-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1px 10px;
+    border-radius: 12px;
+    margin-left: 8px;
+}
+
+.filter-category label .filter-label-text {
+    flex: 1;
+}
+
+/* Адаптив для чекбоксов */
+@media (max-width: 480px) {
+    .filter-category-body label {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+    
+    .filter-category-body .custom-checkbox {
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+    }
+    
+    .filter-category-body input[type="checkbox"]:checked + .custom-checkbox::after {
+        font-size: 10px;
+    }
+}
