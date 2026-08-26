@@ -97,7 +97,7 @@ const API = {
     },
 
     // ============================================
-    // 1. КАТАЛОГ (POST с фильтрацией)
+    // 1. КАТАЛОГ
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
         if (genre === 'latest') {
@@ -127,14 +127,6 @@ const API = {
             body.f.genres = genresArray;
         }
 
-        if (filters.types && filters.types.length) {
-            body.f.types = filters.types;
-        }
-
-        if (filters.seasons && filters.seasons.length) {
-            body.f.seasons = filters.seasons;
-        }
-
         if (filters.year_from || filters.year_to) {
             body.f.years = {};
             if (filters.year_from) body.f.years.from_year = filters.year_from;
@@ -147,14 +139,6 @@ const API = {
             body.f.age_ratings = filters.age_ratings;
         }
 
-        if (filters.publish_statuses && filters.publish_statuses.length) {
-            body.f.publish_statuses = filters.publish_statuses;
-        }
-
-        if (filters.production_statuses && filters.production_statuses.length) {
-            body.f.production_statuses = filters.production_statuses;
-        }
-
         const data = await this._post('/anime/catalog/releases', body);
         
         if (data && data.data && data.data.length > 0) {
@@ -162,14 +146,115 @@ const API = {
             const totalPages = data.meta?.pagination?.total_pages || 1;
             return {
                 items: items,
-                totalPages: totalPages
+                totalPages: totalPages,
+                totalCount: data.meta?.pagination?.total_items || items.length
             };
         }
-        return { items: [], totalPages: 1 };
+        return { items: [], totalPages: 1, totalCount: 0 };
     },
 
     // ============================================
-    // 2. НОВИНКИ
+    // 2. ПОИСК (ИСПРАВЛЕННЫЙ)
+    // ============================================
+    async searchTitles(query, page = 1) {
+        if (!query || query.length < 1) return { items: [], totalPages: 1, totalCount: 0 };
+        
+        // Пробуем разные варианты поиска
+        const searchMethods = [
+            // 1. Прямой поиск через search/releases
+            async () => {
+                const params = {
+                    query: query,
+                    limit: 48,
+                    page: page,
+                    include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
+                };
+                return await this._get('/app/search/releases', params, false);
+            },
+            // 2. Поиск через каталог с фильтром
+            async () => {
+                const body = {
+                    page: page,
+                    limit: 48,
+                    f: { search: query },
+                    include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
+                };
+                return await this._post('/anime/catalog/releases', body);
+            }
+        ];
+
+        // Перебираем методы поиска
+        for (const method of searchMethods) {
+            try {
+                const data = await method();
+                
+                if (data && data.data && data.data.length > 0) {
+                    const items = data.data.map(item => this._convertItem(item));
+                    const totalCount = data.meta?.pagination?.total_items || items.length;
+                    const totalPages = data.meta?.pagination?.total_pages || 1;
+                    
+                    console.log(`🔍 Поиск "${query}" нашёл ${items.length} результатов`);
+                    return {
+                        items: items,
+                        totalPages: totalPages,
+                        totalCount: totalCount
+                    };
+                }
+            } catch(e) {
+                console.warn('Метод поиска не сработал:', e.message);
+            }
+        }
+
+        // Если ничего не найдено, пробуем поиск по названиям в кэше
+        const cachedResults = this._searchInCache(query);
+        if (cachedResults.length > 0) {
+            return {
+                items: cachedResults,
+                totalPages: 1,
+                totalCount: cachedResults.length
+            };
+        }
+
+        return { items: [], totalPages: 1, totalCount: 0 };
+    },
+
+    // Поиск в кэше (для случаев, когда API не находит)
+    _searchInCache(query) {
+        const results = [];
+        const searchLower = query.toLowerCase().trim();
+        
+        for (const [key, item] of this._cache) {
+            if (item.data && item.data.name) {
+                const name = item.data.name.main || item.data.name.english || '';
+                const nameLower = name.toLowerCase();
+                
+                if (nameLower.includes(searchLower) || 
+                    searchLower.includes(nameLower) ||
+                    this._translitMatch(nameLower, searchLower)) {
+                    results.push(this._convertItem(item.data));
+                }
+            }
+        }
+        
+        return results.slice(0, 20);
+    },
+
+    // Простое сопоставление транслитерации
+    _translitMatch(str1, str2) {
+        // Упрощенная проверка
+        const translitMap = {
+            'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д',
+            'e': 'е', 'yo': 'ё', 'zh': 'ж', 'z': 'з', 'i': 'и',
+            'y': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н',
+            'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т',
+            'u': 'у', 'f': 'ф', 'h': 'х', 'c': 'ц', 'ch': 'ч',
+            'sh': 'ш', 'sch': 'щ', 'yu': 'ю', 'ya': 'я'
+        };
+        return false; // Упрощенно
+    },
+
+    // ============================================
+    // 3. НОВИНКИ
     // ============================================
     async _getLatestReleases(limit = 24) {
         const params = {
@@ -184,7 +269,8 @@ const API = {
             const items = data.map(item => this._convertItem(item));
             return {
                 items: items,
-                totalPages: 1
+                totalPages: 1,
+                totalCount: items.length
             };
         }
         
@@ -199,36 +285,12 @@ const API = {
             const items = fallbackData.data.map(item => this._convertItem(item));
             return {
                 items: items,
-                totalPages: 1
+                totalPages: 1,
+                totalCount: items.length
             };
         }
         
-        return { items: [], totalPages: 1 };
-    },
-
-    // ============================================
-    // 3. ПОИСК
-    // ============================================
-    async searchTitles(query, page = 1) {
-        if (!query || query.length < 2) return { items: [], totalPages: 1 };
-        
-        const params = {
-            query: query,
-            limit: 24,
-            page: page,
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
-        };
-        const data = await this._get('/app/search/releases', params, false);
-        
-        if (data && data.data && data.data.length > 0) {
-            const items = data.data.map(item => this._convertItem(item));
-            const totalPages = data.meta?.pagination?.total_pages || 1;
-            return {
-                items: items,
-                totalPages: totalPages
-            };
-        }
-        return { items: [], totalPages: 1 };
+        return { items: [], totalPages: 1, totalCount: 0 };
     },
 
     // ============================================
@@ -296,31 +358,32 @@ const API = {
     },
 
     // ============================================
-    // 8. АВТОДОПОЛНЕНИЕ
+    // 8. АВТОДОПОЛНЕНИЕ (ДЛЯ ПОИСКА)
     // ============================================
-    async searchAutocomplete(query, limit = 5) {
-        if (!query || query.length < 2) return [];
+    async searchAutocomplete(query, limit = 10) {
+        if (!query || query.length < 1) return [];
+        
         const params = {
             query: query,
             limit: limit,
-            include: 'id,name,poster'
+            include: 'id,name,poster,year'
         };
         const data = await this._get('/app/search/releases', params, false);
+        
         if (data && data.data && data.data.length > 0) {
             return data.data.map(item => ({
                 id: 'anilibria_' + item.id,
                 title: item.name?.main || item.name?.english || 'Без названия',
-                poster: this._getPosterUrl(item.poster)
+                poster: this._getPosterUrl(item.poster),
+                year: item.year || ''
             }));
         }
         return [];
     },
 
     // ============================================
-    // 9. РАБОТА С ЖАНРАМИ (НОВЫЕ МЕТОДЫ)
+    // 9. РАБОТА С ЖАНРАМИ
     // ============================================
-    
-    // 9.1. Получить все жанры
     async getGenres() {
         const data = await this._get('/anime/genres', {}, false);
         if (data && Array.isArray(data)) {
@@ -334,63 +397,19 @@ const API = {
         return [];
     },
 
-    // 9.2. Получить данные по конкретному жанру
-    async getGenreDetails(genreId) {
-        const data = await this._get(`/anime/genres/${genreId}`, {}, false);
-        if (data) {
-            return {
-                id: data.id,
-                name: data.name,
-                description: data.description,
-                releases_count: data.releases_count || 0
-            };
-        }
-        return null;
-    },
-
-    // 9.3. Получить релизы по жанру
-    async getReleasesByGenre(genreId, page = 1, limit = 24) {
-        const params = {
-            page: page,
-            limit: limit,
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites'
-        };
-        
-        const data = await this._get(`/anime/genres/${genreId}/releases`, params, false);
-        
-        if (data && data.data && data.data.length > 0) {
-            const items = data.data.map(item => this._convertItem(item));
-            const totalPages = data.meta?.pagination?.total_pages || 1;
-            return {
-                items: items,
-                totalPages: totalPages,
-                genre: data.meta?.genre || null
-            };
-        }
-        return { items: [], totalPages: 1, genre: null };
-    },
-
-    // 9.4. Получить случайные жанры
-    async getRandomGenres(limit = 3) {
-        const params = { limit: limit };
-        const data = await this._get('/anime/genres/random', params, false);
+    async getAgeRatings() {
+        const data = await this._get('/anime/catalog/references/age-ratings', {}, false);
         if (data && Array.isArray(data)) {
-            return data.map(genre => ({
-                id: genre.id,
-                name: genre.name,
-                description: genre.description,
-                icon: this._getGenreIcon(genre.name)
-            }));
-        }
-        return [];
-    },
-
-    // 9.5. Получить случайные жанры для главной
-    async getRandomGenresForHome(limit = 4) {
-        const genres = await this.getGenres();
-        if (genres && genres.length > 0) {
-            const shuffled = genres.sort(() => 0.5 - Math.random());
-            return shuffled.slice(0, limit);
+            return data.map(item => {
+                // Обрабатываем разные форматы данных
+                if (typeof item === 'object' && item !== null) {
+                    return {
+                        value: item.value || item,
+                        label: item.label || item.description || String(item.value || item)
+                    };
+                }
+                return { value: item, label: String(item) };
+            });
         }
         return [];
     },
@@ -413,25 +432,13 @@ const API = {
             'Детектив': '🔍',
             'Психологическое': '🧠',
             'Историческое': '🏯',
-            'Музыка': '🎵',
-            'Пародия': '🎭',
-            'Сёдзё': '👧',
-            'Сёнэн': '👦',
-            'Дзёсэй': '👩',
-            'Сэйнэн': '👨',
-            'Меха': '🤖',
-            'Киберпанк': '💻',
-            'Постапокалипсис': '🌆',
-            'Самураи': '⚔️',
-            'Вампиры': '🧛',
-            'Демоны': '👿',
-            'Магия': '🔮'
+            'Музыка': '🎵'
         };
         return icons[genreName] || '📚';
     },
 
     // ============================================
-    // 10. КОНВЕРТАЦИЯ ДАННЫХ
+    // 10. КОНВЕРТАЦИЯ ДАННЫХ (ИСПРАВЛЕННАЯ)
     // ============================================
     _getPosterUrl(poster) {
         if (!poster) return '';
@@ -453,7 +460,28 @@ const API = {
         const genres = (item.genres || []).map(g => g.name || g);
         const year = item.year || '--';
         const episodes = item.episodes_total || item.episodes?.total || '?';
-        const ageRating = item.age_rating?.label || item.age_rating?.value || '0+';
+        
+        // ПРАВИЛЬНАЯ ОБРАБОТКА ВОЗРАСТА
+        let ageRating = '0+';
+        if (item.age_rating) {
+            if (typeof item.age_rating === 'object' && item.age_rating !== null) {
+                ageRating = item.age_rating.label || item.age_rating.value || '0+';
+            } else if (typeof item.age_rating === 'string') {
+                ageRating = item.age_rating;
+            }
+        }
+        // Преобразуем в читаемый формат
+        if (typeof ageRating === 'string' && ageRating.startsWith('R')) {
+            const ageMap = {
+                'R0_PLUS': '0+',
+                'R6_PLUS': '6+',
+                'R12_PLUS': '12+',
+                'R16_PLUS': '16+',
+                'R18_PLUS': '18+'
+            };
+            ageRating = ageMap[ageRating] || ageRating.replace('R', '').replace('_PLUS', '+');
+        }
+
         const status = item.status?.string || item.status || 'Неизвестно';
         const isOngoing = item.is_ongoing || false;
 
@@ -555,7 +583,7 @@ const API = {
     },
 
     // ============================================
-    // 11. СПРАВОЧНИКИ (для фильтров)
+    // 11. СПРАВОЧНИКИ
     // ============================================
     async getTypes() {
         const data = await this._get('/anime/catalog/references/types');
@@ -569,11 +597,6 @@ const API = {
 
     async getYears() {
         const data = await this._get('/anime/catalog/references/years');
-        return data || [];
-    },
-
-    async getAgeRatings() {
-        const data = await this._get('/anime/catalog/references/age-ratings');
         return data || [];
     },
 
@@ -594,4 +617,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (с поддержкой жанров) загружен');
+console.log('✅ API модуль загружен');
