@@ -17,6 +17,7 @@ let activeFilters = {};
 let isAllLoaded = false;
 let searchQuery = '';
 let filterPanelVisible = false;
+let searchTimeout = null;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -55,7 +56,6 @@ function navigate(pageName) {
     if (pageName === 'catalog') {
         loadCatalog();
         loadFilterOptions();
-        // При переходе в каталог скрываем фильтр по умолчанию
         const panel = document.getElementById('filterPanel');
         const icon = document.getElementById('filterToggleIcon');
         const text = document.getElementById('filterToggleText');
@@ -212,14 +212,18 @@ async function loadCatalog() {
         const filters = getCatalogFilters();
         const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
         
-        // Используем поиск из API
+        // Очищаем поисковый запрос если поле пустое
+        const searchInput = document.getElementById('filterSearchInput');
+        const searchValue = searchInput ? searchInput.value.trim() : '';
+        
         let result;
-        if (searchQuery && searchQuery.length > 1) {
-            // Если есть поисковый запрос — используем поиск
-            result = await API.searchTitles(searchQuery, 1);
+        if (searchValue && searchValue.length > 0) {
+            // Используем поиск
+            console.log(`🔍 Поиск: "${searchValue}"`);
+            result = await API.searchTitles(searchValue, 1);
         } else {
-            // Иначе обычный каталог с фильтрами
-            result = await API.searchAll(filters.search || '', '', 1, filters);
+            // Обычный каталог
+            result = await API.searchAll('', '', 1, filters);
         }
         
         if (result && result.items && result.items.length > 0) {
@@ -234,7 +238,8 @@ async function loadCatalog() {
             
             if (stats) {
                 const shown = allItems.length;
-                stats.textContent = `📊 Найдено ${totalCount} аниме`;
+                const searchText = searchValue ? ` по запросу "${searchValue}"` : '';
+                stats.textContent = `📊 Найдено ${totalCount} аниме${searchText}`;
             }
             
             if (loadMoreBtn) {
@@ -248,14 +253,16 @@ async function loadCatalog() {
             
             isAllLoaded = allItems.length >= totalCount || limit === 0;
         } else {
+            const searchText = searchValue ? ` "${searchValue}"` : '';
             grid.innerHTML = `
                 <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
                     <div style="font-size:64px;margin-bottom:16px;">🔍</div>
-                    <p style="font-size:18px;font-weight:600;margin-bottom:8px;">Ничего не найдено</p>
+                    <p style="font-size:18px;font-weight:600;margin-bottom:8px;">Ничего не найдено${searchText}</p>
                     <p style="font-size:14px;">Попробуйте изменить параметры поиска или фильтры</p>
+                    ${searchValue ? `<p style="font-size:13px;color:var(--text-muted);margin-top:8px;">💡 Попробуйте искать на русском или английском языке</p>` : ''}
                 </div>
             `;
-            if (stats) stats.textContent = '📊 Найдено 0 аниме';
+            if (stats) stats.textContent = `📊 Найдено 0 аниме`;
             if (loadMoreBtn) loadMoreBtn.style.display = 'none';
             allItems = [];
             totalCount = 0;
@@ -294,11 +301,14 @@ async function loadMoreCatalog() {
         const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
         const nextPage = Math.floor(currentCount / Math.max(limit, 24)) + 1;
         
+        const searchInput = document.getElementById('filterSearchInput');
+        const searchValue = searchInput ? searchInput.value.trim() : '';
+        
         let result;
-        if (searchQuery && searchQuery.length > 1) {
-            result = await API.searchTitles(searchQuery, nextPage);
+        if (searchValue && searchValue.length > 0) {
+            result = await API.searchTitles(searchValue, nextPage);
         } else {
-            result = await API.searchAll(filters.search || '', '', nextPage, filters);
+            result = await API.searchAll('', '', nextPage, filters);
         }
         
         if (result && result.items && result.items.length > 0) {
@@ -315,7 +325,8 @@ async function loadMoreCatalog() {
             renderCatalog(allItems);
             
             if (stats) {
-                stats.textContent = `📊 Найдено ${totalCount} аниме`;
+                const searchText = searchValue ? ` по запросу "${searchValue}"` : '';
+                stats.textContent = `📊 Найдено ${totalCount} аниме${searchText}`;
             }
             
             isAllLoaded = allItems.length >= totalCount || newItems.length < Math.max(limit, 24);
@@ -346,15 +357,6 @@ async function loadMoreCatalog() {
 function getCatalogFilters() {
     const filters = {};
     
-    // Поиск по названию
-    const searchInput = document.getElementById('filterSearchInput');
-    if (searchInput && searchInput.value.trim()) {
-        searchQuery = searchInput.value.trim();
-        filters.search = searchQuery;
-    } else {
-        searchQuery = '';
-    }
-    
     // Год
     const yearFrom = document.getElementById('filterYearFrom');
     const yearTo = document.getElementById('filterYearTo');
@@ -371,7 +373,7 @@ function getCatalogFilters() {
         filters.genres = Array.from(genreChecks).map(cb => parseInt(cb.value));
     }
     
-    // Возраст
+    // Возраст - исправлено
     const ageChecks = document.querySelectorAll('#filterAgeRatings input:checked');
     if (ageChecks.length) {
         filters.age_ratings = Array.from(ageChecks).map(cb => cb.value);
@@ -401,26 +403,17 @@ async function loadFilterOptions() {
             `).join('');
         }
         
-        // Возраст
+        // Возраст - исправлено
         const ages = await API.getAgeRatings();
         const agesContainer = document.getElementById('filterAgeRatings');
         if (agesContainer && ages.length) {
             agesContainer.innerHTML = ages.map(a => {
-                // Проверяем, что a это объект с label
-                if (typeof a === 'object' && a !== null) {
-                    const label = a.label || a.value || String(a);
-                    return `
-                        <label>
-                            <input type="checkbox" value="${a.value || a}" onchange="applyCatalogFilters()">
-                            <span>${label}</span>
-                        </label>
-                    `;
-                }
-                // Если это просто строка
+                const label = a.label || a.value || String(a);
+                const value = a.value || a;
                 return `
                     <label>
-                        <input type="checkbox" value="${a}" onchange="applyCatalogFilters()">
-                        <span>${a}</span>
+                        <input type="checkbox" value="${value}" onchange="applyCatalogFilters()">
+                        <span>${label}</span>
                     </label>
                 `;
             }).join('');
@@ -432,10 +425,19 @@ async function loadFilterOptions() {
 
 // Применить фильтры
 function applyCatalogFilters() {
-    allItems = [];
-    isAllLoaded = false;
-    page = 1;
-    loadCatalog();
+    // Очищаем таймаут поиска
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+    }
+    
+    // Дебаунс для поиска (задержка 300ms)
+    searchTimeout = setTimeout(() => {
+        allItems = [];
+        isAllLoaded = false;
+        page = 1;
+        loadCatalog();
+    }, 300);
 }
 
 // Сбросить фильтры
@@ -462,6 +464,12 @@ function resetCatalogFilters() {
     
     const limitSelect = document.getElementById('filterLimit');
     if (limitSelect) limitSelect.value = '24';
+    
+    // Очищаем таймаут
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+    }
     
     searchQuery = '';
     allItems = [];
@@ -494,12 +502,14 @@ function renderCatalog(list) {
         const year = a.year || '';
         const color = colors[index % colors.length];
         const id = a.mal_id || a.id;
+        const age = a.age_rating || '0+';
         
         html += `
             <div class="card" onclick="openDetail('${id}')">
                 <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:48px;' : ''}">
                     ${img ? `<img src="${img}" loading="lazy" decoding="async" onerror="this.style.display='none'">` : '🎬'}
                     ${year ? `<span class="card-year">${year}</span>` : ''}
+                    <span class="card-age">${age}</span>
                 </div>
                 <div class="card-body">
                     <div class="title">${title}</div>
@@ -513,7 +523,7 @@ function renderCatalog(list) {
 }
 
 // ============================================
-// 2. РЕКОМЕНДАЦИИ (для главной)
+// 2. РЕКОМЕНДАЦИИ
 // ============================================
 async function loadRecommendations() {
     const container = document.getElementById('recommendationsGrid');
@@ -572,12 +582,13 @@ async function randomAnime() {
         const img = random.images?.jpg?.image_url || '';
         const year = random.year || '--';
         const episodes = random.episodes || '?';
+        const age = random.age_rating || '0+';
         resultContainer.innerHTML = `
             <div class="random-result-card" onclick="openDetail('${id}')">
                 <div class="random-result-img">${img ? '<img src="' + img + '" alt="' + title + '">' : '<div class="random-no-img">🎬</div>'}</div>
                 <div class="random-result-info">
                     <div class="random-result-title">🎯 ${title}</div>
-                    <div class="random-result-meta">${year} • ${episodes} эп.</div>
+                    <div class="random-result-meta">${year} • ${episodes} эп. • ${age}</div>
                     <div class="random-result-hint">👆 Нажмите, чтобы открыть</div>
                 </div>
             </div>
@@ -588,7 +599,89 @@ async function randomAnime() {
 }
 
 // ============================================
-// 4. ДЕТАЛИ
+// 4. АВТОДОПОЛНЕНИЕ ДЛЯ ПОИСКА
+// ============================================
+// Добавим автодополнение для поля поиска
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('filterSearchInput');
+    const autocompleteContainer = document.createElement('div');
+    autocompleteContainer.className = 'search-autocomplete';
+    autocompleteContainer.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        border: 1px solid rgba(108,92,231,0.1);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        margin-top: 4px;
+    `;
+    
+    const wrapper = searchInput?.closest('.filter-search-wrapper');
+    if (wrapper) {
+        wrapper.style.position = 'relative';
+        wrapper.appendChild(autocompleteContainer);
+    }
+    
+    let autocompleteTimeout = null;
+    
+    searchInput?.addEventListener('input', function() {
+        const value = this.value.trim();
+        clearTimeout(autocompleteTimeout);
+        autocompleteContainer.style.display = 'none';
+        
+        if (value.length < 2) return;
+        
+        autocompleteTimeout = setTimeout(async () => {
+            try {
+                const suggestions = await API.searchAutocomplete(value, 8);
+                if (!suggestions.length) {
+                    autocompleteContainer.style.display = 'none';
+                    return;
+                }
+                
+                let html = '';
+                suggestions.forEach(item => {
+                    html += `
+                        <div class="autocomplete-item" onclick="selectSearchSuggestion('${item.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,0.03);transition:all 0.2s ease;">
+                            ${item.poster ? `<img src="${item.poster}" style="width:30px;height:40px;object-fit:cover;border-radius:4px;">` : '<span style="font-size:20px;width:30px;text-align:center;">🎬</span>'}
+                            <div style="flex:1;">
+                                <div style="font-weight:600;color:var(--text-primary);">${item.title}</div>
+                                ${item.year ? `<div style="font-size:11px;color:var(--text-muted);">${item.year}</div>` : ''}
+                            </div>
+                            <span style="color:var(--accent-glow);font-size:12px;">→</span>
+                        </div>
+                    `;
+                });
+                autocompleteContainer.innerHTML = html;
+                autocompleteContainer.style.display = 'block';
+            } catch(e) {
+                console.warn('Ошибка автодополнения:', e);
+            }
+        }, 300);
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.filter-search-wrapper')) {
+            autocompleteContainer.style.display = 'none';
+        }
+    });
+});
+
+function selectSearchSuggestion(id) {
+    const autocomplete = document.querySelector('.search-autocomplete');
+    if (autocomplete) autocomplete.style.display = 'none';
+    openDetail(id);
+}
+
+// ============================================
+// 5. ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
     if (!id) return showToast('Ошибка ID', 'error');
@@ -619,6 +712,15 @@ function showDetail(anime) {
     const img = anime.images?.jpg?.image_url || '';
     poster.src = img;
     poster.style.display = img ? 'block' : 'none';
+    
+    // Показываем возрастной рейтинг
+    const ageBadge = document.querySelector('.age-badge');
+    if (ageBadge) {
+        const age = anime.age_rating || '0+';
+        ageBadge.textContent = age;
+        ageBadge.className = `age-badge age-${age.replace('+', '')}`;
+    }
+    
     document.getElementById('detailTags').innerHTML = (anime.genres || []).map(g => `<span class="detail-tag">${g}</span>`).join('');
     
     const user = DB.get('currentUser');
@@ -646,7 +748,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 5. КОММЕНТАРИИ
+// 6. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -741,7 +843,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 6. ИЗБРАННОЕ
+// 7. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -811,12 +913,11 @@ function searchAndOpen(name) {
         const clearBtn = document.getElementById('filterSearchClear');
         if (clearBtn) clearBtn.style.display = 'flex';
     }
-    searchQuery = name;
     applyCatalogFilters();
 }
 
 // ============================================
-// 7. ДОСТИЖЕНИЯ
+// 8. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -914,7 +1015,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 8. ПРОФИЛЬ
+// 9. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1005,7 +1106,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 9. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 10. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1159,7 +1260,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 10. АВАТАР
+// 11. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1207,7 +1308,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 11. TOAST
+// 12. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1239,7 +1340,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 12. МОДАЛЬНЫЕ ОКНА
+// 13. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1303,7 +1404,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 13. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 14. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1423,7 +1524,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 14. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 15. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -1460,7 +1561,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 15. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 16. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -1498,7 +1599,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 16. МОИ КОММЕНТАРИИ
+// 17. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -1537,7 +1638,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 17. ЗАПУСК
+// 18. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -1552,7 +1653,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 18. ЭКСПОРТ
+// 19. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
