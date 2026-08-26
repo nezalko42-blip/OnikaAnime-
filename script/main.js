@@ -7,6 +7,8 @@ const allData = {};
 let currentPage = 'home';
 let previousPage = null;
 let page = 1;
+let genre = ''; // <--- ЭТО БЫЛО ПРОПУЩЕНО!
+let query = '';
 let totalCount = 0;
 let loadedCount = 0;
 let allItems = [];
@@ -224,7 +226,7 @@ async function loadCatalog() {
             if (genre === 'latest') {
                 result = await API._getLatestReleases(limit || 48);
             } else {
-                result = await API.searchAll('', '', 1, filters);
+                result = await API.searchAll('', genre, 1, filters);
             }
         }
         
@@ -314,7 +316,7 @@ async function loadMoreCatalog() {
             result = await API._getLatestReleases(limit || 48);
             isAllLoaded = true;
         } else {
-            result = await API.searchAll('', '', nextPage, filters);
+            result = await API.searchAll('', genre, nextPage, filters);
         }
         
         if (result && result.items && result.items.length > 0) {
@@ -547,9 +549,9 @@ function setGenre(genreId, btn) {
         if (genreId === 'latest') {
             titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
         } else if (genreId) {
-            const genre = window.allGenres?.find(g => g.id == genreId);
-            if (genre) {
-                titleEl.textContent = `${genre.icon || '🎭'} ${genre.name}`;
+            const genreObj = window.allGenres?.find(g => g.id == genreId);
+            if (genreObj) {
+                titleEl.textContent = `${genreObj.icon || '🎭'} ${genreObj.name}`;
             } else {
                 const genreNames = {
                     '1': '⚔️ Экшен',
