@@ -97,8 +97,31 @@
         <div class="content">
             <div class="content-inner">
 
-                <!-- ===== ГЛАВНАЯ СТРАНИЦА ===== -->
+                <!-- ===== ГЛАВНАЯ СТРАНИЦА (С КАТАЛОГОМ) ===== -->
                 <div id="page-home">
+
+                    <!-- ===== КАРУСЕЛЬ РЕКОМЕНДАЦИЙ (РЕКЛАМНЫЙ ЩИТ) ===== -->
+                    <section class="hero-slider-section">
+                        <div class="hero-slider-container">
+                            <div class="hero-slider" id="heroSlider">
+                                <div class="hero-slide" style="background: linear-gradient(135deg, #6c5ce7, #fd79a8);">
+                                    <div class="hero-slide-content">
+                                        <div class="hero-slide-badge">🔥 Горячая новинка</div>
+                                        <h2 class="hero-slide-title">Загрузка...</h2>
+                                        <p class="hero-slide-desc">Рекомендации загружаются...</p>
+                                        <button class="hero-slide-btn" onclick="randomAnime()">🎲 Смотреть сейчас</button>
+                                    </div>
+                                    <div class="hero-slide-poster" id="heroPoster">
+                                        <span style="font-size:64px;">🎬</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="hero-slider-btn hero-slider-prev" onclick="slideHero(-1)">‹</button>
+                            <button class="hero-slider-btn hero-slider-next" onclick="slideHero(1)">›</button>
+                            <div class="hero-slider-dots" id="heroDots"></div>
+                        </div>
+                    </section>
+
                     <!-- ===== СЛУЧАЙНОЕ АНИМЕ ===== -->
                     <section class="random-section">
                         <div class="random-container">
@@ -109,14 +132,97 @@
                         </div>
                     </section>
 
-                    <!-- ===== РЕКОМЕНДАЦИИ ===== -->
-                    <section class="recommendations-section">
-                        <div class="recommendations-container" style="max-width:1200px;margin:30px auto;padding:0 16px;">
-                            <h2>🔥 Рекомендуем</h2>
-                            <div class="recommendations-grid" id="recommendationsGrid">
-                                <div style="text-align:center;padding:30px;color:#888;">⏳ Загрузка...</div>
+                    <!-- ===== КАТАЛОГ С ФИЛЬТРОМ ===== -->
+                    <section class="catalog-section">
+                        <div class="catalog-header">
+                            <h2>📚 ВСЕ АНИМЕ</h2>
+                        </div>
+
+                        <!-- ===== КНОПКА ПОКАЗАТЬ/СКРЫТЬ ФИЛЬТР ===== -->
+                        <div class="filter-toggle-wrapper">
+                            <button class="filter-toggle-btn" onclick="toggleFilterPanel()">
+                                <span id="filterToggleIcon">🔽</span>
+                                <span id="filterToggleText">Показать фильтры</span>
+                            </button>
+                        </div>
+
+                        <!-- ===== ФИЛЬТР (СКРЫВАЕМЫЙ) ===== -->
+                        <div class="filter-panel" id="filterPanel" style="display:none;">
+                            <!-- Строка поиска -->
+                            <div class="filter-search-row">
+                                <div class="filter-search-wrapper">
+                                    <span class="filter-search-icon">🔍</span>
+                                    <input type="text" id="filterSearchInput" placeholder="Поиск аниме по названию..." class="filter-search-input" oninput="applyCatalogFilters()">
+                                    <button class="filter-search-clear" id="filterSearchClear" onclick="clearSearchInput()" style="display:none;">✕</button>
+                                </div>
+                            </div>
+
+                            <div class="filter-divider"></div>
+
+                            <!-- Основные фильтры -->
+                            <div class="filter-row">
+                                <div class="filter-group">
+                                    <label>📅 Год</label>
+                                    <div class="filter-year-group">
+                                        <input type="number" id="filterYearFrom" placeholder="От" class="filter-input-small" min="1900" max="2100" onchange="applyCatalogFilters()">
+                                        <span>—</span>
+                                        <input type="number" id="filterYearTo" placeholder="До" class="filter-input-small" min="1900" max="2100" onchange="applyCatalogFilters()">
+                                    </div>
+                                </div>
+                                <div class="filter-group">
+                                    <label>📊 Сортировка</label>
+                                    <select id="filterSorting" class="filter-select" onchange="applyCatalogFilters()">
+                                        <option value="CREATED_AT_DESC">Новинки</option>
+                                        <option value="FRESH_AT_DESC">Свежие</option>
+                                        <option value="RATING_DESC">Популярные</option>
+                                        <option value="TITLE_ASC">По алфавиту</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>📦 Количество</label>
+                                    <select id="filterLimit" class="filter-select" onchange="applyCatalogFilters()">
+                                        <option value="24">24</option>
+                                        <option value="48">48</option>
+                                        <option value="96">96</option>
+                                        <option value="0">Все</option>
+                                    </select>
+                                </div>
+                                <button class="filter-reset-btn" onclick="resetCatalogFilters()">✕ Сбросить фильтры</button>
+                            </div>
+
+                            <div class="filter-divider"></div>
+
+                            <!-- Фильтры-категории -->
+                            <div class="filter-categories">
+                                <div class="filter-category">
+                                    <div class="filter-category-header" onclick="toggleCategory(this)">
+                                        <span>🎭 Жанры</span>
+                                        <span class="filter-category-arrow">▼</span>
+                                    </div>
+                                    <div class="filter-category-body" id="filterGenres"></div>
+                                </div>
+
+                                <div class="filter-category">
+                                    <div class="filter-category-header" onclick="toggleCategory(this)">
+                                        <span>🔞 Возраст</span>
+                                        <span class="filter-category-arrow">▼</span>
+                                    </div>
+                                    <div class="filter-category-body" id="filterAgeRatings"></div>
+                                </div>
                             </div>
                         </div>
+
+                        <div class="catalog-stats" id="catalogStats">
+                            <span id="totalCount">Загрузка...</span>
+                        </div>
+
+                        <div class="grid" id="grid">
+                            <div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка каталога...</div>
+                        </div>
+                        
+                        <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreCatalog()" style="display:none;">
+                            📥 Загрузить ещё
+                        </button>
                     </section>
 
                     <!-- ===== ПОДПИШИСЬ НА НАС ===== -->
@@ -216,98 +322,7 @@
                     </section>
                 </div>
 
-                <!-- ===== СТРАНИЦА КАТАЛОГА С ФИЛЬТРОМ ===== -->
-                <div id="page-catalog" style="display:none;">
-                    <div class="catalog-header">
-                        <h2 id="title">📚 ВСЕ АНИМЕ</h2>
-                    </div>
-
-                    <!-- ===== КНОПКА ПОКАЗАТЬ/СКРЫТЬ ФИЛЬТР ===== -->
-                    <div class="filter-toggle-wrapper">
-                        <button class="filter-toggle-btn" onclick="toggleFilterPanel()">
-                            <span id="filterToggleIcon">🔽</span>
-                            <span id="filterToggleText">Показать фильтры</span>
-                        </button>
-                    </div>
-
-                    <!-- ===== ФИЛЬТР (СКРЫВАЕМЫЙ) ===== -->
-                    <div class="filter-panel" id="filterPanel" style="display:none;">
-                        <!-- Строка поиска -->
-                        <div class="filter-search-row">
-                            <div class="filter-search-wrapper">
-                                <span class="filter-search-icon">🔍</span>
-                                <input type="text" id="filterSearchInput" placeholder="Поиск аниме по названию..." class="filter-search-input" oninput="applyCatalogFilters()">
-                                <button class="filter-search-clear" id="filterSearchClear" onclick="clearSearchInput()" style="display:none;">✕</button>
-                            </div>
-                        </div>
-
-                        <div class="filter-divider"></div>
-
-                        <!-- Основные фильтры -->
-                        <div class="filter-row">
-                            <div class="filter-group">
-                                <label>📅 Год</label>
-                                <div class="filter-year-group">
-                                    <input type="number" id="filterYearFrom" placeholder="От" class="filter-input-small" min="1900" max="2100" onchange="applyCatalogFilters()">
-                                    <span>—</span>
-                                    <input type="number" id="filterYearTo" placeholder="До" class="filter-input-small" min="1900" max="2100" onchange="applyCatalogFilters()">
-                                </div>
-                            </div>
-                            <div class="filter-group">
-                                <label>📊 Сортировка</label>
-                                <select id="filterSorting" class="filter-select" onchange="applyCatalogFilters()">
-                                    <option value="CREATED_AT_DESC">Новинки</option>
-                                    <option value="FRESH_AT_DESC">Свежие</option>
-                                    <option value="RATING_DESC">Популярные</option>
-                                    <option value="TITLE_ASC">По алфавиту</option>
-                                </select>
-                            </div>
-                            <div class="filter-group">
-                                <label>📦 Количество</label>
-                                <select id="filterLimit" class="filter-select" onchange="applyCatalogFilters()">
-                                    <option value="24">24</option>
-                                    <option value="48">48</option>
-                                    <option value="96">96</option>
-                                    <option value="0">Все</option>
-                                </select>
-                            </div>
-                            <button class="filter-reset-btn" onclick="resetCatalogFilters()">✕ Сбросить фильтры</button>
-                        </div>
-
-                        <div class="filter-divider"></div>
-
-                        <!-- Фильтры-категории -->
-                        <div class="filter-categories">
-                            <div class="filter-category">
-                                <div class="filter-category-header" onclick="toggleCategory(this)">
-                                    <span>🎭 Жанры</span>
-                                    <span class="filter-category-arrow">▼</span>
-                                </div>
-                                <div class="filter-category-body" id="filterGenres"></div>
-                            </div>
-
-                            <div class="filter-category">
-                                <div class="filter-category-header" onclick="toggleCategory(this)">
-                                    <span>🔞 Возраст</span>
-                                    <span class="filter-category-arrow">▼</span>
-                                </div>
-                                <div class="filter-category-body" id="filterAgeRatings"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="catalog-stats" id="catalogStats">
-                        <span id="totalCount">Загрузка...</span>
-                    </div>
-
-                    <div class="grid" id="grid">
-                        <div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка каталога...</div>
-                    </div>
-                    
-                    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreCatalog()" style="display:none;">
-                        📥 Загрузить ещё
-                    </button>
-                </div>
+                <!-- ===== СТРАНИЦА КАТАЛОГА (удалена) ===== -->
 
                 <!-- ===== ДЕТАЛЬНАЯ ===== -->
                 <div id="page-detail" style="display:none;">
@@ -340,8 +355,9 @@
                         </div>
                     </div>
                     
+                    <!-- ===== ПОХОЖИЕ АНИМЕ (СЕЗОНЫ И ПРОДОЛЖЕНИЯ) ===== -->
                     <div class="similar-section" id="similarSection" style="display:none;">
-                        <h3>Похожие</h3>
+                        <h3>🎬 Сезоны и продолжения</h3>
                         <div class="similar-scroll" id="similarScroll"></div>
                     </div>
                     
@@ -764,7 +780,6 @@
                 <h4>📂 Разделы</h4>
                 <ul>
                     <li><a href="#" onclick="navigate('home');return false;">🏠 Главная</a></li>
-                    <li><a href="#" onclick="navigate('catalog');return false;">📚 Каталог</a></li>
                     <li><a href="#" onclick="navigate('favorites');return false;">❤️ Избранное</a></li>
                     <li><a href="#" onclick="navigate('achievements');return false;">🏆 Достижения</a></li>
                     <li><a href="#" onclick="navigate('profile');return false;">👤 Профиль</a></li>
@@ -835,6 +850,13 @@
                 setTimeout(function() {
                     navigate('home');
                 }, 100);
+            }
+            
+            // Сбрасываем фильтры при загрузке
+            if (typeof resetCatalogFilters === 'function') {
+                setTimeout(function() {
+                    resetCatalogFilters();
+                }, 200);
             }
             
             const user = DB.get('currentUser');
