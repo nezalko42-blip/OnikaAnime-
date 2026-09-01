@@ -59,7 +59,6 @@ function navigate(pageName) {
         loadRecommendationsForHero();
         loadCatalog();
         loadFilterOptions();
-        // При возврате на главную сбрасываем фильтры
         resetCatalogFiltersSilent();
         const panel = document.getElementById('filterPanel');
         const icon = document.getElementById('filterToggleIcon');
@@ -202,7 +201,6 @@ async function loadRecommendationsForHero() {
             renderHeroSlider(recs);
             startHeroAutoSlide();
         } else {
-            // Если нет рекомендаций, показываем случайные
             const random = await API.getRandomReleases(4);
             if (random && random.length > 0) {
                 heroSliderData = random;
@@ -220,7 +218,6 @@ function renderHeroSlider(items) {
     const dots = document.getElementById('heroDots');
     if (!slider) return;
     
-    // Сохраняем первый слайд для инициализации
     heroCurrentSlide = 0;
     
     let slidesHtml = '';
@@ -235,19 +232,12 @@ function renderHeroSlider(items) {
         const age = item.age_rating || '0+';
         const isActive = index === 0 ? ' active' : '';
         
-        // Генерация градиента для фона
-        const gradients = [
-            'linear-gradient(135deg, #6c5ce7, #fd79a8)',
-            'linear-gradient(135deg, #00b894, #00cec9)',
-            'linear-gradient(135deg, #fdcb6e, #e17055)',
-            'linear-gradient(135deg, #0984e3, #a29bfe)',
-            'linear-gradient(135deg, #e17055, #d63031)',
-            'linear-gradient(135deg, #00cec9, #0984e3)'
-        ];
-        const gradient = gradients[index % gradients.length];
+        // Используем постер как фон с затемнением
+        const posterBg = img ? `url(${img})` : 'none';
         
         slidesHtml += `
-            <div class="hero-slide${isActive}" style="background: ${gradient};" onclick="openDetail('${id}')">
+            <div class="hero-slide${isActive}" onclick="openDetail('${id}')" style="background-image: ${posterBg};">
+                <div class="hero-slide-overlay"></div>
                 <div class="hero-slide-content">
                     <div class="hero-slide-badge">${age} • ${year || 'Новинка'}</div>
                     <h2 class="hero-slide-title">${title}</h2>
@@ -289,7 +279,6 @@ function slideHero(direction) {
     slides[heroCurrentSlide].classList.add('active');
     if (dots[heroCurrentSlide]) dots[heroCurrentSlide].classList.add('active');
     
-    // Сбрасываем авто-слайд
     if (heroAutoSlideTimer) {
         clearInterval(heroAutoSlideTimer);
         startHeroAutoSlide();
@@ -957,7 +946,6 @@ function setGenre(genreId, btn) {
 // 4. РЕКОМЕНДАЦИИ (старая функция для совместимости)
 // ============================================
 async function loadRecommendations() {
-    // Теперь используется loadRecommendationsForHero
     await loadRecommendationsForHero();
 }
 
@@ -2044,10 +2032,8 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUI();
     navigate('home');
     
-    // Сбрасываем фильтры при загрузке
     setTimeout(function() {
         resetCatalogFiltersSilent();
-        // Загружаем каталог с чистыми фильтрами
         loadCatalog();
     }, 300);
     
