@@ -232,7 +232,6 @@ function renderHeroSlider(items) {
         const age = item.age_rating || '0+';
         const isActive = index === 0 ? ' active' : '';
         
-        // Используем постер как фон с затемнением
         const posterBg = img ? `url(${img})` : 'none';
         
         slidesHtml += `
@@ -950,37 +949,169 @@ async function loadRecommendations() {
 }
 
 // ============================================
-// 5. СЛУЧАЙНОЕ АНИМЕ
+// 5. СЛУЧАЙНОЕ АНИМЕ (УЛУЧШЕННАЯ ВЕРСИЯ)
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
     if (!resultContainer) return;
-    resultContainer.innerHTML = '<div style="color:#888;">⏳ Ищем...</div>';
+    
+    // Показываем анимацию загрузки
+    resultContainer.innerHTML = `
+        <div class="random-loading">
+            <div class="random-spinner"></div>
+            <span style="color:var(--text-muted);font-size:14px;margin-top:8px;">🌀 Ищем идеальное аниме...</span>
+        </div>
+    `;
+    
     try {
+        // Получаем случайное аниме
         const items = await API.getRandomReleases(1);
         if (!items || !items.length) {
-            resultContainer.innerHTML = '<div style="color:#888;">😅 Не найдено</div>';
+            resultContainer.innerHTML = `
+                <div class="random-error">
+                    <span style="font-size:48px;">😅</span>
+                    <p style="color:var(--text-secondary);">Не удалось найти аниме</p>
+                    <button onclick="randomAnime()" class="random-retry-btn">🔄 Попробовать снова</button>
+                </div>
+            `;
             return;
         }
-        const random = items[0];
-        const title = random.title;
-        const id = random.id;
-        const img = random.images?.jpg?.image_url || '';
-        const year = random.year || '--';
-        const episodes = random.episodes || '?';
-        const age = random.age_rating || '0+';
+        
+        const anime = items[0];
+        
+        // Показываем результат с анимацией появления
+        setTimeout(() => {
+            resultContainer.innerHTML = renderRandomResult(anime);
+            
+            // Добавляем класс для анимации
+            const card = resultContainer.querySelector('.random-result-card');
+            if (card) {
+                card.classList.add('show');
+            }
+        }, 300);
+        
+    } catch (e) {
+        console.error('Ошибка получения случайного аниме:', e);
         resultContainer.innerHTML = `
-            <div class="random-result-card" onclick="openDetail('${id}')">
-                <div class="random-result-img">${img ? '<img src="' + img + '" alt="' + title + '">' : '<div class="random-no-img">🎬</div>'}</div>
-                <div class="random-result-info">
-                    <div class="random-result-title">🎯 ${title}</div>
-                    <div class="random-result-meta">${year} • ${episodes} эп. • ${age}</div>
-                    <div class="random-result-hint">👆 Нажмите, чтобы открыть</div>
-                </div>
+            <div class="random-error">
+                <span style="font-size:48px;">⚠️</span>
+                <p style="color:var(--text-secondary);">Ошибка загрузки</p>
+                <button onclick="randomAnime()" class="random-retry-btn">🔄 Попробовать снова</button>
             </div>
         `;
+    }
+}
+
+// ============================================
+// РЕНДЕРИНГ РЕЗУЛЬТАТА СЛУЧАЙНОГО АНИМЕ
+// ============================================
+function renderRandomResult(anime) {
+    const img = anime.images?.jpg?.image_url || '';
+    const title = anime.title || 'Без названия';
+    const year = anime.year || '--';
+    const episodes = anime.episodes || '?';
+    const age = anime.age_rating || '0+';
+    const genres = (anime.genres || []).slice(0, 4).join(' • ');
+    const synopsis = anime.synopsis || 'Описание отсутствует';
+    const id = anime.id;
+    const score = anime.score || '--';
+    const status = anime.status || 'Неизвестно';
+    
+    // Получаем цвет для возрастного рейтинга
+    const ageColor = getAgeColor(age);
+    
+    return `
+        <div class="random-result-card" onclick="openDetail('${id}')">
+            <div class="random-result-poster">
+                ${img ? `<img src="${img}" alt="${title}">` : '<div class="random-no-poster">🎬</div>'}
+                <div class="random-result-badge" style="background:${ageColor};">${age}</div>
+            </div>
+            <div class="random-result-content">
+                <div class="random-result-header">
+                    <h3 class="random-result-title">${title}</h3>
+                    <span class="random-result-year">${year}</span>
+                </div>
+                <div class="random-result-meta">
+                    <span class="random-result-episodes">📺 ${episodes} эп.</span>
+                    <span class="random-result-status">${status === 'Онгоинг' ? '🔄 Онгоинг' : '✅ Завершено'}</span>
+                    ${score !== '--' ? `<span class="random-result-score">⭐ ${score}</span>` : ''}
+                </div>
+                ${genres ? `<div class="random-result-genres">${genres}</div>` : ''}
+                <div class="random-result-synopsis">${synopsis.length > 120 ? synopsis.slice(0, 120) + '...' : synopsis}</div>
+                <div class="random-result-actions">
+                    <button class="random-result-btn primary" onclick="event.stopPropagation(); openDetail('${id}')">
+                        🎬 Смотреть
+                    </button>
+                    <button class="random-result-btn secondary" onclick="event.stopPropagation(); randomAnime()">
+                        🎲 Другое
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================
+// ПОЛУЧЕНИЕ ЦВЕТА ДЛЯ ВОЗРАСТНОГО РЕЙТИНГА
+// ============================================
+function getAgeColor(age) {
+    const colors = {
+        '0+': '#2ecc71',
+        '6+': '#3498db',
+        '12+': '#f1c40f',
+        '16+': '#e67e22',
+        '18+': '#e74c3c'
+    };
+    return colors[age] || '#6c5ce7';
+}
+
+// ============================================
+// ДОПОЛНИТЕЛЬНАЯ ФУНКЦИЯ - ПОЛУЧИТЬ СЛУЧАЙНОЕ ПО ЖАНРУ
+// ============================================
+async function randomAnimeByGenre(genreId) {
+    const resultContainer = document.getElementById('randomResult');
+    if (!resultContainer) return;
+    
+    resultContainer.innerHTML = `
+        <div class="random-loading">
+            <div class="random-spinner"></div>
+            <span style="color:var(--text-muted);font-size:14px;margin-top:8px;">🔍 Ищем в этом жанре...</span>
+        </div>
+    `;
+    
+    try {
+        // Получаем случайное аниме по жанру
+        const result = await API.searchAll('', genreId, 1, {});
+        if (!result || !result.items || !result.items.length) {
+            resultContainer.innerHTML = `
+                <div class="random-error">
+                    <span style="font-size:48px;">😅</span>
+                    <p style="color:var(--text-secondary);">В этом жанре пока ничего нет</p>
+                    <button onclick="randomAnime()" class="random-retry-btn">🔄 Попробовать другое</button>
+                </div>
+            `;
+            return;
+        }
+        
+        // Выбираем случайное из списка
+        const randomIndex = Math.floor(Math.random() * result.items.length);
+        const anime = result.items[randomIndex];
+        
+        setTimeout(() => {
+            resultContainer.innerHTML = renderRandomResult(anime);
+            const card = resultContainer.querySelector('.random-result-card');
+            if (card) card.classList.add('show');
+        }, 300);
+        
     } catch (e) {
-        resultContainer.innerHTML = '<div style="color:#888;">⚠️ Ошибка</div>';
+        console.error('Ошибка:', e);
+        resultContainer.innerHTML = `
+            <div class="random-error">
+                <span style="font-size:48px;">⚠️</span>
+                <p style="color:var(--text-secondary);">Ошибка загрузки</p>
+                <button onclick="randomAnime()" class="random-retry-btn">🔄 Попробовать снова</button>
+            </div>
+        `;
     }
 }
 
@@ -2086,5 +2217,6 @@ window.toggleFilterPanel = toggleFilterPanel;
 window.setGenre = setGenre;
 window.slideHero = slideHero;
 window.goToHeroSlide = goToHeroSlide;
+window.randomAnimeByGenre = randomAnimeByGenre;
 
-console.log('✅ OnikaAnime полностью загружен!');
+console.log('✅ OnikaAnime полностью загружен!'); 
