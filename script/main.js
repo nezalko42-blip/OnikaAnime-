@@ -191,7 +191,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// 1. КАРУСЕЛЬ РЕКОМЕНДАЦИЙ (РЕКЛАМНЫЙ ЩИТ)
+// 1. КАРУСЕЛЬ РЕКОМЕНДАЦИЙ
 // ============================================
 async function loadRecommendationsForHero() {
     try {
@@ -303,7 +303,7 @@ function goToHeroSlide(index) {
 }
 
 // ============================================
-// 2. КАТАЛОГ (НА ГЛАВНОЙ)
+// 2. КАТАЛОГ
 // ============================================
 async function loadCatalog() {
     if (isLoading) return;
@@ -942,20 +942,19 @@ function setGenre(genreId, btn) {
 }
 
 // ============================================
-// 4. РЕКОМЕНДАЦИИ (старая функция для совместимости)
+// 4. РЕКОМЕНДАЦИИ
 // ============================================
 async function loadRecommendations() {
     await loadRecommendationsForHero();
 }
 
 // ============================================
-// 5. СЛУЧАЙНОЕ АНИМЕ (УЛУЧШЕННАЯ ВЕРСИЯ)
+// 5. СЛУЧАЙНОЕ АНИМЕ
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
     if (!resultContainer) return;
     
-    // Показываем анимацию загрузки
     resultContainer.innerHTML = `
         <div class="random-loading">
             <div class="random-spinner"></div>
@@ -964,7 +963,6 @@ async function randomAnime() {
     `;
     
     try {
-        // Получаем случайное аниме
         const items = await API.getRandomReleases(1);
         if (!items || !items.length) {
             resultContainer.innerHTML = `
@@ -979,11 +977,8 @@ async function randomAnime() {
         
         const anime = items[0];
         
-        // Показываем результат с анимацией появления
         setTimeout(() => {
             resultContainer.innerHTML = renderRandomResult(anime);
-            
-            // Добавляем класс для анимации
             const card = resultContainer.querySelector('.random-result-card');
             if (card) {
                 card.classList.add('show');
@@ -1002,9 +997,6 @@ async function randomAnime() {
     }
 }
 
-// ============================================
-// РЕНДЕРИНГ РЕЗУЛЬТАТА СЛУЧАЙНОГО АНИМЕ
-// ============================================
 function renderRandomResult(anime) {
     const img = anime.images?.jpg?.image_url || '';
     const title = anime.title || 'Без названия';
@@ -1016,8 +1008,6 @@ function renderRandomResult(anime) {
     const id = anime.id;
     const score = anime.score || '--';
     const status = anime.status || 'Неизвестно';
-    
-    // Получаем цвет для возрастного рейтинга
     const ageColor = getAgeColor(age);
     
     return `
@@ -1051,9 +1041,6 @@ function renderRandomResult(anime) {
     `;
 }
 
-// ============================================
-// ПОЛУЧЕНИЕ ЦВЕТА ДЛЯ ВОЗРАСТНОГО РЕЙТИНГА
-// ============================================
 function getAgeColor(age) {
     const colors = {
         '0+': '#2ecc71',
@@ -1065,9 +1052,6 @@ function getAgeColor(age) {
     return colors[age] || '#6c5ce7';
 }
 
-// ============================================
-// ДОПОЛНИТЕЛЬНАЯ ФУНКЦИЯ - ПОЛУЧИТЬ СЛУЧАЙНОЕ ПО ЖАНРУ
-// ============================================
 async function randomAnimeByGenre(genreId) {
     const resultContainer = document.getElementById('randomResult');
     if (!resultContainer) return;
@@ -1080,7 +1064,6 @@ async function randomAnimeByGenre(genreId) {
     `;
     
     try {
-        // Получаем случайное аниме по жанру
         const result = await API.searchAll('', genreId, 1, {});
         if (!result || !result.items || !result.items.length) {
             resultContainer.innerHTML = `
@@ -1093,7 +1076,6 @@ async function randomAnimeByGenre(genreId) {
             return;
         }
         
-        // Выбираем случайное из списка
         const randomIndex = Math.floor(Math.random() * result.items.length);
         const anime = result.items[randomIndex];
         
@@ -1116,7 +1098,7 @@ async function randomAnimeByGenre(genreId) {
 }
 
 // ============================================
-// 6. АВТОДОПОЛНЕНИЕ ДЛЯ ПОИСКА
+// 6. АВТОДОПОЛНЕНИЕ
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('filterSearchInput');
@@ -1197,7 +1179,214 @@ function selectSearchSuggestion(id) {
 }
 
 // ============================================
-// 7. ДЕТАЛИ
+// 7. ПЛЕЕР - ВИДЕО И ТОРРЕНТЫ
+// ============================================
+
+// Переключение вкладок плеера
+function switchPlayerTab(tab) {
+    const tabs = document.querySelectorAll('.player-tab');
+    const contents = document.querySelectorAll('.player-tab-content');
+    
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(c => c.classList.remove('active'));
+    
+    document.querySelector(`.player-tab[data-tab="${tab}"]`)?.classList.add('active');
+    document.getElementById(`tab-${tab}`)?.classList.add('active');
+}
+
+// Загрузка видео
+async function loadVideos(limit = 6) {
+    const container = document.getElementById('videoGrid');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка видео...</div>';
+    
+    try {
+        const videos = await API.getVideos(limit);
+        if (!videos || videos.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">😅 Видео не найдены</div>';
+            return;
+        }
+        
+        let html = '';
+        videos.forEach(video => {
+            const img = video.image || '';
+            const title = video.title || 'Без названия';
+            const views = formatNumber(video.views);
+            const embedUrl = video.url || '';
+            
+            html += `
+                <div class="video-card" onclick="openVideoPlayer('${video.video_id || video.id}', '${encodeURIComponent(title)}', '${embedUrl}')">
+                    <div class="video-card-img">
+                        ${img ? `<img src="${img}" loading="lazy" alt="${title}">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;">🎬</div>'}
+                        <div class="video-card-play">▶️</div>
+                        ${video.is_announce ? '<span class="video-card-badge">📢 Анонс</span>' : ''}
+                    </div>
+                    <div class="video-card-body">
+                        <div class="video-card-title">${title}</div>
+                        <div class="video-card-meta">👁️ ${views} ${video.comments ? `• 💬 ${video.comments}` : ''}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('Ошибка загрузки видео:', e);
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">⚠️ Ошибка загрузки</div>';
+    }
+}
+
+// Открыть видео плеер
+function openVideoPlayer(videoId, title, url) {
+    const modal = document.getElementById('videoPlayerModal');
+    const player = document.getElementById('videoPlayerIframe');
+    const info = document.getElementById('videoPlayerInfo');
+    
+    if (!modal || !player) return;
+    
+    if (url && url.includes('watch?v=')) {
+        const videoId = url.split('v=')[1]?.split('&')[0];
+        if (videoId) {
+            player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        } else {
+            player.src = url;
+        }
+    } else if (url) {
+        player.src = url;
+    } else {
+        player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    }
+    
+    if (info) {
+        info.innerHTML = `<strong>${decodeURIComponent(title)}</strong>`;
+    }
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Закрыть видео плеер
+function closeVideoPlayer() {
+    const modal = document.getElementById('videoPlayerModal');
+    const player = document.getElementById('videoPlayerIframe');
+    
+    if (modal) modal.style.display = 'none';
+    if (player) player.src = '';
+    document.body.style.overflow = '';
+}
+
+// Загрузка торрентов для релиза
+async function loadTorrentsForRelease(releaseId) {
+    const container = document.getElementById('torrentGrid');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка торрентов...</div>';
+    
+    try {
+        const torrents = await API.getTorrentsByRelease(releaseId);
+        if (!torrents || torrents.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">😅 Торренты не найдены</div>';
+            return;
+        }
+        
+        let html = '';
+        torrents.forEach(t => {
+            const sizeGB = (t.size / (1024 * 1024 * 1024)).toFixed(2);
+            const quality = t.quality || 'Неизвестно';
+            const codec = t.codec || 'Неизвестно';
+            const seeders = t.seeders || 0;
+            const leechers = t.leechers || 0;
+            
+            html += `
+                <div class="torrent-item">
+                    <div class="torrent-info">
+                        <div class="torrent-title">${t.label}</div>
+                        <div class="torrent-meta">
+                            <span>📦 ${sizeGB} GB</span>
+                            <span>🎬 ${quality}</span>
+                            <span>💻 ${codec}</span>
+                            ${t.is_hardsub ? '<span>🔤 Хардсаб</span>' : ''}
+                            <span>⬆️ ${seeders}</span>
+                            <span>⬇️ ${leechers}</span>
+                        </div>
+                        ${t.description ? `<div class="torrent-desc">${t.description}</div>` : ''}
+                    </div>
+                    <div class="torrent-actions">
+                        ${t.magnet ? `<button class="torrent-btn magnet" onclick="copyMagnet('${t.magnet}')">🧲 Magnet</button>` : ''}
+                        ${t.hash ? `<button class="torrent-btn download" onclick="downloadTorrent('${t.hash}')">📥 Скачать .torrent</button>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('Ошибка загрузки торрентов:', e);
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">⚠️ Ошибка загрузки</div>';
+    }
+}
+
+// Копировать magnet-ссылку
+function copyMagnet(magnet) {
+    if (!magnet) return;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(magnet).then(() => {
+            showToast('🧲 Magnet-ссылка скопирована!', 'success');
+        }).catch(() => {
+            fallbackCopy(magnet);
+        });
+    } else {
+        fallbackCopy(magnet);
+    }
+}
+
+function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        showToast('🧲 Magnet-ссылка скопирована!', 'success');
+    } catch (e) {
+        showToast('❌ Не удалось скопировать', 'error');
+    }
+    document.body.removeChild(textarea);
+}
+
+// Скачать .torrent файл
+async function downloadTorrent(hash) {
+    if (!hash) return;
+    
+    showToast('⏳ Загрузка торрент-файла...', 'info');
+    
+    try {
+        const response = await fetch(`https://anilibria.top/api/v1/anime/torrents/${hash}/file`);
+        if (!response.ok) throw new Error('Ошибка загрузки');
+        
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${hash}.torrent`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('✅ Торрент-файл загружен!', 'success');
+    } catch (e) {
+        console.error('Ошибка скачивания торрента:', e);
+        showToast('❌ Ошибка загрузки торрент-файла', 'error');
+    }
+}
+
+// ============================================
+// 8. ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
     if (!id) return showToast('Ошибка ID', 'error');
@@ -1249,6 +1438,30 @@ function showDetail(anime) {
     
     showSimilarAnime(anime);
     
+    // Загружаем торренты для этого релиза
+    const cleanId = anime.id?.replace('anilibria_', '') || '';
+    if (cleanId) {
+        loadTorrentsForRelease(cleanId);
+    }
+    
+    // Загружаем видео
+    loadVideos(6);
+    
+    // Показываем серии если есть
+    const episodesList = anime.episodes_list || [];
+    const episodeBtns = document.getElementById('episodeBtns');
+    if (episodeBtns) {
+        if (episodesList && episodesList.length > 0) {
+            let btnsHtml = '';
+            episodesList.forEach(ep => {
+                btnsHtml += `<button class="ep-btn" onclick="playEpisode('${anime.id}', ${ep.episode})">${ep.episode}</button>`;
+            });
+            episodeBtns.innerHTML = btnsHtml;
+        } else {
+            episodeBtns.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">Серии не найдены</span>';
+        }
+    }
+    
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
         const code = anime._raw?.code || anime._raw?.alias || '';
@@ -1264,8 +1477,13 @@ function showDetail(anime) {
     }
 }
 
+function playEpisode(id, episode) {
+    showToast(`🎬 Загрузка ${episode} серии...`, 'info');
+    // Здесь можно реализовать загрузку конкретной серии
+}
+
 // ============================================
-// 8. КОММЕНТАРИИ
+// 9. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1360,7 +1578,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 9. ИЗБРАННОЕ
+// 10. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1434,7 +1652,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 10. ДОСТИЖЕНИЯ
+// 11. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1532,7 +1750,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 11. ПРОФИЛЬ
+// 12. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1623,7 +1841,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 12. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 13. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1777,7 +1995,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 13. АВАТАР
+// 14. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -1825,7 +2043,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 14. TOAST
+// 15. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1857,7 +2075,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 15. МОДАЛЬНЫЕ ОКНА
+// 16. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1921,7 +2139,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 16. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 17. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -2041,7 +2259,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 17. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 18. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -2078,7 +2296,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 18. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 19. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2116,7 +2334,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 19. МОИ КОММЕНТАРИИ
+// 20. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2155,7 +2373,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 20. ЗАПУСК
+// 21. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -2176,7 +2394,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 21. ЭКСПОРТ
+// 22. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2218,5 +2436,12 @@ window.setGenre = setGenre;
 window.slideHero = slideHero;
 window.goToHeroSlide = goToHeroSlide;
 window.randomAnimeByGenre = randomAnimeByGenre;
+window.switchPlayerTab = switchPlayerTab;
+window.loadVideos = loadVideos;
+window.openVideoPlayer = openVideoPlayer;
+window.closeVideoPlayer = closeVideoPlayer;
+window.loadTorrentsForRelease = loadTorrentsForRelease;
+window.copyMagnet = copyMagnet;
+window.downloadTorrent = downloadTorrent;
 
-console.log('✅ OnikaAnime полностью загружен!'); 
+console.log('✅ OnikaAnime полностью загружен!');
