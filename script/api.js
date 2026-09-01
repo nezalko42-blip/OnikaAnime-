@@ -1,5 +1,5 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME (Anilibria API + Жанры)
+// API МОДУЛЬ ONIKAANIME (Anilibria API + Жанры + Видео + Торренты)
 // ============================================
 
 const API = {
@@ -115,7 +115,6 @@ const API = {
             body.f.search = query;
         }
 
-        // Жанры
         let genresArray = [];
         if (genre && genre !== 'latest') {
             genresArray = [parseInt(genre)];
@@ -154,14 +153,13 @@ const API = {
     },
 
     // ============================================
-    // 2. ПОИСК (ИСПРАВЛЕННЫЙ)
+    // 2. ПОИСК
     // ============================================
     async searchTitles(query, page = 1) {
         if (!query || query.length < 1) return { items: [], totalPages: 1, totalCount: 0 };
         
         console.log(`🔍 API поиск: "${query}"`);
         
-        // Пробуем несколько вариантов
         const searchVariants = [
             query,
             query.toLowerCase(),
@@ -199,7 +197,6 @@ const API = {
             }
         }
         
-        // Если ничего не найдено, пробуем искать по частям
         if (query.length > 10) {
             const words = query.split(' ');
             for (const word of words) {
@@ -399,7 +396,92 @@ const API = {
         return [];
     },
 
-    // Вспомогательный метод для иконок жанров
+    // ============================================
+    // 10. ВИДЕО (НОВЫЙ МЕТОД)
+    // ============================================
+    async getVideos(limit = 12) {
+        const params = {
+            limit: limit,
+            include: 'id,url,title,views,image,comments,video_id,created_at,updated_at,is_announce,origin'
+        };
+        const data = await this._get('/media/videos', params, false);
+        if (data && data.data) {
+            return data.data.map(video => ({
+                id: video.id,
+                url: video.url,
+                title: video.title || 'Без названия',
+                views: video.views || 0,
+                image: this._getPosterUrl(video.image),
+                comments: video.comments || 0,
+                video_id: video.video_id,
+                created_at: video.created_at,
+                is_announce: video.is_announce || false,
+                origin: video.origin || null
+            }));
+        }
+        return [];
+    },
+
+    // ============================================
+    // 11. ТОРРЕНТЫ (НОВЫЕ МЕТОДЫ)
+    // ============================================
+    async getTorrentsByRelease(releaseId) {
+        const params = {
+            include: 'id,hash,size,type,color,codec,label,quality,magnet,filename,seeders,leechers,bitrate,sort_order,updated_at,is_hardsub,description,created_at,completed_times,torrent_members'
+        };
+        const data = await this._get(`/anime/torrents/release/${releaseId}`, params, false);
+        if (data && data.data) {
+            return data.data.map(torrent => ({
+                id: torrent.id,
+                hash: torrent.hash,
+                size: torrent.size || 0,
+                type: torrent.type?.description || 'Неизвестно',
+                codec: torrent.codec?.label || torrent.codec?.value || 'Неизвестно',
+                label: torrent.label || 'Без названия',
+                quality: torrent.quality?.description || 'Неизвестно',
+                magnet: torrent.magnet,
+                filename: torrent.filename,
+                seeders: torrent.seeders || 0,
+                leechers: torrent.leechers || 0,
+                bitrate: torrent.bitrate || 0,
+                is_hardsub: torrent.is_hardsub || false,
+                description: torrent.description || '',
+                created_at: torrent.created_at,
+                completed_times: torrent.completed_times || 0
+            }));
+        }
+        return [];
+    },
+
+    async getLatestTorrents(limit = 10) {
+        const params = {
+            page: 1,
+            limit: limit,
+            include: 'id,hash,size,type,color,codec,label,quality,magnet,filename,seeders,leechers,release'
+        };
+        const data = await this._get('/anime/torrents', params, false);
+        if (data && data.data) {
+            return data.data.map(torrent => ({
+                id: torrent.id,
+                hash: torrent.hash,
+                size: torrent.size || 0,
+                label: torrent.label || 'Без названия',
+                quality: torrent.quality?.description || 'Неизвестно',
+                magnet: torrent.magnet,
+                seeders: torrent.seeders || 0,
+                leechers: torrent.leechers || 0,
+                release: torrent.release ? {
+                    id: torrent.release.id,
+                    title: torrent.release.name?.main || 'Без названия'
+                } : null
+            }));
+        }
+        return [];
+    },
+
+    // ============================================
+    // 12. КОНВЕРТАЦИЯ
+    // ============================================
     _getGenreIcon(genreName) {
         const icons = {
             'Экшен': '⚔️',
@@ -422,9 +504,6 @@ const API = {
         return icons[genreName] || '📚';
     },
 
-    // ============================================
-    // 10. КОНВЕРТАЦИЯ ДАННЫХ
-    // ============================================
     _getPosterUrl(poster) {
         if (!poster) return '';
         const optimized = poster.optimized || poster;
@@ -561,7 +640,7 @@ const API = {
     },
 
     // ============================================
-    // 11. СПРАВОЧНИКИ
+    // 13. СПРАВОЧНИКИ
     // ============================================
     async getTypes() {
         const data = await this._get('/anime/catalog/references/types');
