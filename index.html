@@ -374,18 +374,48 @@
                         <div class="similar-scroll" id="similarScroll"></div>
                     </div>
                     
-                    <!-- ===== ПЛЕЕР ===== -->
+                    <!-- ===== ПЛЕЕР С ВКЛАДКАМИ ===== -->
                     <div class="player-section">
-                        <h3>▶️ Плеер</h3>
-                        <div class="player-wrapper" id="playerWrapper">
-                            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:8px;">
-                                <span style="font-size:48px;">🎬</span>
-                                <span>Выберите серию</span>
+                        <div class="player-tabs">
+                            <button class="player-tab active" data-tab="episodes" onclick="switchPlayerTab('episodes')">
+                                📺 Серии
+                            </button>
+                            <button class="player-tab" data-tab="videos" onclick="switchPlayerTab('videos')">
+                                🎬 Видео
+                            </button>
+                            <button class="player-tab" data-tab="torrents" onclick="switchPlayerTab('torrents')">
+                                🧲 Торренты
+                            </button>
+                        </div>
+                        
+                        <!-- Вкладка: Серии -->
+                        <div class="player-tab-content active" id="tab-episodes">
+                            <div class="player-wrapper" id="playerWrapper">
+                                <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:8px;background:rgba(0,0,0,0.7);">
+                                    <span style="font-size:48px;">🎬</span>
+                                    <span>Выберите серию</span>
+                                </div>
+                            </div>
+                            <div id="episodeBtns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
+                                <span style="color:var(--text-muted);font-size:13px;">⏳ Загрузка серий...</span>
                             </div>
                         </div>
-                        <div id="episodeBtns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;"></div>
+                        
+                        <!-- Вкладка: Видео -->
+                        <div class="player-tab-content" id="tab-videos">
+                            <div class="video-grid" id="videoGrid">
+                                <div style="text-align:center;padding:20px;color:#888;">⏳ Загрузка видео...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Вкладка: Торренты -->
+                        <div class="player-tab-content" id="tab-torrents">
+                            <div class="torrent-grid" id="torrentGrid">
+                                <div style="text-align:center;padding:20px;color:#888;">⏳ Загрузка торрентов...</div>
+                            </div>
+                        </div>
                     </div>
-                    
+
                     <!-- ===== КОММЕНТАРИИ ===== -->
                     <div class="comments-section">
                         <h3>💬 Комментарии</h3>
@@ -398,6 +428,19 @@
                         </div>
                         <div id="commentsList">
                             <div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== ВИДЕО ПЛЕЕР (МОДАЛЬНОЕ ОКНО) ===== -->
+                <div class="modal" id="videoPlayerModal" onclick="if(event.target===this) closeVideoPlayer()">
+                    <div class="modal-box video-player-modal">
+                        <button class="modal-close" onclick="closeVideoPlayer()">
+                            <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+                        </button>
+                        <div id="videoPlayerInfo" style="color:var(--text-primary);font-size:16px;margin-bottom:12px;"></div>
+                        <div style="position:relative;padding-bottom:56.25%;height:0;background:#000;border-radius:var(--radius-sm);overflow:hidden;">
+                            <iframe id="videoPlayerIframe" src="" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen allow="autoplay; encrypted-media"></iframe>
                         </div>
                     </div>
                 </div>
