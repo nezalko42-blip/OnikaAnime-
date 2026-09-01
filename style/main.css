@@ -4119,3 +4119,298 @@ svg use {
         display: none !important;
     }
 }
+
+/* ============================================
+   ПЛЕЕР С ВКЛАДКАМИ
+   ============================================ */
+
+.player-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius);
+    padding: 4px;
+    border: 1px solid rgba(0, 245, 255, 0.03);
+}
+
+.player-tab {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.player-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.player-tab.active {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(0, 245, 255, 0.1);
+}
+
+.player-tab-content {
+    display: none;
+}
+
+.player-tab-content.active {
+    display: block;
+}
+
+/* ============================================
+   ВИДЕО-КАРТОЧКИ
+   ============================================ */
+
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.video-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(0, 245, 255, 0.03);
+    transition: all 0.3s ease;
+}
+
+.video-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0, 245, 255, 0.08);
+    box-shadow: 0 0 30px rgba(0, 245, 255, 0.03);
+}
+
+.video-card-img {
+    position: relative;
+    aspect-ratio: 16/9;
+    background: var(--bg-secondary);
+    overflow: hidden;
+}
+
+.video-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-card-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 36px;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.video-card:hover .video-card-play {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+}
+
+.video-card-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.video-card-body {
+    padding: 8px 10px 10px;
+}
+
+.video-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.video-card-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* ============================================
+   ТОРРЕНТЫ
+   ============================================ */
+
+.torrent-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.torrent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    transition: all 0.3s ease;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.torrent-item:hover {
+    border-color: rgba(0, 245, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.torrent-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.torrent-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.torrent-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.torrent-meta span {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.torrent-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.torrent-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.torrent-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: none;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.torrent-btn.magnet {
+    background: rgba(0, 245, 255, 0.05);
+    color: var(--neon-cyan);
+    border: 1px solid rgba(0, 245, 255, 0.05);
+}
+
+.torrent-btn.magnet:hover {
+    background: rgba(0, 245, 255, 0.1);
+    border-color: var(--neon-cyan);
+    transform: translateY(-2px);
+}
+
+.torrent-btn.download {
+    background: rgba(108, 92, 231, 0.05);
+    color: var(--accent-glow);
+    border: 1px solid rgba(108, 92, 231, 0.05);
+}
+
+.torrent-btn.download:hover {
+    background: rgba(108, 92, 231, 0.1);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+/* ============================================
+   ВИДЕО ПЛЕЕР (МОДАЛЬНОЕ ОКНО)
+   ============================================ */
+
+.video-player-modal {
+    max-width: 800px !important;
+    width: 95% !important;
+    padding: 20px !important;
+}
+
+.video-player-modal .modal-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    z-index: 10;
+}
+
+/* ===== АДАПТИВ ===== */
+@media (max-width: 600px) {
+    .player-tab {
+        font-size: 11px;
+        padding: 8px 10px;
+    }
+    
+    .video-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .torrent-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .torrent-actions {
+        justify-content: flex-start;
+    }
+    
+    .video-player-modal {
+        width: 98% !important;
+        padding: 14px !important;
+    }
+}
+
+@media (max-width: 400px) {
+    .video-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    
+    .video-card-title {
+        font-size: 10px;
+    }
+    
+    .torrent-title {
+        font-size: 12px;
+    }
+    
+    .torrent-meta {
+        font-size: 10px;
+        gap: 4px 8px;
+    }
+}
