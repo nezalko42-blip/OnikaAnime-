@@ -97,14 +97,15 @@
         <div class="content">
             <div class="content-inner">
 
-                <!-- ===== ГЛАВНАЯ СТРАНИЦА (С КАТАЛОГОМ) ===== -->
+                <!-- ===== ГЛАВНАЯ СТРАНИЦА ===== -->
                 <div id="page-home">
 
-                    <!-- ===== КАРУСЕЛЬ РЕКОМЕНДАЦИЙ (РЕКЛАМНЫЙ ЩИТ) ===== -->
+                    <!-- ===== КАРУСЕЛЬ РЕКОМЕНДАЦИЙ ===== -->
                     <section class="hero-slider-section">
                         <div class="hero-slider-container">
                             <div class="hero-slider" id="heroSlider">
                                 <div class="hero-slide" style="background: linear-gradient(135deg, #6c5ce7, #fd79a8);">
+                                    <div class="hero-slide-overlay"></div>
                                     <div class="hero-slide-content">
                                         <div class="hero-slide-badge">🔥 Горячая новинка</div>
                                         <h2 class="hero-slide-title">Загрузка...</h2>
@@ -125,9 +126,23 @@
                     <!-- ===== СЛУЧАЙНОЕ АНИМЕ ===== -->
                     <section class="random-section">
                         <div class="random-container">
-                            <button class="random-btn" onclick="randomAnime()">
-                                🎲 Не знаю что посмотреть?
-                            </button>
+                            <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:16px;">
+                                <button class="random-btn" onclick="randomAnime()">
+                                    🎲 Не знаю что посмотреть?
+                                </button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('1')" style="background:linear-gradient(135deg, #e74c3c, #e17055);">
+                                    ⚔️ Экшен
+                                </button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('21')" style="background:linear-gradient(135deg, #f1c40f, #f39c12);">
+                                    😂 Комедия
+                                </button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('22')" style="background:linear-gradient(135deg, #e84393, #fd79a8);">
+                                    💕 Романтика
+                                </button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('10')" style="background:linear-gradient(135deg, #0984e3, #6c5ce7);">
+                                    🧙 Фэнтези
+                                </button>
+                            </div>
                             <div class="random-result" id="randomResult"></div>
                         </div>
                     </section>
@@ -321,8 +336,6 @@
                         </div>
                     </section>
                 </div>
-
-                <!-- ===== СТРАНИЦА КАТАЛОГА (удалена) ===== -->
 
                 <!-- ===== ДЕТАЛЬНАЯ ===== -->
                 <div id="page-detail" style="display:none;">
@@ -852,7 +865,6 @@
                 }, 100);
             }
             
-            // Сбрасываем фильтры при загрузке
             if (typeof resetCatalogFilters === 'function') {
                 setTimeout(function() {
                     resetCatalogFilters();
@@ -968,7 +980,6 @@
             }
         };
 
-        // Отслеживаем ввод в поиске для показа кнопки очистки
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('filterSearchInput');
             const clearBtn = document.getElementById('filterSearchClear');
