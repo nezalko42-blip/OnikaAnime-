@@ -474,7 +474,7 @@ const API = {
     },
 
     // ============================================
-    // 11. ТОРРЕНТЫ (ИСПРАВЛЕННЫЙ МЕТОД)
+    // 11. ТОРРЕНТЫ (ЧЕРЕЗ API)
     // ============================================
     async getTorrentsByRelease(releaseId) {
         try {
@@ -525,34 +525,102 @@ const API = {
         }
     },
 
-    async getLatestTorrents(limit = 10) {
-        const params = {
-            page: 1,
-            limit: limit,
-            include: 'id,hash,size,type,color,codec,label,quality,magnet,filename,seeders,leechers,release'
-        };
-        const data = await this._get('/anime/torrents', params, false);
-        if (data && data.data) {
-            return data.data.map(torrent => ({
-                id: torrent.id,
-                hash: torrent.hash,
-                size: torrent.size || 0,
-                label: torrent.label || 'Без названия',
-                quality: torrent.quality?.description || 'Неизвестно',
-                magnet: torrent.magnet,
-                seeders: torrent.seeders || 0,
-                leechers: torrent.leechers || 0,
-                release: torrent.release ? {
-                    id: torrent.release.id,
-                    title: torrent.release.name?.main || 'Без названия'
-                } : null
-            }));
+    // ============================================
+    // 12. ТОРРЕНТЫ (ЧЕРЕЗ RSS) - НОВЫЙ МЕТОД
+    // ============================================
+    async getTorrentsRSS(limit = 20) {
+        try {
+            const url = `${this.BASE_URL}/anime/torrents/rss?limit=${limit}`;
+            console.log('📡 Запрос RSS торрентов:', url);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/xml',
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const xmlText = await response.text();
+            console.log('📡 RSS получен, длина:', xmlText.length);
+            
+            // Парсим XML
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+            
+            // Проверяем ошибки парсинга
+            const parserError = xmlDoc.querySelector('parsererror');
+            if (parserError) {
+                throw new Error('Ошибка парсинга RSS');
+            }
+            
+            const items = xmlDoc.querySelectorAll('item');
+            const torrents = [];
+            
+            items.forEach(item => {
+                const title = item.querySelector('title')?.textContent?.trim() || 'Без названия';
+                const guid = item.querySelector('guid')?.textContent?.trim() || '';
+                const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
+                const torrentId = item.querySelector('torrentId')?.textContent?.trim() || '';
+                const releaseId = item.querySelector('releaseId')?.textContent?.trim() || '';
+                const description = item.querySelector('description')?.textContent?.trim() || '';
+                const enclosure = item.querySelector('enclosure');
+                
+                let size = 0;
+                if (enclosure) {
+                    const length = enclosure.getAttribute('length');
+                    if (length) size = parseInt(length) || 0;
+                }
+                
+                let quality = 'Неизвестно';
+                let codec = 'Неизвестно';
+                let type = 'Неизвестно';
+                
+                if (title) {
+                    const qualityMatch = title.match(/(\d{3,4}p)/i);
+                    if (qualityMatch) quality = qualityMatch[1];
+                    
+                    if (title.includes('HEVC') || title.includes('x265')) {
+                        codec = 'HEVC';
+                    } else if (title.includes('AVC') || title.includes('x264')) {
+                        codec = 'AVC';
+                    }
+                    
+                    if (title.includes('BDRip')) type = 'BDRip';
+                    else if (title.includes('WEBRip')) type = 'WEBRip';
+                    else if (title.includes('WEB-DL')) type = 'WEB-DL';
+                }
+                
+                torrents.push({
+                    id: torrentId || guid,
+                    hash: guid,
+                    title: title,
+                    size: size,
+                    quality: quality,
+                    codec: codec,
+                    type: type,
+                    releaseId: releaseId,
+                    pubDate: pubDate,
+                    description: description,
+                    enclosureUrl: enclosure ? enclosure.getAttribute('url') : '',
+                    animeTitle: title.split('|')[0]?.trim() || title
+                });
+            });
+            
+            console.log('✅ Найдено торрентов в RSS:', torrents.length);
+            return torrents;
+            
+        } catch (error) {
+            console.error('❌ Ошибка получения RSS торрентов:', error);
+            return [];
         }
-        return [];
     },
 
     // ============================================
-    // 12. КОНВЕРТАЦИЯ
+    // 13. КОНВЕРТАЦИЯ
     // ============================================
     _getGenreIcon(genreName) {
         const icons = {
@@ -712,7 +780,7 @@ const API = {
     },
 
     // ============================================
-    // 13. СПРАВОЧНИКИ
+    // 14. СПРАВОЧНИКИ
     // ============================================
     async getTypes() {
         const data = await this._get('/anime/catalog/references/types');
