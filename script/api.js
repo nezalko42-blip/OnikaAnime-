@@ -299,11 +299,28 @@ const API = {
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('anilibria_', '');
         const params = {
-            include: 'id,type.genres,name,poster,year,episodes_total,description,genres,age_rating,external_player,publish_day,added_in_users_favorites,average_duration_of_episode,created_at,updated_at,is_ongoing,player,status,torrents'
+            include: 'id,player,episodes_total,external_player,names,poster,year,description,genres,age_rating,status,torrents'
         };
         const data = await this._get(`/anime/releases/${cleanId}`, params, false);
+        
         if (data && data.id) {
-            return this._convertItem(data);
+            const item = this._convertItem(data);
+            
+            // Дополнительно пробуем получить серии через player
+            if (data.player && data.player.list) {
+                const episodes = Object.values(data.player.list).map(ep => ({
+                    episode: ep.episode || ep.serie || 0,
+                    name: ep.name || null,
+                    uuid: ep.uuid || null,
+                    preview: ep.preview || null,
+                    hls: ep.hls || null
+                })).sort((a, b) => a.episode - b.episode);
+                
+                item.episodes_list = episodes;
+                item.total_episodes = data.episodes_total || episodes.length;
+            }
+            
+            return item;
         }
         return null;
     },
