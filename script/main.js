@@ -1326,7 +1326,7 @@ function closeVideoPlayer() {
 }
 
 // ============================================
-// ЗАГРУЗКА ТОРРЕНТОВ
+// ЗАГРУЗКА ТОРРЕНТОВ (ОБНОВЛЕННАЯ С RSS)
 // ============================================
 async function loadTorrentsForRelease(releaseId) {
     const container = document.getElementById('torrentGrid');
@@ -1335,8 +1335,20 @@ async function loadTorrentsForRelease(releaseId) {
     container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка торрентов...</div>';
     
     try {
-        const torrents = await API.getTorrentsByRelease(releaseId);
-        console.log('🧲 Торренты получены:', torrents);
+        // Сначала пробуем получить торренты через RSS
+        let torrents = await API.getTorrentsRSS(20);
+        console.log('🧲 Торренты из RSS:', torrents);
+        
+        // Если есть releaseId, фильтруем по нему
+        if (releaseId && torrents.length > 0) {
+            torrents = torrents.filter(t => t.releaseId === releaseId);
+        }
+        
+        // Если через RSS ничего не найдено, пробуем через API
+        if (!torrents || torrents.length === 0) {
+            torrents = await API.getTorrentsByRelease(releaseId);
+            console.log('🧲 Торренты из API:', torrents);
+        }
         
         if (!torrents || torrents.length === 0) {
             container.innerHTML = `
@@ -1344,12 +1356,18 @@ async function loadTorrentsForRelease(releaseId) {
                     <div style="font-size:48px;margin-bottom:12px;">🧲</div>
                     <p>Торренты не найдены</p>
                     <p style="font-size:12px;margin-top:4px;">Для этого аниме пока нет торрентов</p>
+                    <button onclick="loadTorrentsForRelease('${releaseId}')" class="random-retry-btn" style="margin-top:12px;">🔄 Попробовать снова</button>
                 </div>
             `;
             return;
         }
         
-        renderTorrents(torrents);
+        // Если torrents из RSS имеют структуру с полями, используем renderTorrentsRSS
+        if (torrents.length > 0 && torrents[0].animeTitle) {
+            renderTorrentsRSS(torrents);
+        } else {
+            renderTorrents(torrents);
+        }
         
     } catch (e) {
         console.error('Ошибка загрузки торрентов:', e);
@@ -1391,6 +1409,52 @@ function renderTorrents(torrents) {
                 </div>
                 <div class="torrent-actions">
                     ${t.magnet ? `<button class="torrent-btn magnet" onclick="copyMagnet('${t.magnet}')">🧲 Magnet</button>` : ''}
+                    ${t.hash ? `<button class="torrent-btn download" onclick="downloadTorrent('${t.hash}')">📥 Скачать .torrent</button>` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderTorrentsRSS(torrents) {
+    const container = document.getElementById('torrentGrid');
+    if (!container) return;
+    
+    let html = '';
+    torrents.forEach(t => {
+        const sizeGB = (t.size / (1024 * 1024 * 1024)).toFixed(2);
+        const quality = t.quality || 'Неизвестно';
+        const codec = t.codec || 'Неизвестно';
+        const type = t.type || 'Неизвестно';
+        const title = t.animeTitle || t.title || 'Без названия';
+        const releaseId = t.releaseId || '';
+        
+        let date = 'Недавно';
+        if (t.pubDate) {
+            try {
+                const d = new Date(t.pubDate);
+                date = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+            } catch(e) {}
+        }
+        
+        html += `
+            <div class="torrent-item">
+                <div class="torrent-info">
+                    <div class="torrent-title">${title}</div>
+                    <div class="torrent-meta">
+                        <span>📦 ${sizeGB} GB</span>
+                        <span>🎬 ${quality}</span>
+                        <span>💻 ${codec}</span>
+                        <span>📀 ${type}</span>
+                        <span>📅 ${date}</span>
+                        ${releaseId ? `<span onclick="openDetail('anilibria_${releaseId}')" style="cursor:pointer;color:var(--neon-cyan);">🔗 Открыть</span>` : ''}
+                    </div>
+                    ${t.description ? `<div class="torrent-desc">${t.description.replace(/<[^>]*>/g, '').slice(0, 100)}...</div>` : ''}
+                </div>
+                <div class="torrent-actions">
+                    ${t.hash ? `<button class="torrent-btn magnet" onclick="copyMagnet('magnet:?xt=urn:btih:${t.hash}')">🧲 Magnet</button>` : ''}
                     ${t.hash ? `<button class="torrent-btn download" onclick="downloadTorrent('${t.hash}')">📥 Скачать .torrent</button>` : ''}
                 </div>
             </div>
@@ -1487,7 +1551,7 @@ async function testVideos() {
 }
 
 // ============================================
-// 9. ОТКРЫТЬ ДЕТАЛИ АНИМЕ (ИСПРАВЛЕННАЯ)
+// 9. ОТКРЫТЬ ДЕТАЛИ АНИМЕ
 // ============================================
 async function openDetail(id) {
     if (!id) {
@@ -1564,22 +1628,16 @@ function showDetail(anime) {
         favBtn.onclick = () => toggleFav(anime.title);
     }
     
-    // Загружаем комментарии
     renderComments(anime.title);
-    
-    // Загружаем похожие
     showSimilarAnime(anime);
     
-    // Загружаем торренты
     const cleanId = anime.id?.replace('anilibria_', '') || '';
     if (cleanId) {
         loadTorrentsForRelease(cleanId);
     }
     
-    // Загружаем видео
     loadVideos(6);
     
-    // Показываем серии
     const episodesList = anime.episodes_list || [];
     const episodeBtns = document.getElementById('episodeBtns');
     if (episodeBtns) {
@@ -1594,7 +1652,6 @@ function showDetail(anime) {
         }
     }
     
-    // Показываем плеер
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
         const code = anime._raw?.code || anime._raw?.alias || '';
