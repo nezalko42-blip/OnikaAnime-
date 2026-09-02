@@ -212,6 +212,15 @@
                             <h2>📚 ВСЕ АНИМЕ</h2>
                         </div>
 
+                        <!-- ===== ПОИСКОВАЯ СТРОКА (ВЫНЕСЕНА ИЗ ФИЛЬТРА) ===== -->
+                        <div class="catalog-search-row">
+                            <div class="catalog-search-wrapper">
+                                <span class="catalog-search-icon">🔍</span>
+                                <input type="text" id="catalogSearchInput" placeholder="Поиск аниме по названию..." class="catalog-search-input" oninput="applyCatalogFilters()">
+                                <button class="catalog-search-clear" id="catalogSearchClear" onclick="clearCatalogSearch()" style="display:none;">✕</button>
+                            </div>
+                        </div>
+
                         <!-- ===== КНОПКА ПОКАЗАТЬ/СКРЫТЬ ФИЛЬТР ===== -->
                         <div class="filter-toggle-wrapper">
                             <button class="filter-toggle-btn" onclick="toggleFilterPanel()">
@@ -222,17 +231,6 @@
 
                         <!-- ===== ФИЛЬТР (СКРЫВАЕМЫЙ) ===== -->
                         <div class="filter-panel" id="filterPanel" style="display:none;">
-                            <!-- Строка поиска -->
-                            <div class="filter-search-row">
-                                <div class="filter-search-wrapper">
-                                    <span class="filter-search-icon">🔍</span>
-                                    <input type="text" id="filterSearchInput" placeholder="Поиск аниме по названию..." class="filter-search-input" oninput="applyCatalogFilters()">
-                                    <button class="filter-search-clear" id="filterSearchClear" onclick="clearSearchInput()" style="display:none;">✕</button>
-                                </div>
-                            </div>
-
-                            <div class="filter-divider"></div>
-
                             <!-- Основные фильтры -->
                             <div class="filter-row">
                                 <div class="filter-group">
@@ -286,8 +284,9 @@
                             </div>
                         </div>
 
+                        <!-- ===== СТАТИСТИКА БЕЗ НАДПИСИ "НАЙДЕНО" ===== -->
                         <div class="catalog-stats" id="catalogStats">
-                            <span id="totalCount">Загрузка...</span>
+                            <span id="totalCount"></span>
                         </div>
 
                         <div class="grid" id="grid">
@@ -994,8 +993,29 @@
                 }
             });
             
+            // ===== ОБРАБОТЧИК ДЛЯ НОВОЙ ПОИСКОВОЙ СТРОКИ =====
+            const searchInput = document.getElementById('catalogSearchInput');
+            const clearBtn = document.getElementById('catalogSearchClear');
+            if (searchInput && clearBtn) {
+                searchInput.addEventListener('input', function() {
+                    clearBtn.style.display = this.value.length > 0 ? 'flex' : 'none';
+                });
+            }
+            
             console.log('✅ OnikaAnime готов!');
         });
+
+        // ===== ОЧИСТКА ПОИСКА В КАТАЛОГЕ =====
+        window.clearCatalogSearch = function() {
+            const input = document.getElementById('catalogSearchInput');
+            const clearBtn = document.getElementById('catalogSearchClear');
+            if (input) {
+                input.value = '';
+                input.focus();
+                if (clearBtn) clearBtn.style.display = 'none';
+                applyCatalogFilters();
+            }
+        };
 
         // ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
         window.scrollToTop = function() {
@@ -1072,8 +1092,8 @@
         };
 
         window.clearSearchInput = function() {
-            const input = document.getElementById('filterSearchInput');
-            const clearBtn = document.getElementById('filterSearchClear');
+            const input = document.getElementById('catalogSearchInput');
+            const clearBtn = document.getElementById('catalogSearchClear');
             if (input) {
                 input.value = '';
                 input.focus();
@@ -1081,16 +1101,6 @@
                 applyCatalogFilters();
             }
         };
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('filterSearchInput');
-            const clearBtn = document.getElementById('filterSearchClear');
-            if (searchInput && clearBtn) {
-                searchInput.addEventListener('input', function() {
-                    clearBtn.style.display = this.value.length > 0 ? 'flex' : 'none';
-                });
-            }
-        });
 
         console.log('🌟 OnikaAnime загружен!');
         console.log('💡 Используйте checkData() для проверки данных');
