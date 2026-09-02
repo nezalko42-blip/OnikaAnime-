@@ -1658,21 +1658,32 @@ function showDetail(anime) {
         }, 1000);
     }
     
-    loadVideos(6);
-    
+    // ==== ЗАГРУЗКА СЕРИЙ В ПЛЕЕР ====
     const episodesList = anime.episodes_list || [];
     const episodeBtns = document.getElementById('episodeBtns');
     if (episodeBtns) {
         if (episodesList && episodesList.length > 0) {
             let btnsHtml = '';
+            // Показываем все серии
             episodesList.forEach(ep => {
-                btnsHtml += `<button class="ep-btn" onclick="playEpisode('${anime.id}', ${ep.episode})">${ep.episode}</button>`;
+                btnsHtml += `
+                    <button class="ep-btn" onclick="playEpisode('${anime.id}', ${ep.episode})" 
+                            style="padding:8px 16px;border-radius:8px;border:1px solid rgba(0,245,255,0.1);
+                                   background:rgba(0,245,255,0.02);color:var(--text-primary);cursor:pointer;
+                                   transition:all 0.3s ease;font-size:13px;"
+                            onmouseover="this.style.background='rgba(0,245,255,0.05)'" 
+                            onmouseout="this.style.background='rgba(0,245,255,0.02)'">
+                        ${ep.episode}
+                    </button>
+                `;
             });
             episodeBtns.innerHTML = btnsHtml;
         } else {
             episodeBtns.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">Серии не найдены</span>';
         }
     }
+    
+    loadVideos(6);
     
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
@@ -1689,12 +1700,223 @@ function showDetail(anime) {
     }
 }
 
+// ============================================
+// 11. ВОСПРОИЗВЕДЕНИЕ СЕРИИ
+// ============================================
 function playEpisode(id, episode) {
-    showToast(`🎬 Загрузка ${episode} серии...`, 'info');
+    console.log(`🎬 Загрузка ${episode} серии для ${id}`);
+    showToast(`⏳ Загрузка ${episode} серии...`, 'info');
+    
+    const cleanId = id.replace('anilibria_', '');
+    const wrapper = document.getElementById('playerWrapper');
+    
+    if (!wrapper) return;
+    
+    wrapper.innerHTML = `
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;flex-direction:column;gap:12px;background:rgba(0,0,0,0.8);">
+            <div class="spinner-small"></div>
+            <span style="font-size:14px;color:#aaa;">⏳ Загрузка серии ${episode}...</span>
+        </div>
+    `;
+    
+    try {
+        API.getVideoLinksForEpisode(cleanId, episode).then(result => {
+            if (!result || !result.links || result.links.length === 0) {
+                wrapper.innerHTML = `
+                    <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+                        <span style="font-size:48px;">😕</span>
+                        <span style="font-size:16px;color:#aaa;">Видео не найдено</span>
+                        <span style="font-size:13px;color:#666;">Попробуйте другую серию</span>
+                        ${result?.externalPlayer ? `<a href="${result.externalPlayer}" target="_blank" class="video-link">▶️ Открыть внешний плеер</a>` : ''}
+                    </div>
+                `;
+                showToast('❌ Видео для этой серии не найдено', 'error');
+                return;
+            }
+            
+            const bestLink = result.links[0];
+            const quality = bestLink.quality || '720p';
+            const videoUrl = bestLink.url;
+            
+            console.log(`🎬 Воспроизведение ${quality}:`, videoUrl);
+            
+            let playerHtml = '';
+            
+            // YouTube
+            if (videoUrl.includes('youtube.com/embed') || videoUrl.includes('youtu.be') || videoUrl.includes('youtube.com/watch')) {
+                let embedUrl = videoUrl;
+                if (videoUrl.includes('watch?v=')) {
+                    const vid = videoUrl.split('v=')[1]?.split('&')[0];
+                    if (vid) embedUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
+                } else if (videoUrl.includes('youtu.be/')) {
+                    const vid = videoUrl.split('youtu.be/')[1]?.split('?')[0];
+                    if (vid) embedUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
+                }
+                
+                playerHtml = `
+                    <iframe src="${embedUrl}" 
+                        frameborder="0" 
+                        allowfullscreen 
+                        allow="autoplay; encrypted-media" 
+                        style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;">
+                    </iframe>
+                    <div style="position:absolute;bottom:12px;right:16px;color:rgba(255,255,255,0.3);font-size:11px;z-index:10;">
+                        ${result.title} • Серия ${episode} • ${quality}
+                    </div>
+                `;
+            } 
+            // HLS или MP4
+            else if (videoUrl.endsWith('.mp4') || videoUrl.endsWith('.m3u8') || videoUrl.includes('.m3u8')) {
+                const isHLS = videoUrl.endsWith('.m3u8') || videoUrl.includes('.m3u8');
+                
+                playerHtml = `
+                    <video id="animeVideoPlayer" controls autoplay playsinline style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;">
+                        ${isHLS ? '' : `<source src="${videoUrl}" type="video/mp4">`}
+                        <p>Ваш браузер не поддерживает видео</p>
+                    </video>
+                    <div style="position:absolute;bottom:12px;right:16px;color:rgba(255,255,255,0.3);font-size:11px;z-index:10;">
+                        ${result.title} • Серия ${episode} • ${quality} • ${isHLS ? 'HLS' : 'MP4'}
+                    </div>
+                `;
+                
+                if (isHLS && typeof Hls !== 'undefined') {
+                    setTimeout(() => {
+                        const video = document.getElementById('animeVideoPlayer');
+                        if (video) {
+                            const hls = new Hls();
+                            hls.loadSource(videoUrl);
+                            hls.attachMedia(video);
+                            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                                video.play();
+                            });
+                        }
+                    }, 500);
+                } else if (isHLS) {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@0.14.17/dist/hls.min.js';
+                    script.onload = () => {
+                        const video = document.getElementById('animeVideoPlayer');
+                        if (video) {
+                            const hls = new Hls();
+                            hls.loadSource(videoUrl);
+                            hls.attachMedia(video);
+                            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                                video.play();
+                            });
+                        }
+                    };
+                    document.head.appendChild(script);
+                }
+            }
+            // Внешняя ссылка
+            else {
+                playerHtml = `
+                    <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;flex-direction:column;gap:16px;background:rgba(0,0,0,0.7);">
+                        <span style="font-size:48px;">🎬</span>
+                        <span style="font-size:16px;color:#aaa;">${result.title} • Серия ${episode}</span>
+                        <a href="${videoUrl}" target="_blank" class="video-link" style="font-size:16px;padding:12px 32px;">
+                            ▶️ Открыть видео
+                        </a>
+                        ${result.links.length > 1 ? '<span style="font-size:12px;color:#666;">Доступно несколько источников</span>' : ''}
+                    </div>
+                `;
+            }
+            
+            wrapper.innerHTML = playerHtml;
+            showToast(`▶️ Серия ${episode} загружена!`, 'success');
+            
+            // Кнопки качества
+            if (result.links.length > 1) {
+                let qualityHtml = '<div style="position:absolute;top:12px;right:16px;z-index:10;display:flex;gap:6px;flex-wrap:wrap;max-width:200px;justify-content:flex-end;">';
+                result.links.forEach((link, index) => {
+                    const isActive = index === 0 ? 'active' : '';
+                    qualityHtml += `
+                        <button onclick="switchVideoQuality('${cleanId}', ${episode}, ${index})" 
+                            class="quality-btn ${isActive}" 
+                            style="padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:${isActive ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.05)'};color:#fff;font-size:11px;cursor:pointer;transition:all 0.3s ease;">
+                            ${link.quality}
+                        </button>
+                    `;
+                });
+                qualityHtml += '</div>';
+                wrapper.innerHTML += qualityHtml;
+                
+                window._videoLinks = result.links;
+                window._currentEpisode = episode;
+                window._currentReleaseId = cleanId;
+            }
+            
+        }).catch(error => {
+            console.error('Ошибка загрузки видео:', error);
+            wrapper.innerHTML = `
+                <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+                    <span style="font-size:48px;">⚠️</span>
+                    <span style="font-size:16px;color:#aaa;">Ошибка загрузки видео</span>
+                    <span style="font-size:13px;color:#666;">${error.message || 'Попробуйте позже'}</span>
+                    <button onclick="playEpisode('${id}', ${episode})" class="random-retry-btn" style="margin-top:8px;">🔄 Попробовать снова</button>
+                </div>
+            `;
+            showToast('❌ Ошибка загрузки видео', 'error');
+        });
+        
+    } catch (error) {
+        console.error('Ошибка:', error);
+        wrapper.innerHTML = `
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+                <span style="font-size:48px;">⚠️</span>
+                <span style="font-size:16px;color:#aaa;">Ошибка</span>
+                <button onclick="playEpisode('${id}', ${episode})" class="random-retry-btn">🔄 Попробовать снова</button>
+            </div>
+        `;
+        showToast('❌ Ошибка загрузки', 'error');
+    }
 }
 
 // ============================================
-// 11. ТОРРЕНТ-ПЛЕЕР
+// 12. ПЕРЕКЛЮЧЕНИЕ КАЧЕСТВА ВИДЕО
+// ============================================
+function switchVideoQuality(releaseId, episode, index) {
+    const links = window._videoLinks;
+    if (!links || !links[index]) return;
+    
+    const link = links[index];
+    console.log(`🔄 Переключение на ${link.quality}:`, link.url);
+    
+    document.querySelectorAll('.quality-btn').forEach((btn, i) => {
+        btn.style.background = i === index ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.05)';
+        btn.style.borderColor = i === index ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.1)';
+    });
+    
+    const video = document.getElementById('animeVideoPlayer');
+    if (video) {
+        const currentTime = video.currentTime || 0;
+        const wasPlaying = !video.paused;
+        
+        if (link.url.endsWith('.m3u8') || link.url.includes('.m3u8')) {
+            if (typeof Hls !== 'undefined') {
+                const hls = new Hls();
+                hls.loadSource(link.url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.currentTime = currentTime;
+                    if (wasPlaying) video.play();
+                });
+            }
+        } else {
+            video.src = link.url;
+            video.load();
+            video.currentTime = currentTime;
+            if (wasPlaying) video.play();
+        }
+        
+        showToast(`🔄 Качество: ${link.quality}`, 'info');
+    } else {
+        playEpisode(`anilibria_${releaseId}`, episode);
+    }
+}
+
+// ============================================
+// 13. ТОРРЕНТ-ПЛЕЕР
 // ============================================
 function renderTorrentPlayer(torrents, animeTitle) {
     const section = document.getElementById('torrentPlayerSection');
@@ -1801,7 +2023,7 @@ function selectTorrentQuality() {
 }
 
 // ============================================
-// 12. КОММЕНТАРИИ
+// 14. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1896,7 +2118,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 13. ИЗБРАННОЕ
+// 15. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1970,7 +2192,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 14. ДОСТИЖЕНИЯ
+// 16. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -2068,7 +2290,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 15. ПРОФИЛЬ
+// 17. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -2159,7 +2381,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 16. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 18. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -2313,7 +2535,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 17. АВАТАР
+// 19. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -2361,7 +2583,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 18. TOAST
+// 20. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -2393,7 +2615,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 19. МОДАЛЬНЫЕ ОКНА
+// 21. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -2457,7 +2679,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 20. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 22. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -2577,7 +2799,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 21. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 23. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -2614,7 +2836,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 22. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 24. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2652,7 +2874,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 23. МОИ КОММЕНТАРИИ
+// 25. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2691,7 +2913,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 24. ЗАПУСК
+// 26. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -2712,7 +2934,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 25. ЭКСПОРТ
+// 27. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2764,5 +2986,7 @@ window.downloadTorrent = downloadTorrent;
 window.testVideos = testVideos;
 window.selectTorrentQuality = selectTorrentQuality;
 window.renderTorrentPlayer = renderTorrentPlayer;
+window.playEpisode = playEpisode;
+window.switchVideoQuality = switchVideoQuality;
 
 console.log('✅ OnikaAnime полностью загружен!');
