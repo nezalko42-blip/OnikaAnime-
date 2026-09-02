@@ -284,7 +284,7 @@
                             </div>
                         </div>
 
-                        <!-- ===== СТАТИСТИКА БЕЗ НАДПИСИ "НАЙДЕНО" ===== -->
+                        <!-- ===== СТАТИСТИКА КАТАЛОГА ===== -->
                         <div class="catalog-stats" id="catalogStats">
                             <span id="totalCount"></span>
                         </div>
@@ -430,6 +430,12 @@
                     <div class="similar-section" id="similarSection" style="display:none;">
                         <h3>🎬 Сезоны и продолжения</h3>
                         <div class="similar-scroll" id="similarScroll"></div>
+                    </div>
+
+                    <!-- ===== ТОРРЕНТ-ПЛЕЕР ===== -->
+                    <div class="torrent-player-section" id="torrentPlayerSection" style="display:none;">
+                        <h3>🧲 Смотреть через торрент</h3>
+                        <div id="torrentPlayerContainer"></div>
                     </div>
                     
                     <!-- ===== ПЛЕЕР С ВКЛАДКАМИ ===== -->
@@ -929,12 +935,14 @@
     </footer>
 
     <!-- ===== СКРИПТЫ ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/webtorrent@0.128.0/webtorrent.min.js"></script>
     <script src="script/storage.js"></script>
     <script src="script/api.js"></script>
     <script src="script/utils.js"></script>
     <script src="script/auth.js"></script>
     <script src="script/shikimori-player.js"></script>
     <script src="script/pet.js"></script>
+    <script src="script/webtorrent-player.js"></script>
     <script src="script/main.js"></script>
 
     <script>
