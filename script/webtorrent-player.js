@@ -16,14 +16,11 @@ class WebTorrentPlayer {
         this.onError = options.onError || null;
         this.onProgress = options.onProgress || null;
         
-        // Устанавливаем WebTorrent
         this._loadWebTorrent();
     }
 
-    // ===== ЗАГРУЗКА WEBTORRENT =====
     _loadWebTorrent() {
         if (typeof WebTorrent === 'undefined') {
-            // Загружаем скрипт, если его нет
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/webtorrent@0.128.0/webtorrent.min.js';
             script.onload = () => this.init();
@@ -33,13 +30,11 @@ class WebTorrentPlayer {
         }
     }
 
-    // ===== ИНИЦИАЛИЗАЦИЯ =====
     init() {
         this.client = new WebTorrent();
         this.render();
     }
 
-    // ===== ОТРИСОВКА ПЛЕЕРА =====
     render() {
         this.container.innerHTML = `
             <div class="webtorrent-player">
@@ -77,12 +72,9 @@ class WebTorrentPlayer {
         `;
         
         this.videoElement = document.getElementById('torrentVideo');
-        
-        // Сохраняем ссылку на плеер в глобальную переменную
         window._torrentPlayer = this;
     }
 
-    // ===== ЗАПУСК ТОРРЕНТА =====
     async start(magnet = null) {
         if (magnet) this.magnet = magnet;
         
@@ -96,7 +88,6 @@ class WebTorrentPlayer {
         document.querySelector('.webtorrent-play-btn').textContent = '⏳ Загрузка...';
         
         try {
-            // Добавляем торрент
             this.client.add(this.magnet, {
                 path: '/tmp/webtorrent/'
             }, (torrent) => {
@@ -111,9 +102,7 @@ class WebTorrentPlayer {
         }
     }
 
-    // ===== ТОРРЕНТ ГОТОВ =====
     _onTorrentReady(torrent) {
-        // Ищем видео-файл
         const videoFile = torrent.files.find(f => {
             const name = f.name.toLowerCase();
             return name.endsWith('.mp4') || 
@@ -130,14 +119,11 @@ class WebTorrentPlayer {
         
         this._setStatus(`📦 Найден файл: ${videoFile.name} (${(videoFile.length / 1024 / 1024 / 1024).toFixed(2)} GB)`, 'info');
         
-        // Показываем плеер
         const wrapper = document.getElementById('torrentVideoWrapper');
         if (wrapper) wrapper.style.display = 'block';
         
-        // Запускаем стриминг
         this._streamVideo(videoFile);
         
-        // Отслеживаем прогресс
         torrent.on('download', (bytes) => {
             const progress = (torrent.progress * 100).toFixed(1);
             const speed = (torrent.downloadSpeed / 1024 / 1024).toFixed(1);
@@ -160,7 +146,6 @@ class WebTorrentPlayer {
             this._setStatus('❌ Ошибка: ' + err.message, 'error');
         });
         
-        // Убираем кнопку "Смотреть", показываем "Остановить"
         document.querySelector('.webtorrent-play-btn').style.display = 'none';
         document.querySelector('.webtorrent-stop-btn').style.display = 'inline-block';
         
@@ -169,19 +154,13 @@ class WebTorrentPlayer {
         }
     }
 
-    // ===== СТРИМИНГ ВИДЕО =====
     _streamVideo(videoFile) {
         const video = this.videoElement;
         const loading = document.getElementById('torrentLoading');
         
-        // Создаём поток
-        const stream = videoFile.createReadStream();
-        
-        // Используем MediaSource для стриминга
         if (window.MediaSource && videoFile.name.endsWith('.mp4')) {
             this._streamWithMediaSource(videoFile, video);
         } else {
-            // Обычный способ через blob URL
             videoFile.renderTo(video, {
                 autoplay: true,
                 muted: false,
@@ -205,7 +184,6 @@ class WebTorrentPlayer {
         }
     }
 
-    // ===== СТРИМИНГ ЧЕРЕЗ MEDIA SOURCE (для MP4) =====
     _streamWithMediaSource(videoFile, video) {
         const loading = document.getElementById('torrentLoading');
         const mediaSource = new MediaSource();
@@ -216,7 +194,6 @@ class WebTorrentPlayer {
             const mimeType = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
             
             if (!MediaSource.isTypeSupported(mimeType)) {
-                // Пробуем другой кодек
                 const fallbackMime = 'video/mp4';
                 if (!MediaSource.isTypeSupported(fallbackMime)) {
                     this._setStatus('❌ Ваш браузер не поддерживает этот кодек', 'error');
@@ -271,7 +248,6 @@ class WebTorrentPlayer {
         };
     }
 
-    // ===== УПРАВЛЕНИЕ =====
     togglePlay() {
         if (!this.torrent) {
             this.start();
@@ -319,7 +295,6 @@ class WebTorrentPlayer {
         }
     }
 
-    // ===== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ =====
     _setStatus(text, type = 'info') {
         const statusEl = document.getElementById('torrentStatus');
         if (!statusEl) return;
