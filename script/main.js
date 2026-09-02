@@ -1194,7 +1194,9 @@ function switchPlayerTab(tab) {
     document.getElementById(`tab-${tab}`)?.classList.add('active');
 }
 
-// Загрузка видео
+// ============================================
+// ЗАГРУЗКА ВИДЕО (ИСПРАВЛЕННАЯ)
+// ============================================
 async function loadVideos(limit = 6) {
     const container = document.getElementById('videoGrid');
     if (!container) return;
@@ -1203,8 +1205,16 @@ async function loadVideos(limit = 6) {
     
     try {
         const videos = await API.getVideos(limit);
+        console.log('🎬 Видео получены:', videos);
+        
         if (!videos || videos.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">😅 Видео не найдены</div>';
+            container.innerHTML = `
+                <div style="text-align:center;padding:30px;color:var(--text-muted);">
+                    <div style="font-size:48px;margin-bottom:12px;">🎬</div>
+                    <p>Видео не найдены</p>
+                    <p style="font-size:12px;margin-top:4px;">Попробуйте обновить страницу</p>
+                </div>
+            `;
             return;
         }
         
@@ -1213,12 +1223,21 @@ async function loadVideos(limit = 6) {
             const img = video.image || '';
             const title = video.title || 'Без названия';
             const views = formatNumber(video.views);
-            const embedUrl = video.url || '';
+            const videoId = video.video_id || video.id;
+            
+            // Пробуем получить embed URL
+            let embedUrl = video.url || '';
+            if (embedUrl && embedUrl.includes('watch?v=')) {
+                const vid = embedUrl.split('v=')[1]?.split('&')[0];
+                if (vid) {
+                    embedUrl = `https://www.youtube.com/embed/${vid}`;
+                }
+            }
             
             html += `
-                <div class="video-card" onclick="openVideoPlayer('${video.video_id || video.id}', '${encodeURIComponent(title)}', '${embedUrl}')">
+                <div class="video-card" onclick="openVideoPlayer('${videoId}', '${encodeURIComponent(title)}', '${embedUrl}')">
                     <div class="video-card-img">
-                        ${img ? `<img src="${img}" loading="lazy" alt="${title}">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;">🎬</div>'}
+                        ${img ? `<img src="${img}" loading="lazy" alt="${title}" onerror="this.style.display='none'">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));">🎬</div>'}
                         <div class="video-card-play">▶️</div>
                         ${video.is_announce ? '<span class="video-card-badge">📢 Анонс</span>' : ''}
                     </div>
@@ -1233,11 +1252,19 @@ async function loadVideos(limit = 6) {
         container.innerHTML = html;
     } catch (e) {
         console.error('Ошибка загрузки видео:', e);
-        container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">⚠️ Ошибка загрузки</div>';
+        container.innerHTML = `
+            <div style="text-align:center;padding:30px;color:var(--text-muted);">
+                <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                <p>Ошибка загрузки видео</p>
+                <button onclick="loadVideos(6)" class="random-retry-btn" style="margin-top:12px;">🔄 Попробовать снова</button>
+            </div>
+        `;
     }
 }
 
-// Открыть видео плеер
+// ============================================
+// ОТКРЫТЬ ВИДЕО ПЛЕЕР (ИСПРАВЛЕННЫЙ)
+// ============================================
 function openVideoPlayer(videoId, title, url) {
     const modal = document.getElementById('videoPlayerModal');
     const player = document.getElementById('videoPlayerIframe');
@@ -1245,18 +1272,41 @@ function openVideoPlayer(videoId, title, url) {
     
     if (!modal || !player) return;
     
-    if (url && url.includes('watch?v=')) {
-        const videoId = url.split('v=')[1]?.split('&')[0];
-        if (videoId) {
-            player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
-        } else {
-            player.src = url;
+    let finalUrl = url || '';
+    
+    // Если есть URL, пытаемся извлечь ID для YouTube
+    if (finalUrl) {
+        // YouTube
+        if (finalUrl.includes('youtube.com/watch?v=') || finalUrl.includes('youtu.be/')) {
+            let vid = '';
+            if (finalUrl.includes('youtube.com/watch?v=')) {
+                vid = finalUrl.split('v=')[1]?.split('&')[0];
+            } else if (finalUrl.includes('youtu.be/')) {
+                vid = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+            }
+            if (vid) {
+                finalUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
+            }
         }
-    } else if (url) {
-        player.src = url;
-    } else {
-        player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        // Если уже embed ссылка
+        else if (finalUrl.includes('/embed/')) {
+            finalUrl = finalUrl + (finalUrl.includes('?') ? '&autoplay=1' : '?autoplay=1');
+        }
+        // Если просто ссылка на видео (пробуем определить тип)
+        else {
+            // Оставляем как есть, может быть прямой ссылкой на mp4 и т.д.
+        }
+    } else if (videoId) {
+        // Если нет URL, но есть ID, пробуем YouTube
+        finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
     }
+    
+    if (!finalUrl) {
+        showToast('❌ Ссылка на видео не найдена', 'error');
+        return;
+    }
+    
+    player.src = finalUrl;
     
     if (info) {
         info.innerHTML = `<strong>${decodeURIComponent(title)}</strong>`;
@@ -1276,7 +1326,9 @@ function closeVideoPlayer() {
     document.body.style.overflow = '';
 }
 
-// Загрузка торрентов для релиза
+// ============================================
+// ЗАГРУЗКА ТОРРЕНТОВ
+// ============================================
 async function loadTorrentsForRelease(releaseId) {
     const container = document.getElementById('torrentGrid');
     if (!container) return;
@@ -1386,7 +1438,35 @@ async function downloadTorrent(hash) {
 }
 
 // ============================================
-// 8. ДЕТАЛИ
+// 8. ТЕСТОВАЯ ФУНКЦИЯ ДЛЯ ПРОВЕРКИ ВИДЕО
+// ============================================
+async function testVideos() {
+    console.log('🔍 Тестируем API видео...');
+    try {
+        const data = await API._get('/media/videos', { limit: 5, include: 'id,url,title,image' }, false);
+        console.log('📡 Ответ API (сырой):', data);
+        
+        if (data && data.data) {
+            console.log('✅ Найдено видео:', data.data.length);
+            data.data.forEach((v, i) => {
+                console.log(`  ${i+1}. ${v.title || 'Без названия'} - ${v.url || 'нет ссылки'}`);
+            });
+        } else if (Array.isArray(data)) {
+            console.log('✅ Найдено видео (массив):', data.length);
+            data.forEach((v, i) => {
+                console.log(`  ${i+1}. ${v.title || 'Без названия'} - ${v.url || 'нет ссылки'}`);
+            });
+        } else {
+            console.log('❌ Видео не найдены или структура ответа другая');
+            console.log('Структура:', Object.keys(data || {}));
+        }
+    } catch(e) {
+        console.error('❌ Ошибка теста:', e);
+    }
+}
+
+// ============================================
+// 9. ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
     if (!id) return showToast('Ошибка ID', 'error');
@@ -1479,11 +1559,10 @@ function showDetail(anime) {
 
 function playEpisode(id, episode) {
     showToast(`🎬 Загрузка ${episode} серии...`, 'info');
-    // Здесь можно реализовать загрузку конкретной серии
 }
 
 // ============================================
-// 9. КОММЕНТАРИИ
+// 10. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1578,7 +1657,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 10. ИЗБРАННОЕ
+// 11. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1652,7 +1731,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 11. ДОСТИЖЕНИЯ
+// 12. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1750,7 +1829,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 12. ПРОФИЛЬ
+// 13. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1841,7 +1920,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 13. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 14. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1995,7 +2074,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 14. АВАТАР
+// 15. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -2043,7 +2122,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 15. TOAST
+// 16. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -2075,7 +2154,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 16. МОДАЛЬНЫЕ ОКНА
+// 17. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -2139,7 +2218,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 17. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 18. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -2259,7 +2338,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 18. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 19. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -2296,7 +2375,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 19. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 20. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2334,7 +2413,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 20. МОИ КОММЕНТАРИИ
+// 21. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2373,7 +2452,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 21. ЗАПУСК
+// 22. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -2394,7 +2473,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 22. ЭКСПОРТ
+// 23. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2443,5 +2522,6 @@ window.closeVideoPlayer = closeVideoPlayer;
 window.loadTorrentsForRelease = loadTorrentsForRelease;
 window.copyMagnet = copyMagnet;
 window.downloadTorrent = downloadTorrent;
+window.testVideos = testVideos;
 
 console.log('✅ OnikaAnime полностью загружен!');
