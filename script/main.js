@@ -1213,6 +1213,7 @@ async function loadVideos(limit = 6) {
                     <div style="font-size:48px;margin-bottom:12px;">🎬</div>
                     <p>Видео не найдены</p>
                     <p style="font-size:12px;margin-top:4px;">Попробуйте обновить страницу</p>
+                    <button onclick="loadVideos(6)" class="random-retry-btn" style="margin-top:12px;">🔄 Попробовать снова</button>
                 </div>
             `;
             return;
@@ -1225,10 +1226,14 @@ async function loadVideos(limit = 6) {
             const views = formatNumber(video.views);
             const videoId = video.video_id || video.id;
             
-            // Пробуем получить embed URL
             let embedUrl = video.url || '';
             if (embedUrl && embedUrl.includes('watch?v=')) {
                 const vid = embedUrl.split('v=')[1]?.split('&')[0];
+                if (vid) {
+                    embedUrl = `https://www.youtube.com/embed/${vid}`;
+                }
+            } else if (embedUrl && embedUrl.includes('youtu.be/')) {
+                const vid = embedUrl.split('youtu.be/')[1]?.split('?')[0];
                 if (vid) {
                     embedUrl = `https://www.youtube.com/embed/${vid}`;
                 }
@@ -1256,6 +1261,7 @@ async function loadVideos(limit = 6) {
             <div style="text-align:center;padding:30px;color:var(--text-muted);">
                 <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
                 <p>Ошибка загрузки видео</p>
+                <p style="font-size:12px;color:var(--text-muted);">${e.message || 'Попробуйте позже'}</p>
                 <button onclick="loadVideos(6)" class="random-retry-btn" style="margin-top:12px;">🔄 Попробовать снова</button>
             </div>
         `;
@@ -1263,7 +1269,7 @@ async function loadVideos(limit = 6) {
 }
 
 // ============================================
-// ОТКРЫТЬ ВИДЕО ПЛЕЕР (ИСПРАВЛЕННЫЙ)
+// ОТКРЫТЬ ВИДЕО ПЛЕЕР
 // ============================================
 function openVideoPlayer(videoId, title, url) {
     const modal = document.getElementById('videoPlayerModal');
@@ -1274,9 +1280,7 @@ function openVideoPlayer(videoId, title, url) {
     
     let finalUrl = url || '';
     
-    // Если есть URL, пытаемся извлечь ID для YouTube
     if (finalUrl) {
-        // YouTube
         if (finalUrl.includes('youtube.com/watch?v=') || finalUrl.includes('youtu.be/')) {
             let vid = '';
             if (finalUrl.includes('youtube.com/watch?v=')) {
@@ -1287,17 +1291,10 @@ function openVideoPlayer(videoId, title, url) {
             if (vid) {
                 finalUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
             }
-        }
-        // Если уже embed ссылка
-        else if (finalUrl.includes('/embed/')) {
+        } else if (finalUrl.includes('/embed/')) {
             finalUrl = finalUrl + (finalUrl.includes('?') ? '&autoplay=1' : '?autoplay=1');
         }
-        // Если просто ссылка на видео (пробуем определить тип)
-        else {
-            // Оставляем как есть, может быть прямой ссылкой на mp4 и т.д.
-        }
     } else if (videoId) {
-        // Если нет URL, но есть ID, пробуем YouTube
         finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
     }
     
@@ -1327,7 +1324,7 @@ function closeVideoPlayer() {
 }
 
 // ============================================
-// ЗАГРУЗКА ТОРРЕНТОВ
+// ЗАГРУЗКА ТОРРЕНТОВ (ИСПРАВЛЕННАЯ)
 // ============================================
 async function loadTorrentsForRelease(releaseId) {
     const container = document.getElementById('torrentGrid');
@@ -1337,46 +1334,100 @@ async function loadTorrentsForRelease(releaseId) {
     
     try {
         const torrents = await API.getTorrentsByRelease(releaseId);
+        console.log('🧲 Торренты получены:', torrents);
+        
         if (!torrents || torrents.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">😅 Торренты не найдены</div>';
+            // Пробуем альтернативный метод
+            try {
+                const data = await API._get(`/anime/torrents/release/${releaseId}`, {
+                    include: 'id,hash,size,type,color,codec,label,quality,magnet,filename,seeders,leechers'
+                }, false);
+                
+                if (data && data.data && data.data.length > 0) {
+                    const torrents2 = data.data.map(t => ({
+                        id: t.id,
+                        hash: t.hash,
+                        size: t.size || 0,
+                        type: t.type?.description || 'Неизвестно',
+                        codec: t.codec?.label || t.codec?.value || 'Неизвестно',
+                        label: t.label || 'Без названия',
+                        quality: t.quality?.description || 'Неизвестно',
+                        magnet: t.magnet,
+                        filename: t.filename,
+                        seeders: t.seeders || 0,
+                        leechers: t.leechers || 0,
+                        is_hardsub: t.is_hardsub || false,
+                        description: t.description || ''
+                    }));
+                    
+                    if (torrents2.length > 0) {
+                        renderTorrents(torrents2);
+                        return;
+                    }
+                }
+            } catch(e) {
+                console.warn('Альтернативный метод не сработал:', e);
+            }
+            
+            container.innerHTML = `
+                <div style="text-align:center;padding:30px;color:var(--text-muted);">
+                    <div style="font-size:48px;margin-bottom:12px;">🧲</div>
+                    <p>Торренты не найдены</p>
+                    <p style="font-size:12px;margin-top:4px;">Для этого аниме пока нет торрентов</p>
+                </div>
+            `;
             return;
         }
         
-        let html = '';
-        torrents.forEach(t => {
-            const sizeGB = (t.size / (1024 * 1024 * 1024)).toFixed(2);
-            const quality = t.quality || 'Неизвестно';
-            const codec = t.codec || 'Неизвестно';
-            const seeders = t.seeders || 0;
-            const leechers = t.leechers || 0;
-            
-            html += `
-                <div class="torrent-item">
-                    <div class="torrent-info">
-                        <div class="torrent-title">${t.label}</div>
-                        <div class="torrent-meta">
-                            <span>📦 ${sizeGB} GB</span>
-                            <span>🎬 ${quality}</span>
-                            <span>💻 ${codec}</span>
-                            ${t.is_hardsub ? '<span>🔤 Хардсаб</span>' : ''}
-                            <span>⬆️ ${seeders}</span>
-                            <span>⬇️ ${leechers}</span>
-                        </div>
-                        ${t.description ? `<div class="torrent-desc">${t.description}</div>` : ''}
-                    </div>
-                    <div class="torrent-actions">
-                        ${t.magnet ? `<button class="torrent-btn magnet" onclick="copyMagnet('${t.magnet}')">🧲 Magnet</button>` : ''}
-                        ${t.hash ? `<button class="torrent-btn download" onclick="downloadTorrent('${t.hash}')">📥 Скачать .torrent</button>` : ''}
-                    </div>
-                </div>
-            `;
-        });
+        renderTorrents(torrents);
         
-        container.innerHTML = html;
     } catch (e) {
         console.error('Ошибка загрузки торрентов:', e);
-        container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">⚠️ Ошибка загрузки</div>';
+        container.innerHTML = `
+            <div style="text-align:center;padding:30px;color:var(--text-muted);">
+                <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                <p>Ошибка загрузки торрентов</p>
+                <button onclick="loadTorrentsForRelease('${releaseId}')" class="random-retry-btn" style="margin-top:12px;">🔄 Попробовать снова</button>
+            </div>
+        `;
     }
+}
+
+function renderTorrents(torrents) {
+    const container = document.getElementById('torrentGrid');
+    if (!container) return;
+    
+    let html = '';
+    torrents.forEach(t => {
+        const sizeGB = (t.size / (1024 * 1024 * 1024)).toFixed(2);
+        const quality = t.quality || 'Неизвестно';
+        const codec = t.codec || 'Неизвестно';
+        const seeders = t.seeders || 0;
+        const leechers = t.leechers || 0;
+        
+        html += `
+            <div class="torrent-item">
+                <div class="torrent-info">
+                    <div class="torrent-title">${t.label}</div>
+                    <div class="torrent-meta">
+                        <span>📦 ${sizeGB} GB</span>
+                        <span>🎬 ${quality}</span>
+                        <span>💻 ${codec}</span>
+                        ${t.is_hardsub ? '<span>🔤 Хардсаб</span>' : ''}
+                        <span>⬆️ ${seeders}</span>
+                        <span>⬇️ ${leechers}</span>
+                    </div>
+                    ${t.description ? `<div class="torrent-desc">${t.description}</div>` : ''}
+                </div>
+                <div class="torrent-actions">
+                    ${t.magnet ? `<button class="torrent-btn magnet" onclick="copyMagnet('${t.magnet}')">🧲 Magnet</button>` : ''}
+                    ${t.hash ? `<button class="torrent-btn download" onclick="downloadTorrent('${t.hash}')">📥 Скачать .torrent</button>` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
 }
 
 // Копировать magnet-ссылку
@@ -1466,103 +1517,7 @@ async function testVideos() {
 }
 
 // ============================================
-// 9. ДЕТАЛИ
-// ============================================
-async function openDetail(id) {
-    if (!id) return showToast('Ошибка ID', 'error');
-    
-    previousPage = currentPage;
-    navigate('detail');
-    document.getElementById('detailTitle').textContent = 'Загрузка...';
-    try {
-        const data = await API.getAnimeDetails(id);
-        if (data) {
-            if (!allData[id]) allData[id] = data;
-            showDetail(data);
-        } else {
-            showToast('❌ Не найдено', 'error');
-        }
-    } catch (e) {
-        console.error(e);
-        showToast('❌ Ошибка', 'error');
-    }
-}
-
-function showDetail(anime) {
-    document.getElementById('detailTitle').textContent = anime.title;
-    document.getElementById('detailEng').textContent = anime.title_english || '';
-    document.getElementById('detailMeta').textContent = `${anime.year} | ${anime.episodes} эп.`;
-    document.getElementById('detailDesc').textContent = anime.synopsis || 'Описание отсутствует';
-    const poster = document.getElementById('detailPoster');
-    const img = anime.images?.jpg?.image_url || '';
-    poster.src = img;
-    poster.style.display = img ? 'block' : 'none';
-    
-    const ageBadge = document.querySelector('.age-badge');
-    if (ageBadge) {
-        const age = anime.age_rating || '0+';
-        ageBadge.textContent = age;
-        ageBadge.className = `age-badge age-${age.replace('+', '')}`;
-    }
-    
-    document.getElementById('detailTags').innerHTML = (anime.genres || []).map(g => `<span class="detail-tag">${g}</span>`).join('');
-    
-    const user = DB.get('currentUser');
-    const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
-    const isFav = favs.indexOf(anime.title) > -1;
-    const btn = document.getElementById('favBtn');
-    btn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
-    btn.className = 'fav-btn' + (isFav ? ' active' : '');
-    btn.onclick = () => toggleFav(anime.title);
-    renderComments(anime.title);
-    
-    showSimilarAnime(anime);
-    
-    // Загружаем торренты для этого релиза
-    const cleanId = anime.id?.replace('anilibria_', '') || '';
-    if (cleanId) {
-        loadTorrentsForRelease(cleanId);
-    }
-    
-    // Загружаем видео
-    loadVideos(6);
-    
-    // Показываем серии если есть
-    const episodesList = anime.episodes_list || [];
-    const episodeBtns = document.getElementById('episodeBtns');
-    if (episodeBtns) {
-        if (episodesList && episodesList.length > 0) {
-            let btnsHtml = '';
-            episodesList.forEach(ep => {
-                btnsHtml += `<button class="ep-btn" onclick="playEpisode('${anime.id}', ${ep.episode})">${ep.episode}</button>`;
-            });
-            episodeBtns.innerHTML = btnsHtml;
-        } else {
-            episodeBtns.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">Серии не найдены</span>';
-        }
-    }
-    
-    const wrapper = document.getElementById('playerWrapper');
-    if (wrapper) {
-        const code = anime._raw?.code || anime._raw?.alias || '';
-        const externalPlayer = anime.external_player || '';
-        wrapper.innerHTML = `
-            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
-                <span style="font-size:48px;">🎬</span>
-                <span style="font-size:16px;color:#aaa;">Смотреть на Anilibria</span>
-                ${externalPlayer ? `<a href="${externalPlayer}" target="_blank" class="video-link">▶️ Открыть плеер</a>` : ''}
-                ${code ? `<a href="https://www.anilibria.tv/release/${code}" target="_blank" class="video-link">🌐 Открыть на Anilibria</a>` : ''}
-            </div>
-        `;
-    }
-}
-
-function playEpisode(id, episode) {
-    showToast(`🎬 Загрузка ${episode} серии...`, 'info');
-}
-
-// ============================================
-// 10. КОММЕНТАРИИ
+// 9. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1657,7 +1612,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 11. ИЗБРАННОЕ
+// 10. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1731,7 +1686,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 12. ДОСТИЖЕНИЯ
+// 11. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1829,7 +1784,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 13. ПРОФИЛЬ
+// 12. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1920,7 +1875,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 14. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 13. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -2074,7 +2029,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 15. АВАТАР
+// 14. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -2122,7 +2077,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 16. TOAST
+// 15. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -2154,7 +2109,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 17. МОДАЛЬНЫЕ ОКНА
+// 16. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -2218,7 +2173,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 18. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 17. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -2338,7 +2293,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 19. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 18. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -2375,7 +2330,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 20. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 19. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2413,7 +2368,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 21. МОИ КОММЕНТАРИИ
+// 20. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2452,7 +2407,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 22. ЗАПУСК
+// 21. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -2473,7 +2428,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 23. ЭКСПОРТ
+// 22. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
