@@ -23,6 +23,7 @@ let searchTimeout = null;
 let heroSliderData = [];
 let heroCurrentSlide = 0;
 let heroAutoSlideTimer = null;
+let torrentPlayerInstance = null;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -1531,7 +1532,7 @@ async function downloadTorrent(hash) {
 }
 
 // ============================================
-// 8. ТЕСТОВАЯ ФУНКЦИЯ ДЛЯ ПРОВЕРКИ ВИДЕО
+// 8. ТЕСТОВАЯ ФУНКЦИЯ
 // ============================================
 async function testVideos() {
     console.log('🔍 Тестируем API видео...');
@@ -1642,6 +1643,19 @@ function showDetail(anime) {
     const cleanId = anime.id?.replace('anilibria_', '') || '';
     if (cleanId) {
         loadTorrentsForRelease(cleanId);
+        
+        // Загружаем торренты для плеера
+        setTimeout(async () => {
+            try {
+                const torrents = await API.getTorrentsByRelease(cleanId);
+                window.currentTorrents = torrents;
+                if (torrents && torrents.length > 0) {
+                    renderTorrentPlayer(torrents, anime.title);
+                }
+            } catch (e) {
+                console.warn('Не удалось загрузить торренты для плеера:', e);
+            }
+        }, 1000);
     }
     
     loadVideos(6);
@@ -1680,7 +1694,114 @@ function playEpisode(id, episode) {
 }
 
 // ============================================
-// 11. КОММЕНТАРИИ
+// 11. ТОРРЕНТ-ПЛЕЕР
+// ============================================
+function renderTorrentPlayer(torrents, animeTitle) {
+    const section = document.getElementById('torrentPlayerSection');
+    const container = document.getElementById('torrentPlayerContainer');
+    
+    if (!section || !container) return;
+    
+    if (!torrents || torrents.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    
+    section.style.display = 'block';
+    
+    const qualityOrder = ['1080p', '720p', '480p', '360p'];
+    const sorted = qualityOrder.map(q => 
+        torrents.find(t => t.quality === q || t.quality?.includes(q))
+    ).filter(Boolean);
+    
+    if (sorted.length === 0) {
+        sorted.push(torrents[0]);
+    }
+    
+    let selectHtml = `
+        <div class="torrent-quality-select">
+            <label>🎬 Качество:</label>
+            <select id="torrentQualitySelect" onchange="selectTorrentQuality()">
+    `;
+    
+    sorted.forEach((t, index) => {
+        const size = (t.size / (1024 * 1024 * 1024)).toFixed(2);
+        const label = `${t.quality || 'Неизвестно'} (${size} GB) • ${t.seeders || 0} сидов`;
+        selectHtml += `
+            <option value="${index}" ${index === 0 ? 'selected' : ''}>
+                ${label}
+            </option>
+        `;
+    });
+    
+    selectHtml += `
+            </select>
+        </div>
+    `;
+    
+    container.innerHTML = selectHtml;
+    
+    if (torrentPlayerInstance) {
+        torrentPlayerInstance.destroy();
+        torrentPlayerInstance = null;
+    }
+    
+    const playerContainer = document.createElement('div');
+    playerContainer.id = 'torrentPlayerInner';
+    container.appendChild(playerContainer);
+    
+    const firstTorrent = sorted[0];
+    torrentPlayerInstance = new WebTorrentPlayer(playerContainer, {
+        magnet: firstTorrent.magnet,
+        title: animeTitle || 'Аниме',
+        quality: firstTorrent.quality || '720p',
+        onReady: function(torrent, file) {
+            console.log('✅ Торрент готов:', file.name);
+            showToast('🎬 Торрент загружен, начинаем просмотр!', 'success');
+        },
+        onError: function(error) {
+            console.error('❌ Ошибка торрент-плеера:', error);
+            showToast('❌ Ошибка: ' + error.message, 'error');
+        },
+        onProgress: function(progress, speed, peers) {}
+    });
+    
+    setTimeout(() => {
+        if (torrentPlayerInstance) {
+            torrentPlayerInstance.start(firstTorrent.magnet);
+        }
+    }, 300);
+}
+
+function selectTorrentQuality() {
+    const select = document.getElementById('torrentQualitySelect');
+    if (!select) return;
+    
+    const index = parseInt(select.value);
+    const torrents = window.currentTorrents || [];
+    
+    const qualityOrder = ['1080p', '720p', '480p', '360p'];
+    const sorted = qualityOrder.map(q => 
+        torrents.find(t => t.quality === q || t.quality?.includes(q))
+    ).filter(Boolean);
+    
+    if (sorted.length === 0) {
+        sorted.push(torrents[0]);
+    }
+    
+    const torrent = sorted[index];
+    if (!torrent || !torrentPlayerInstance) return;
+    
+    torrentPlayerInstance.stop();
+    setTimeout(() => {
+        torrentPlayerInstance.start(torrent.magnet);
+        torrentPlayerInstance.title = torrent.quality || 'Аниме';
+        torrentPlayerInstance.quality = torrent.quality || '720p';
+    }, 500);
+}
+
+// ============================================
+// 12. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1775,7 +1896,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 12. ИЗБРАННОЕ
+// 13. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1849,7 +1970,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 13. ДОСТИЖЕНИЯ
+// 14. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1947,7 +2068,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 14. ПРОФИЛЬ
+// 15. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -2038,7 +2159,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 15. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 16. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -2192,7 +2313,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 16. АВАТАР
+// 17. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -2240,7 +2361,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 17. TOAST
+// 18. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -2272,7 +2393,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 18. МОДАЛЬНЫЕ ОКНА
+// 19. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -2336,7 +2457,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 19. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 20. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -2456,7 +2577,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 20. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 21. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -2493,7 +2614,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 21. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 22. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2531,7 +2652,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 22. МОИ КОММЕНТАРИИ
+// 23. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2570,7 +2691,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 23. ЗАПУСК
+// 24. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -2591,7 +2712,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 24. ЭКСПОРТ
+// 25. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2641,5 +2762,7 @@ window.loadTorrentsForRelease = loadTorrentsForRelease;
 window.copyMagnet = copyMagnet;
 window.downloadTorrent = downloadTorrent;
 window.testVideos = testVideos;
+window.selectTorrentQuality = selectTorrentQuality;
+window.renderTorrentPlayer = renderTorrentPlayer;
 
 console.log('✅ OnikaAnime полностью загружен!');
