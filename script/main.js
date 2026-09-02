@@ -318,13 +318,13 @@ async function loadCatalog() {
     
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка...</div>';
     if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-    if (stats) stats.textContent = 'Загрузка...';
+    if (stats) stats.textContent = '';
     
     try {
         const filters = getCatalogFilters();
         const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
         
-        const searchInput = document.getElementById('filterSearchInput');
+        const searchInput = document.getElementById('catalogSearchInput');
         const searchValue = searchInput ? searchInput.value.trim() : '';
         
         let result;
@@ -372,9 +372,8 @@ async function loadCatalog() {
             renderCatalog(allItems);
             
             if (stats) {
-                const shown = allItems.length;
-                const searchText = searchValue ? ` по запросу "${searchValue}"` : '';
-                stats.textContent = `📊 Найдено ${totalCount} аниме${searchText}`;
+                const searchText = searchValue ? `по запросу "${searchValue}"` : '';
+                stats.textContent = searchText ? `${searchText} (${allItems.length})` : '';
             }
             
             if (loadMoreBtn) {
@@ -397,7 +396,7 @@ async function loadCatalog() {
                     ${searchValue ? `<p style="font-size:13px;color:var(--text-muted);margin-top:8px;">💡 Попробуйте ввести часть названия</p>` : ''}
                 </div>
             `;
-            if (stats) stats.textContent = `📊 Найдено 0 аниме`;
+            if (stats) stats.textContent = '';
             if (loadMoreBtn) loadMoreBtn.style.display = 'none';
             allItems = [];
             totalCount = 0;
@@ -653,7 +652,9 @@ async function showSimilarAnime(anime) {
     }
 }
 
-// Загрузка дополнительных аниме
+// ============================================
+// ЗАГРУЗКА ДОПОЛНИТЕЛЬНЫХ АНИМЕ
+// ============================================
 async function loadMoreCatalog() {
     if (isLoading || isAllLoaded) return;
     isLoading = true;
@@ -673,7 +674,7 @@ async function loadMoreCatalog() {
         const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
         const nextPage = Math.floor(currentCount / Math.max(limit, 24)) + 1;
         
-        const searchInput = document.getElementById('filterSearchInput');
+        const searchInput = document.getElementById('catalogSearchInput');
         const searchValue = searchInput ? searchInput.value.trim() : '';
         
         let result;
@@ -700,8 +701,8 @@ async function loadMoreCatalog() {
             renderCatalog(allItems);
             
             if (stats) {
-                const searchText = searchValue ? ` по запросу "${searchValue}"` : '';
-                stats.textContent = `📊 Найдено ${totalCount} аниме${searchText}`;
+                const searchText = searchValue ? `по запросу "${searchValue}"` : '';
+                stats.textContent = searchText ? `${searchText} (${allItems.length})` : '';
             }
             
             isAllLoaded = allItems.length >= totalCount || newItems.length < Math.max(limit, 24);
@@ -753,7 +754,9 @@ function getCatalogFilters() {
     return filters;
 }
 
-// Загрузка опций для фильтров
+// ============================================
+// ЗАГРУЗКА ОПЦИЙ ДЛЯ ФИЛЬТРОВ
+// ============================================
 async function loadFilterOptions() {
     try {
         const genres = await API.getGenres();
@@ -786,7 +789,9 @@ async function loadFilterOptions() {
     }
 }
 
-// Применить фильтры
+// ============================================
+// ПРИМЕНИТЬ ФИЛЬТРЫ
+// ============================================
 function applyCatalogFilters() {
     if (searchTimeout) {
         clearTimeout(searchTimeout);
@@ -801,13 +806,15 @@ function applyCatalogFilters() {
     }, 300);
 }
 
-// Сброс фильтров (без перезагрузки страницы)
+// ============================================
+// СБРОС ФИЛЬТРОВ (БЕЗ ПЕРЕЗАГРУЗКИ СТРАНИЦЫ)
+// ============================================
 function resetCatalogFiltersSilent() {
     document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
-    const searchInput = document.getElementById('filterSearchInput');
+    const searchInput = document.getElementById('catalogSearchInput');
     if (searchInput) {
         searchInput.value = '';
-        const clearBtn = document.getElementById('filterSearchClear');
+        const clearBtn = document.getElementById('catalogSearchClear');
         if (clearBtn) clearBtn.style.display = 'none';
     }
     const yearFrom = document.getElementById('filterYearFrom');
@@ -839,12 +846,17 @@ function resetCatalogFiltersSilent() {
     page = 1;
 }
 
-// Сбросить фильтры (с перезагрузкой)
+// ============================================
+// СБРОСИТЬ ФИЛЬТРЫ (С ПЕРЕЗАГРУЗКОЙ)
+// ============================================
 function resetCatalogFilters() {
     resetCatalogFiltersSilent();
     loadCatalog();
 }
 
+// ============================================
+// ОТРИСОВКА КАТАЛОГА
+// ============================================
 function renderCatalog(list) {
     const grid = document.getElementById('grid');
     if (!grid) return;
@@ -902,7 +914,7 @@ function setGenre(genreId, btn) {
     window.query = '';
     window.page = 1;
     
-    const searchInput = document.getElementById('filterSearchInput');
+    const searchInput = document.getElementById('catalogSearchInput');
     if (searchInput) searchInput.value = '';
     
     const titleEl = document.getElementById('title');
@@ -1103,7 +1115,7 @@ async function randomAnimeByGenre(genreId) {
 // 6. АВТОДОПОЛНЕНИЕ
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('filterSearchInput');
+    const searchInput = document.getElementById('catalogSearchInput');
     const autocompleteContainer = document.createElement('div');
     autocompleteContainer.className = 'search-autocomplete';
     autocompleteContainer.style.cssText = `
@@ -1123,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', function() {
         margin-top: 4px;
     `;
     
-    const wrapper = searchInput?.closest('.filter-search-wrapper');
+    const wrapper = searchInput?.closest('.catalog-search-wrapper');
     if (wrapper) {
         wrapper.style.position = 'relative';
         wrapper.appendChild(autocompleteContainer);
@@ -1168,7 +1180,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.filter-search-wrapper')) {
+        if (!e.target.closest('.catalog-search-wrapper')) {
             autocompleteContainer.style.display = 'none';
         }
     });
@@ -1326,7 +1338,7 @@ function closeVideoPlayer() {
 }
 
 // ============================================
-// ЗАГРУЗКА ТОРРЕНТОВ (ОБНОВЛЕННАЯ С RSS)
+// ЗАГРУЗКА ТОРРЕНТОВ
 // ============================================
 async function loadTorrentsForRelease(releaseId) {
     const container = document.getElementById('torrentGrid');
@@ -1335,16 +1347,13 @@ async function loadTorrentsForRelease(releaseId) {
     container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка торрентов...</div>';
     
     try {
-        // Сначала пробуем получить торренты через RSS
         let torrents = await API.getTorrentsRSS(20);
         console.log('🧲 Торренты из RSS:', torrents);
         
-        // Если есть releaseId, фильтруем по нему
         if (releaseId && torrents.length > 0) {
             torrents = torrents.filter(t => t.releaseId === releaseId);
         }
         
-        // Если через RSS ничего не найдено, пробуем через API
         if (!torrents || torrents.length === 0) {
             torrents = await API.getTorrentsByRelease(releaseId);
             console.log('🧲 Торренты из API:', torrents);
@@ -1362,7 +1371,6 @@ async function loadTorrentsForRelease(releaseId) {
             return;
         }
         
-        // Если torrents из RSS имеют структуру с полями, используем renderTorrentsRSS
         if (torrents.length > 0 && torrents[0].animeTitle) {
             renderTorrentsRSS(torrents);
         } else {
@@ -1831,10 +1839,10 @@ function renderFavorites() {
 function searchAndOpen(name) {
     if (!name) return;
     navigate('home');
-    const searchInput = document.getElementById('filterSearchInput');
+    const searchInput = document.getElementById('catalogSearchInput');
     if (searchInput) {
         searchInput.value = name;
-        const clearBtn = document.getElementById('filterSearchClear');
+        const clearBtn = document.getElementById('catalogSearchClear');
         if (clearBtn) clearBtn.style.display = 'flex';
     }
     applyCatalogFilters();
@@ -2619,7 +2627,7 @@ window.uploadAvatar = uploadAvatar;
 window.updateSocialStats = updateSocialStats;
 window.searchAndOpen = searchAndOpen;
 window.toggleCategory = toggleCategory;
-window.clearSearchInput = clearSearchInput;
+window.clearCatalogSearch = clearCatalogSearch;
 window.toggleFilterPanel = toggleFilterPanel;
 window.setGenre = setGenre;
 window.slideHero = slideHero;
