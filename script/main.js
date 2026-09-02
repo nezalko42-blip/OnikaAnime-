@@ -52,7 +52,9 @@ function navigate(pageName) {
     
     pages.forEach(p => {
         const el = document.getElementById(`page-${p}`);
-        if (el) el.style.display = p === pageName ? 'block' : 'none';
+        if (el) {
+            el.style.display = p === pageName ? 'block' : 'none';
+        }
     });
     
     if (pageName === 'home') {
@@ -1195,7 +1197,7 @@ function switchPlayerTab(tab) {
 }
 
 // ============================================
-// ЗАГРУЗКА ВИДЕО (ИСПРАВЛЕННАЯ)
+// ЗАГРУЗКА ВИДЕО
 // ============================================
 async function loadVideos(limit = 6) {
     const container = document.getElementById('videoGrid');
@@ -1324,7 +1326,7 @@ function closeVideoPlayer() {
 }
 
 // ============================================
-// ЗАГРУЗКА ТОРРЕНТОВ (ИСПРАВЛЕННАЯ)
+// ЗАГРУЗКА ТОРРЕНТОВ
 // ============================================
 async function loadTorrentsForRelease(releaseId) {
     const container = document.getElementById('torrentGrid');
@@ -1337,38 +1339,6 @@ async function loadTorrentsForRelease(releaseId) {
         console.log('🧲 Торренты получены:', torrents);
         
         if (!torrents || torrents.length === 0) {
-            // Пробуем альтернативный метод
-            try {
-                const data = await API._get(`/anime/torrents/release/${releaseId}`, {
-                    include: 'id,hash,size,type,color,codec,label,quality,magnet,filename,seeders,leechers'
-                }, false);
-                
-                if (data && data.data && data.data.length > 0) {
-                    const torrents2 = data.data.map(t => ({
-                        id: t.id,
-                        hash: t.hash,
-                        size: t.size || 0,
-                        type: t.type?.description || 'Неизвестно',
-                        codec: t.codec?.label || t.codec?.value || 'Неизвестно',
-                        label: t.label || 'Без названия',
-                        quality: t.quality?.description || 'Неизвестно',
-                        magnet: t.magnet,
-                        filename: t.filename,
-                        seeders: t.seeders || 0,
-                        leechers: t.leechers || 0,
-                        is_hardsub: t.is_hardsub || false,
-                        description: t.description || ''
-                    }));
-                    
-                    if (torrents2.length > 0) {
-                        renderTorrents(torrents2);
-                        return;
-                    }
-                }
-            } catch(e) {
-                console.warn('Альтернативный метод не сработал:', e);
-            }
-            
             container.innerHTML = `
                 <div style="text-align:center;padding:30px;color:var(--text-muted);">
                     <div style="font-size:48px;margin-bottom:12px;">🧲</div>
@@ -1517,7 +1487,135 @@ async function testVideos() {
 }
 
 // ============================================
-// 9. КОММЕНТАРИИ
+// 9. ОТКРЫТЬ ДЕТАЛИ АНИМЕ (ИСПРАВЛЕННАЯ)
+// ============================================
+async function openDetail(id) {
+    if (!id) {
+        showToast('Ошибка ID', 'error');
+        return;
+    }
+    
+    console.log('📖 Открываем детали:', id);
+    
+    previousPage = currentPage;
+    navigate('detail');
+    
+    const titleEl = document.getElementById('detailTitle');
+    if (titleEl) titleEl.textContent = 'Загрузка...';
+    
+    try {
+        const data = await API.getAnimeDetails(id);
+        console.log('📦 Данные аниме:', data);
+        
+        if (data) {
+            if (!allData[id]) allData[id] = data;
+            showDetail(data);
+        } else {
+            showToast('❌ Аниме не найдено', 'error');
+            setTimeout(() => goBack(), 1500);
+        }
+    } catch (e) {
+        console.error('❌ Ошибка загрузки деталей:', e);
+        showToast('❌ Ошибка загрузки', 'error');
+    }
+}
+
+// ============================================
+// 10. ПОКАЗАТЬ ДЕТАЛИ АНИМЕ
+// ============================================
+function showDetail(anime) {
+    const titleEl = document.getElementById('detailTitle');
+    const engEl = document.getElementById('detailEng');
+    const metaEl = document.getElementById('detailMeta');
+    const descEl = document.getElementById('detailDesc');
+    const posterEl = document.getElementById('detailPoster');
+    const ageBadge = document.querySelector('.age-badge');
+    const tagsEl = document.getElementById('detailTags');
+    const favBtn = document.getElementById('favBtn');
+    
+    if (titleEl) titleEl.textContent = anime.title || 'Без названия';
+    if (engEl) engEl.textContent = anime.title_english || '';
+    if (metaEl) metaEl.textContent = `${anime.year || '--'} | ${anime.episodes || '?'} эп.`;
+    if (descEl) descEl.textContent = anime.synopsis || 'Описание отсутствует';
+    
+    const img = anime.images?.jpg?.image_url || '';
+    if (posterEl) {
+        posterEl.src = img;
+        posterEl.style.display = img ? 'block' : 'none';
+    }
+    
+    if (ageBadge) {
+        const age = anime.age_rating || '0+';
+        ageBadge.textContent = age;
+        ageBadge.className = `age-badge age-${age.replace('+', '')}`;
+    }
+    
+    if (tagsEl) {
+        tagsEl.innerHTML = (anime.genres || []).map(g => `<span class="detail-tag">${g}</span>`).join('');
+    }
+    
+    const user = DB.get('currentUser');
+    const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
+    const isFav = favs.indexOf(anime.title) > -1;
+    
+    if (favBtn) {
+        favBtn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
+        favBtn.className = 'fav-btn' + (isFav ? ' active' : '');
+        favBtn.onclick = () => toggleFav(anime.title);
+    }
+    
+    // Загружаем комментарии
+    renderComments(anime.title);
+    
+    // Загружаем похожие
+    showSimilarAnime(anime);
+    
+    // Загружаем торренты
+    const cleanId = anime.id?.replace('anilibria_', '') || '';
+    if (cleanId) {
+        loadTorrentsForRelease(cleanId);
+    }
+    
+    // Загружаем видео
+    loadVideos(6);
+    
+    // Показываем серии
+    const episodesList = anime.episodes_list || [];
+    const episodeBtns = document.getElementById('episodeBtns');
+    if (episodeBtns) {
+        if (episodesList && episodesList.length > 0) {
+            let btnsHtml = '';
+            episodesList.forEach(ep => {
+                btnsHtml += `<button class="ep-btn" onclick="playEpisode('${anime.id}', ${ep.episode})">${ep.episode}</button>`;
+            });
+            episodeBtns.innerHTML = btnsHtml;
+        } else {
+            episodeBtns.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">Серии не найдены</span>';
+        }
+    }
+    
+    // Показываем плеер
+    const wrapper = document.getElementById('playerWrapper');
+    if (wrapper) {
+        const code = anime._raw?.code || anime._raw?.alias || '';
+        const externalPlayer = anime.external_player || '';
+        wrapper.innerHTML = `
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
+                <span style="font-size:48px;">🎬</span>
+                <span style="font-size:16px;color:#aaa;">Смотреть на Anilibria</span>
+                ${externalPlayer ? `<a href="${externalPlayer}" target="_blank" class="video-link">▶️ Открыть плеер</a>` : ''}
+                ${code ? `<a href="https://www.anilibria.tv/release/${code}" target="_blank" class="video-link">🌐 Открыть на Anilibria</a>` : ''}
+            </div>
+        `;
+    }
+}
+
+function playEpisode(id, episode) {
+    showToast(`🎬 Загрузка ${episode} серии...`, 'info');
+}
+
+// ============================================
+// 11. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1612,7 +1710,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 10. ИЗБРАННОЕ
+// 12. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1686,7 +1784,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 11. ДОСТИЖЕНИЯ
+// 13. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1784,7 +1882,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 12. ПРОФИЛЬ
+// 14. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1875,7 +1973,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 13. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 15. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -2029,7 +2127,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 14. АВАТАР
+// 16. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -2077,7 +2175,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 15. TOAST
+// 17. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -2109,7 +2207,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 16. МОДАЛЬНЫЕ ОКНА
+// 18. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -2173,7 +2271,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 17. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 19. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -2293,7 +2391,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 18. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 20. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -2330,7 +2428,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 19. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 21. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2368,7 +2466,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 20. МОИ КОММЕНТАРИИ
+// 22. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2407,7 +2505,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 21. ЗАПУСК
+// 23. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -2428,7 +2526,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 22. ЭКСПОРТ
+// 24. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
