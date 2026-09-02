@@ -4414,3 +4414,99 @@ svg use {
         gap: 4px 8px;
     }
 }
+
+/* ===== ПОИСКОВАЯ СТРОКА НАД КАТАЛОГОМ ===== */
+.catalog-search-row {
+    margin-bottom: 16px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.catalog-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius);
+    border: 1px solid rgba(0, 245, 255, 0.05);
+    transition: var(--transition);
+}
+
+.catalog-search-wrapper:focus-within {
+    border-color: var(--neon-cyan);
+    background: rgba(0, 245, 255, 0.02);
+    box-shadow: 0 0 40px rgba(0, 245, 255, 0.03);
+}
+
+.catalog-search-icon {
+    padding: 0 12px 0 16px;
+    color: var(--text-muted);
+    font-size: 18px;
+    user-select: none;
+}
+
+.catalog-search-input {
+    flex: 1;
+    padding: 12px 12px 12px 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 16px;
+    outline: none;
+    min-height: 50px;
+}
+
+.catalog-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.catalog-search-clear {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin-right: 8px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    transition: var(--transition);
+}
+
+.catalog-search-clear:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+/* ===== СТАТИСТИКА КАТАЛОГА (БЕЗ НАДПИСИ "НАЙДЕНО") ===== */
+.catalog-stats {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    padding: 4px 16px;
+    min-height: 24px;
+}
+
+.catalog-stats span {
+    color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+    .catalog-search-input {
+        font-size: 14px;
+        min-height: 42px;
+        padding: 8px 8px 8px 0;
+    }
+    .catalog-search-icon {
+        font-size: 14px;
+        padding: 0 8px 0 12px;
+    }
+    .catalog-search-wrapper {
+        border-radius: var(--radius-sm);
+    }
+}
