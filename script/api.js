@@ -397,7 +397,7 @@ const API = {
     },
 
     // ============================================
-    // 10. ВИДЕО (НОВЫЙ МЕТОД)
+    // 10. ВИДЕО (ИСПРАВЛЕННЫЙ МЕТОД)
     // ============================================
     async getVideos(limit = 12) {
         const params = {
@@ -405,25 +405,66 @@ const API = {
             include: 'id,url,title,views,image,comments,video_id,created_at,updated_at,is_announce,origin'
         };
         const data = await this._get('/media/videos', params, false);
-        if (data && data.data) {
-            return data.data.map(video => ({
-                id: video.id,
-                url: video.url,
-                title: video.title || 'Без названия',
-                views: video.views || 0,
-                image: this._getPosterUrl(video.image),
-                comments: video.comments || 0,
-                video_id: video.video_id,
-                created_at: video.created_at,
-                is_announce: video.is_announce || false,
-                origin: video.origin || null
-            }));
+        
+        console.log('📡 Ответ видео API:', data);
+        
+        // Проверяем структуру ответа
+        if (data) {
+            let videos = [];
+            
+            // Если data это массив
+            if (Array.isArray(data)) {
+                videos = data;
+            } 
+            // Если data.data это массив
+            else if (data.data && Array.isArray(data.data)) {
+                videos = data.data;
+            }
+            // Если data.list это массив
+            else if (data.list && Array.isArray(data.list)) {
+                videos = data.list;
+            }
+            
+            if (videos.length > 0) {
+                return videos.map(video => ({
+                    id: video.id,
+                    url: video.url || '',
+                    title: video.title || 'Без названия',
+                    views: video.views || 0,
+                    image: this._getPosterUrl(video.image || video.poster),
+                    comments: video.comments || 0,
+                    video_id: video.video_id || video.id,
+                    created_at: video.created_at,
+                    is_announce: video.is_announce || false,
+                    origin: video.origin || null
+                }));
+            }
         }
+        
+        // Если видео не найдены, пробуем получить через поиск
+        try {
+            const searchData = await this._get('/media/videos?limit=' + limit, {}, false);
+            if (searchData && searchData.data && searchData.data.length > 0) {
+                return searchData.data.map(video => ({
+                    id: video.id,
+                    url: video.url || '',
+                    title: video.title || 'Без названия',
+                    views: video.views || 0,
+                    image: this._getPosterUrl(video.image || video.poster),
+                    comments: video.comments || 0,
+                    video_id: video.video_id || video.id,
+                    created_at: video.created_at,
+                    is_announce: video.is_announce || false,
+                    origin: video.origin || null
+                }));
+            }
+        } catch(e) {}
+        
         return [];
     },
 
     // ============================================
-    // 11. ТОРРЕНТЫ (НОВЫЕ МЕТОДЫ)
+    // 11. ТОРРЕНТЫ
     // ============================================
     async getTorrentsByRelease(releaseId) {
         const params = {
