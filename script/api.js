@@ -400,98 +400,129 @@ const API = {
     // 10. ВИДЕО (ИСПРАВЛЕННЫЙ МЕТОД)
     // ============================================
     async getVideos(limit = 12) {
-        const params = {
-            limit: limit,
-            include: 'id,url,title,views,image,comments,video_id,created_at,updated_at,is_announce,origin'
-        };
-        const data = await this._get('/media/videos', params, false);
-        
-        console.log('📡 Ответ видео API:', data);
-        
-        // Проверяем структуру ответа
-        if (data) {
-            let videos = [];
-            
-            // Если data это массив
-            if (Array.isArray(data)) {
-                videos = data;
-            } 
-            // Если data.data это массив
-            else if (data.data && Array.isArray(data.data)) {
-                videos = data.data;
-            }
-            // Если data.list это массив
-            else if (data.list && Array.isArray(data.list)) {
-                videos = data.list;
-            }
-            
-            if (videos.length > 0) {
-                return videos.map(video => ({
-                    id: video.id,
-                    url: video.url || '',
-                    title: video.title || 'Без названия',
-                    views: video.views || 0,
-                    image: this._getPosterUrl(video.image || video.poster),
-                    comments: video.comments || 0,
-                    video_id: video.video_id || video.id,
-                    created_at: video.created_at,
-                    is_announce: video.is_announce || false,
-                    origin: video.origin || null
-                }));
-            }
-        }
-        
-        // Если видео не найдены, пробуем получить через поиск
         try {
-            const searchData = await this._get('/media/videos?limit=' + limit, {}, false);
-            if (searchData && searchData.data && searchData.data.length > 0) {
-                return searchData.data.map(video => ({
-                    id: video.id,
-                    url: video.url || '',
-                    title: video.title || 'Без названия',
-                    views: video.views || 0,
-                    image: this._getPosterUrl(video.image || video.poster),
-                    comments: video.comments || 0,
-                    video_id: video.video_id || video.id,
-                    created_at: video.created_at,
-                    is_announce: video.is_announce || false,
-                    origin: video.origin || null
-                }));
+            const endpoints = [
+                async () => {
+                    const params = {
+                        limit: limit,
+                        include: 'id,url,title,views,image,comments,video_id,created_at,updated_at,is_announce,origin'
+                    };
+                    return await this._get('/media/videos', params, false);
+                },
+                async () => {
+                    const params = { limit: limit };
+                    return await this._get('/media/videos', params, false);
+                },
+                async () => {
+                    const params = {
+                        limit: limit,
+                        sort: '-created_at'
+                    };
+                    return await this._get('/media/videos', params, false);
+                }
+            ];
+
+            let data = null;
+            for (const method of endpoints) {
+                try {
+                    const result = await method();
+                    if (result && (result.data || Array.isArray(result))) {
+                        data = result;
+                        break;
+                    }
+                } catch(e) {
+                    console.warn('Метод запроса видео не сработал:', e.message);
+                }
             }
-        } catch(e) {}
-        
-        return [];
+
+            console.log('📡 Ответ видео API:', data);
+
+            if (data) {
+                let videos = [];
+
+                if (Array.isArray(data)) {
+                    videos = data;
+                } else if (data.data && Array.isArray(data.data)) {
+                    videos = data.data;
+                } else if (data.list && Array.isArray(data.list)) {
+                    videos = data.list;
+                } else if (data.items && Array.isArray(data.items)) {
+                    videos = data.items;
+                }
+
+                if (videos.length > 0) {
+                    return videos.map(video => ({
+                        id: video.id,
+                        url: video.url || '',
+                        title: video.title || 'Без названия',
+                        views: video.views || 0,
+                        image: this._getPosterUrl(video.image || video.poster),
+                        comments: video.comments || 0,
+                        video_id: video.video_id || video.id,
+                        created_at: video.created_at,
+                        is_announce: video.is_announce || false,
+                        origin: video.origin || null
+                    }));
+                }
+            }
+
+            return [];
+        } catch (error) {
+            console.error('❌ Ошибка получения видео:', error);
+            return [];
+        }
     },
 
     // ============================================
-    // 11. ТОРРЕНТЫ
+    // 11. ТОРРЕНТЫ (ИСПРАВЛЕННЫЙ МЕТОД)
     // ============================================
     async getTorrentsByRelease(releaseId) {
-        const params = {
-            include: 'id,hash,size,type,color,codec,label,quality,magnet,filename,seeders,leechers,bitrate,sort_order,updated_at,is_hardsub,description,created_at,completed_times,torrent_members'
-        };
-        const data = await this._get(`/anime/torrents/release/${releaseId}`, params, false);
-        if (data && data.data) {
-            return data.data.map(torrent => ({
-                id: torrent.id,
-                hash: torrent.hash,
-                size: torrent.size || 0,
-                type: torrent.type?.description || 'Неизвестно',
-                codec: torrent.codec?.label || torrent.codec?.value || 'Неизвестно',
-                label: torrent.label || 'Без названия',
-                quality: torrent.quality?.description || 'Неизвестно',
-                magnet: torrent.magnet,
-                filename: torrent.filename,
-                seeders: torrent.seeders || 0,
-                leechers: torrent.leechers || 0,
-                bitrate: torrent.bitrate || 0,
-                is_hardsub: torrent.is_hardsub || false,
-                description: torrent.description || '',
-                created_at: torrent.created_at,
-                completed_times: torrent.completed_times || 0
-            }));
+        try {
+            const params = {
+                include: 'id,hash,size,type,color,codec,label,quality,magnet,filename,seeders,leechers,bitrate,sort_order,updated_at,is_hardsub,description,created_at,completed_times,torrent_members'
+            };
+            const data = await this._get(`/anime/torrents/release/${releaseId}`, params, false);
+            
+            console.log('🧲 Ответ торрентов API:', data);
+            
+            if (data) {
+                let torrents = [];
+                
+                if (data.data && Array.isArray(data.data)) {
+                    torrents = data.data;
+                } else if (Array.isArray(data)) {
+                    torrents = data;
+                } else if (data.list && Array.isArray(data.list)) {
+                    torrents = data.list;
+                }
+                
+                if (torrents.length > 0) {
+                    return torrents.map(torrent => ({
+                        id: torrent.id,
+                        hash: torrent.hash,
+                        size: torrent.size || 0,
+                        type: torrent.type?.description || 'Неизвестно',
+                        codec: torrent.codec?.label || torrent.codec?.value || 'Неизвестно',
+                        label: torrent.label || 'Без названия',
+                        quality: torrent.quality?.description || 'Неизвестно',
+                        magnet: torrent.magnet,
+                        filename: torrent.filename,
+                        seeders: torrent.seeders || 0,
+                        leechers: torrent.leechers || 0,
+                        bitrate: torrent.bitrate || 0,
+                        is_hardsub: torrent.is_hardsub || false,
+                        description: torrent.description || '',
+                        created_at: torrent.created_at,
+                        completed_times: torrent.completed_times || 0
+                    }));
+                }
+            }
+            
+            return [];
+        } catch (error) {
+            console.error('❌ Ошибка получения торрентов:', error);
+            return [];
         }
-        return [];
     },
 
     async getLatestTorrents(limit = 10) {
