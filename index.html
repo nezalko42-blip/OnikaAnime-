@@ -425,12 +425,6 @@
                             </button>
                         </div>
                     </div>
-                    
-                    <!-- ===== ПОХОЖИЕ АНИМЕ (СЕЗОНЫ И ПРОДОЛЖЕНИЯ) ===== -->
-                    <div class="similar-section" id="similarSection" style="display:none;">
-                        <h3>🎬 Сезоны и продолжения</h3>
-                        <div class="similar-scroll" id="similarScroll"></div>
-                    </div>
 
                     <!-- ===== ТОРРЕНТ-ПЛЕЕР ===== -->
                     <div class="torrent-player-section" id="torrentPlayerSection" style="display:none;">
@@ -438,17 +432,11 @@
                         <div id="torrentPlayerContainer"></div>
                     </div>
                     
-                    <!-- ===== ПЛЕЕР С ВКЛАДКАМИ ===== -->
+                    <!-- ===== ПЛЕЕР С ВКЛАДКАМИ (ТОЛЬКО СЕРИИ) ===== -->
                     <div class="player-section">
                         <div class="player-tabs">
                             <button class="player-tab active" data-tab="episodes" onclick="switchPlayerTab('episodes')">
                                 📺 Серии
-                            </button>
-                            <button class="player-tab" data-tab="videos" onclick="switchPlayerTab('videos')">
-                                🎬 Видео
-                            </button>
-                            <button class="player-tab" data-tab="torrents" onclick="switchPlayerTab('torrents')">
-                                🧲 Торренты
                             </button>
                         </div>
                         
@@ -462,20 +450,6 @@
                             </div>
                             <div id="episodeBtns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
                                 <span style="color:var(--text-muted);font-size:13px;">⏳ Загрузка серий...</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Вкладка: Видео -->
-                        <div class="player-tab-content" id="tab-videos">
-                            <div class="video-grid" id="videoGrid">
-                                <div style="text-align:center;padding:20px;color:#888;">⏳ Загрузка видео...</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Вкладка: Торренты -->
-                        <div class="player-tab-content" id="tab-torrents">
-                            <div class="torrent-grid" id="torrentGrid">
-                                <div style="text-align:center;padding:20px;color:#888;">⏳ Загрузка торрентов...</div>
                             </div>
                         </div>
                     </div>
