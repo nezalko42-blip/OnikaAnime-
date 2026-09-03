@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME - ИСПРАВЛЕННАЯ ВЕРСИЯ
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -544,7 +544,7 @@ async function searchSeasonsAndSequels(title) {
 }
 
 // ============================================
-// ПОИСК ПОХОЖИХ АНИМЕ (НЕ ИСПОЛЬЗУЕТСЯ)
+// ПОИСК ПОХОЖИХ АНИМЕ
 // ============================================
 async function findSimilarAnime(anime) {
     if (!anime || !anime.title) return [];
@@ -616,7 +616,7 @@ async function findSimilarAnime(anime) {
 }
 
 // ============================================
-// ПОКАЗ ПОХОЖИХ АНИМЕ (НЕ ИСПОЛЬЗУЕТСЯ)
+// ПОКАЗ ПОХОЖИХ АНИМЕ
 // ============================================
 async function showSimilarAnime(anime) {
     // Функция больше не используется
@@ -1214,7 +1214,7 @@ async function openDetail(id) {
 }
 
 // ============================================
-// 9. ПОКАЗАТЬ ДЕТАЛИ АНИМЕ
+// 9. ПОКАЗАТЬ ДЕТАЛИ АНИМЕ (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================
 function showDetail(anime) {
     const titleEl = document.getElementById('detailTitle');
@@ -1226,24 +1226,50 @@ function showDetail(anime) {
     const tagsEl = document.getElementById('detailTags');
     const favBtn = document.getElementById('favBtn');
     
-    // ===== ИСПРАВЛЕННОЕ ОТОБРАЖЕНИЕ НАЗВАНИЯ =====
-    // Пробуем получить название в правильном порядке
-    let displayTitle = anime.title_russian || anime.russian || anime.title_english || anime.title || 'Без названия';
+    // ===== ДИАГНОСТИКА В КОНСОЛЬ =====
+    console.log('📦 Данные аниме в showDetail:', anime);
+    console.log('📛 Поля названия:', {
+        title: anime.title,
+        title_russian: anime.title_russian,
+        russian: anime.russian,
+        title_english: anime.title_english,
+        '_raw.names': anime._raw?.names,
+        '_raw.name': anime._raw?.name
+    });
     
-    // Если название всё ещё не отображается, пробуем другие поля
-    if (displayTitle === 'Без названия' || displayTitle === '') {
-        if (anime._raw && anime._raw.names) {
-            displayTitle = anime._raw.names.ru || anime._raw.names.en || anime._raw.names.main || 'Без названия';
+    // ===== ИСПРАВЛЕННОЕ ОТОБРАЖЕНИЕ НАЗВАНИЯ =====
+    let displayTitle = 'Без названия';
+    
+    // Пробуем получить название из всех возможных источников
+    if (anime.title_russian) displayTitle = anime.title_russian;
+    else if (anime.russian) displayTitle = anime.russian;
+    else if (anime.title) displayTitle = anime.title;
+    else if (anime.title_english) displayTitle = anime.title_english;
+    else if (anime._raw?.names?.ru) displayTitle = anime._raw.names.ru;
+    else if (anime._raw?.names?.main) displayTitle = anime._raw.names.main;
+    else if (anime._raw?.names?.en) displayTitle = anime._raw.names.en;
+    else if (anime._raw?.name?.main) displayTitle = anime._raw.name.main;
+    else if (anime._raw?.name?.russian) displayTitle = anime._raw.name.russian;
+    else if (anime._raw?.name?.english) displayTitle = anime._raw.name.english;
+    else if (typeof anime._raw?.name === 'string') displayTitle = anime._raw.name;
+    
+    // Если всё ещё нет, пробуем найти в любом поле
+    if (displayTitle === 'Без названия') {
+        for (const key of ['names', 'name', 'title', 'russian', 'english']) {
+            if (anime[key] && typeof anime[key] === 'string' && anime[key].length > 0) {
+                displayTitle = anime[key];
+                break;
+            }
+            if (anime._raw && anime._raw[key] && typeof anime._raw[key] === 'string' && anime._raw[key].length > 0) {
+                displayTitle = anime._raw[key];
+                break;
+            }
         }
     }
     
-    // Дополнительная проверка: если есть поле name с объектом
-    if (displayTitle === 'Без названия' && anime._raw && anime._raw.name) {
-        if (typeof anime._raw.name === 'object') {
-            displayTitle = anime._raw.name.main || anime._raw.name.english || anime._raw.name.russian || 'Без названия';
-        } else if (typeof anime._raw.name === 'string') {
-            displayTitle = anime._raw.name;
-        }
+    // Если до сих пор нет названия, используем id как запасной вариант
+    if (displayTitle === 'Без названия' && anime.id) {
+        displayTitle = anime.id.replace('anilibria_', '');
     }
     
     if (titleEl) titleEl.textContent = displayTitle;
@@ -1278,12 +1304,9 @@ function showDetail(anime) {
     }
     
     renderComments(displayTitle);
-    // showSimilarAnime(anime); // УДАЛЕНО - больше не показываем похожие аниме
     
     const cleanId = anime.id?.replace('anilibria_', '') || '';
     if (cleanId) {
-        // loadTorrentsForRelease(cleanId); // УДАЛЕНО - торренты загружаются отдельно
-        
         setTimeout(async () => {
             try {
                 const torrents = await API.getTorrentsByRelease(cleanId);
@@ -1296,8 +1319,6 @@ function showDetail(anime) {
             }
         }, 1000);
     }
-    
-    // loadVideos(6); // УДАЛЕНО - видео загружаются отдельно
     
     // ===== ЗАГРУЗКА СЕРИЙ =====
     const episodeBtns = document.getElementById('episodeBtns');
@@ -1340,7 +1361,6 @@ async function forceLoadEpisodes(animeId) {
     episodeBtns.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">⏳ Загрузка серий...</span>';
     
     try {
-        // Пробуем через API
         const data = await API.getVideoLinksForEpisode(cleanId, 1);
         
         if (data && data.totalEpisodes > 0) {
@@ -1362,7 +1382,6 @@ async function forceLoadEpisodes(animeId) {
             return true;
         }
         
-        // Пробуем через детали
         const details = await API.getAnimeDetails(animeId);
         if (details && details.episodes_list && details.episodes_list.length > 0) {
             let btnsHtml = '';
@@ -1383,7 +1402,6 @@ async function forceLoadEpisodes(animeId) {
             return true;
         }
         
-        // Если ничего не найдено
         const code = details?._raw?.code || '';
         const externalPlayer = details?.external_player || '';
         episodeBtns.innerHTML = `
@@ -1447,7 +1465,6 @@ function playEpisode(id, episode) {
             
             console.log(`🎬 Воспроизведение ${quality}:`, videoUrl);
             
-            // ===== ПРОВЕРКА: ВНЕШНИЙ ПЛЕЕР =====
             const isExternal = videoUrl.includes('aniqit.com') || 
                               videoUrl.includes('youtube.com') || 
                               videoUrl.includes('youtu.be') ||
@@ -1457,7 +1474,6 @@ function playEpisode(id, episode) {
                               (!videoUrl.endsWith('.mp4') && !videoUrl.endsWith('.m3u8') && !videoUrl.includes('.m3u8'));
             
             if (isExternal) {
-                // Открываем в новой вкладке
                 window.open(videoUrl, '_blank');
                 wrapper.innerHTML = `
                     <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#aaa;flex-direction:column;gap:16px;background:rgba(0,0,0,0.7);">
@@ -1474,10 +1490,8 @@ function playEpisode(id, episode) {
                 return;
             }
             
-            // ===== ВСТРОЕННЫЙ ПЛЕЕР (MP4 / HLS) =====
             let playerHtml = '';
             
-            // YouTube (если вдруг embed-ссылка)
             if (videoUrl.includes('youtube.com/embed') || videoUrl.includes('youtu.be')) {
                 let embedUrl = videoUrl;
                 if (videoUrl.includes('watch?v=')) {
@@ -1500,7 +1514,6 @@ function playEpisode(id, episode) {
                     </div>
                 `;
             } 
-            // HLS или MP4
             else if (videoUrl.endsWith('.mp4') || videoUrl.endsWith('.m3u8') || videoUrl.includes('.m3u8')) {
                 const isHLS = videoUrl.endsWith('.m3u8') || videoUrl.includes('.m3u8');
                 
@@ -1543,7 +1556,6 @@ function playEpisode(id, episode) {
                     document.head.appendChild(script);
                 }
             }
-            // Неизвестный тип — открываем в новой вкладке
             else {
                 window.open(videoUrl, '_blank');
                 wrapper.innerHTML = `
@@ -1562,7 +1574,6 @@ function playEpisode(id, episode) {
             wrapper.innerHTML = playerHtml;
             showToast(`▶️ Серия ${episode} загружена!`, 'success');
             
-            // Кнопки качества
             if (result.links.length > 1) {
                 let qualityHtml = '<div style="position:absolute;top:12px;right:16px;z-index:10;display:flex;gap:6px;flex-wrap:wrap;max-width:200px;justify-content:flex-end;">';
                 result.links.forEach((link, index) => {
