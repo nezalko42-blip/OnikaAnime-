@@ -544,7 +544,7 @@ async function searchSeasonsAndSequels(title) {
 }
 
 // ============================================
-// ПОИСК ПОХОЖИХ АНИМЕ
+// ПОИСК ПОХОЖИХ АНИМЕ (НЕ ИСПОЛЬЗУЕТСЯ)
 // ============================================
 async function findSimilarAnime(anime) {
     if (!anime || !anime.title) return [];
@@ -616,41 +616,11 @@ async function findSimilarAnime(anime) {
 }
 
 // ============================================
-// ПОКАЗ ПОХОЖИХ АНИМЕ
+// ПОКАЗ ПОХОЖИХ АНИМЕ (НЕ ИСПОЛЬЗУЕТСЯ)
 // ============================================
 async function showSimilarAnime(anime) {
-    const section = document.getElementById('similarSection');
-    const container = document.getElementById('similarScroll');
-    if (!section || !container) return;
-    
-    section.style.display = 'block';
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">⏳ Поиск похожих...</div>';
-    
-    try {
-        const similar = await findSimilarAnime(anime);
-        if (!similar || similar.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">😅 Похожих аниме не найдено</div>';
-            return;
-        }
-        
-        let html = '';
-        similar.forEach(item => {
-            const img = item.images?.jpg?.image_url || '';
-            const title = item.title || 'Без названия';
-            const id = item.id;
-            const year = item.year || '';
-            html += `
-                <div class="similar-card" onclick="openDetail('${id}')">
-                    <img src="${img || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22400%22%3E%3Crect width=%22300%22 height=%22400%22 fill=%22%236c5ce7%22/%3E%3Ctext x=%22150%22 y=%22200%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2248%22%3E🎬%3C/text%3E%3C/svg%3E'}" alt="${title}">
-                    <div class="s-name">${title} ${year ? `(${year})` : ''}</div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    } catch (e) {
-        console.error('Ошибка загрузки похожих:', e);
-        container.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">⚠️ Ошибка загрузки</div>';
-    }
+    // Функция больше не используется
+    return;
 }
 
 // ============================================
@@ -1256,10 +1226,27 @@ function showDetail(anime) {
     const tagsEl = document.getElementById('detailTags');
     const favBtn = document.getElementById('favBtn');
     
-    // Исправленное отображение названия (русское -> английское -> любое)
-    if (titleEl) {
-        titleEl.textContent = anime.title_russian || anime.title_english || anime.title || 'Без названия';
+    // ===== ИСПРАВЛЕННОЕ ОТОБРАЖЕНИЕ НАЗВАНИЯ =====
+    // Пробуем получить название в правильном порядке
+    let displayTitle = anime.title_russian || anime.russian || anime.title_english || anime.title || 'Без названия';
+    
+    // Если название всё ещё не отображается, пробуем другие поля
+    if (displayTitle === 'Без названия' || displayTitle === '') {
+        if (anime._raw && anime._raw.names) {
+            displayTitle = anime._raw.names.ru || anime._raw.names.en || anime._raw.names.main || 'Без названия';
+        }
     }
+    
+    // Дополнительная проверка: если есть поле name с объектом
+    if (displayTitle === 'Без названия' && anime._raw && anime._raw.name) {
+        if (typeof anime._raw.name === 'object') {
+            displayTitle = anime._raw.name.main || anime._raw.name.english || anime._raw.name.russian || 'Без названия';
+        } else if (typeof anime._raw.name === 'string') {
+            displayTitle = anime._raw.name;
+        }
+    }
+    
+    if (titleEl) titleEl.textContent = displayTitle;
     if (engEl) engEl.textContent = anime.title_english || '';
     if (metaEl) metaEl.textContent = `${anime.year || '--'} | ${anime.episodes || '?'} эп.`;
     if (descEl) descEl.textContent = anime.synopsis || 'Описание отсутствует';
@@ -1282,15 +1269,15 @@ function showDetail(anime) {
     
     const user = DB.get('currentUser');
     const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
-    const isFav = favs.indexOf(anime.title) > -1;
+    const isFav = favs.indexOf(displayTitle) > -1;
     
     if (favBtn) {
         favBtn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
         favBtn.className = 'fav-btn' + (isFav ? ' active' : '');
-        favBtn.onclick = () => toggleFav(anime.title);
+        favBtn.onclick = () => toggleFav(displayTitle);
     }
     
-    renderComments(anime.title);
+    renderComments(displayTitle);
     // showSimilarAnime(anime); // УДАЛЕНО - больше не показываем похожие аниме
     
     const cleanId = anime.id?.replace('anilibria_', '') || '';
@@ -1302,7 +1289,7 @@ function showDetail(anime) {
                 const torrents = await API.getTorrentsByRelease(cleanId);
                 window.currentTorrents = torrents;
                 if (torrents && torrents.length > 0) {
-                    renderTorrentPlayer(torrents, anime.title);
+                    renderTorrentPlayer(torrents, displayTitle);
                 }
             } catch (e) {
                 console.warn('Не удалось загрузить торренты для плеера:', e);
