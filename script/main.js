@@ -1228,49 +1228,100 @@ function showDetail(anime) {
     
     // ===== ДИАГНОСТИКА В КОНСОЛЬ =====
     console.log('📦 Данные аниме в showDetail:', anime);
-    console.log('📛 Поля названия:', {
+    console.log('📛 Все поля с названиями:', {
         title: anime.title,
         title_russian: anime.title_russian,
         russian: anime.russian,
         title_english: anime.title_english,
+        name: anime.name,
+        names: anime.names,
         '_raw.names': anime._raw?.names,
-        '_raw.name': anime._raw?.name
+        '_raw.name': anime._raw?.name,
+        '_raw.title': anime._raw?.title
     });
     
     // ===== ИСПРАВЛЕННОЕ ОТОБРАЖЕНИЕ НАЗВАНИЯ =====
     let displayTitle = 'Без названия';
     
-    // Пробуем получить название из всех возможных источников
-    if (anime.title_russian) displayTitle = anime.title_russian;
-    else if (anime.russian) displayTitle = anime.russian;
-    else if (anime.title) displayTitle = anime.title;
-    else if (anime.title_english) displayTitle = anime.title_english;
-    else if (anime._raw?.names?.ru) displayTitle = anime._raw.names.ru;
-    else if (anime._raw?.names?.main) displayTitle = anime._raw.names.main;
-    else if (anime._raw?.names?.en) displayTitle = anime._raw.names.en;
-    else if (anime._raw?.name?.main) displayTitle = anime._raw.name.main;
-    else if (anime._raw?.name?.russian) displayTitle = anime._raw.name.russian;
-    else if (anime._raw?.name?.english) displayTitle = anime._raw.name.english;
-    else if (typeof anime._raw?.name === 'string') displayTitle = anime._raw.name;
-    
-    // Если всё ещё нет, пробуем найти в любом поле
-    if (displayTitle === 'Без названия') {
-        for (const key of ['names', 'name', 'title', 'russian', 'english']) {
-            if (anime[key] && typeof anime[key] === 'string' && anime[key].length > 0) {
+    // 1. Пробуем anime.title_russian (самое частое)
+    if (anime.title_russian && anime.title_russian.length > 0) {
+        displayTitle = anime.title_russian;
+    }
+    // 2. Пробуем anime.russian
+    else if (anime.russian && anime.russian.length > 0) {
+        displayTitle = anime.russian;
+    }
+    // 3. Пробуем anime.title (если есть и не ID)
+    else if (anime.title && anime.title.length > 0 && !/^\d+$/.test(anime.title)) {
+        displayTitle = anime.title;
+    }
+    // 4. Пробуем anime.title_english
+    else if (anime.title_english && anime.title_english.length > 0) {
+        displayTitle = anime.title_english;
+    }
+    // 5. Пробуем anime.name (если это строка)
+    else if (typeof anime.name === 'string' && anime.name.length > 0) {
+        displayTitle = anime.name;
+    }
+    // 6. Пробуем anime.name (если это объект)
+    else if (anime.name && typeof anime.name === 'object') {
+        displayTitle = anime.name.main || anime.name.english || anime.name.russian || 'Без названия';
+    }
+    // 7. Пробуем anime.names (если это объект)
+    else if (anime.names && typeof anime.names === 'object') {
+        displayTitle = anime.names.ru || anime.names.en || anime.names.main || 'Без названия';
+    }
+    // 8. Пробуем anime._raw.names
+    else if (anime._raw?.names && typeof anime._raw.names === 'object') {
+        displayTitle = anime._raw.names.ru || anime._raw.names.en || anime._raw.names.main || 'Без названия';
+    }
+    // 9. Пробуем anime._raw.name
+    else if (anime._raw?.name && typeof anime._raw.name === 'object') {
+        displayTitle = anime._raw.name.main || anime._raw.name.english || anime._raw.name.russian || 'Без названия';
+    }
+    // 10. Пробуем anime._raw.title
+    else if (anime._raw?.title && anime._raw.title.length > 0) {
+        displayTitle = anime._raw.title;
+    }
+    // 11. Если ничего не найдено, пробуем найти любое поле с не-цифровым значением
+    else {
+        for (const key of ['title', 'name', 'names', 'russian', 'english', 'main']) {
+            if (anime[key] && typeof anime[key] === 'string' && anime[key].length > 0 && !/^\d+$/.test(anime[key])) {
                 displayTitle = anime[key];
                 break;
             }
-            if (anime._raw && anime._raw[key] && typeof anime._raw[key] === 'string' && anime._raw[key].length > 0) {
+            if (anime._raw && anime._raw[key] && typeof anime._raw[key] === 'string' && anime._raw[key].length > 0 && !/^\d+$/.test(anime._raw[key])) {
                 displayTitle = anime._raw[key];
                 break;
             }
         }
     }
     
-    // Если до сих пор нет названия, используем id как запасной вариант
-    if (displayTitle === 'Без названия' && anime.id) {
-        displayTitle = anime.id.replace('anilibria_', '');
+    // Если всё ещё цифры — пробуем найти в любом строковом поле
+    if (/^\d+$/.test(displayTitle) || displayTitle === 'Без названия') {
+        const allFields = Object.keys(anime);
+        for (const field of allFields) {
+            const val = anime[field];
+            if (typeof val === 'string' && val.length > 0 && !/^\d+$/.test(val) && val !== 'anilibria_') {
+                displayTitle = val;
+                break;
+            }
+            if (anime._raw && typeof anime._raw[field] === 'string' && anime._raw[field].length > 0 && !/^\d+$/.test(anime._raw[field])) {
+                displayTitle = anime._raw[field];
+                break;
+            }
+        }
     }
+    
+    // Самый последний запасной вариант — ID без префикса
+    if (/^\d+$/.test(displayTitle) || displayTitle === 'Без названия' || displayTitle === 'anilibria_') {
+        const cleanId = anime.id?.replace('anilibria_', '') || anime.mal_id?.replace('anilibria_', '') || '';
+        if (cleanId && !/^\d+$/.test(cleanId)) {
+            displayTitle = cleanId;
+        }
+    }
+    
+    console.log('📛 Итоговое название:', displayTitle);
     
     if (titleEl) titleEl.textContent = displayTitle;
     if (engEl) engEl.textContent = anime.title_english || '';
