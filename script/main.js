@@ -1644,7 +1644,6 @@ function showDetail(anime) {
     if (cleanId) {
         loadTorrentsForRelease(cleanId);
         
-        // Загружаем торренты для плеера
         setTimeout(async () => {
             try {
                 const torrents = await API.getTorrentsByRelease(cleanId);
@@ -1658,32 +1657,19 @@ function showDetail(anime) {
         }, 1000);
     }
     
-    // ==== ЗАГРУЗКА СЕРИЙ В ПЛЕЕР ====
-    const episodesList = anime.episodes_list || [];
+    loadVideos(6);
+    
+    // ===== ЗАГРУЗКА СЕРИЙ =====
     const episodeBtns = document.getElementById('episodeBtns');
     if (episodeBtns) {
-        if (episodesList && episodesList.length > 0) {
-            let btnsHtml = '';
-            // Показываем все серии
-            episodesList.forEach(ep => {
-                btnsHtml += `
-                    <button class="ep-btn" onclick="playEpisode('${anime.id}', ${ep.episode})" 
-                            style="padding:8px 16px;border-radius:8px;border:1px solid rgba(0,245,255,0.1);
-                                   background:rgba(0,245,255,0.02);color:var(--text-primary);cursor:pointer;
-                                   transition:all 0.3s ease;font-size:13px;"
-                            onmouseover="this.style.background='rgba(0,245,255,0.05)'" 
-                            onmouseout="this.style.background='rgba(0,245,255,0.02)'">
-                        ${ep.episode}
-                    </button>
-                `;
-            });
-            episodeBtns.innerHTML = btnsHtml;
-        } else {
-            episodeBtns.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">Серии не найдены</span>';
-        }
+        episodeBtns.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">⏳ Загрузка серий...</span>';
+        
+        setTimeout(() => {
+            if (anime && anime.id) {
+                forceLoadEpisodes(anime.id);
+            }
+        }, 500);
     }
-    
-    loadVideos(6);
     
     const wrapper = document.getElementById('playerWrapper');
     if (wrapper) {
@@ -1692,7 +1678,7 @@ function showDetail(anime) {
         wrapper.innerHTML = `
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
                 <span style="font-size:48px;">🎬</span>
-                <span style="font-size:16px;color:#aaa;">Смотреть на Anilibria</span>
+                <span style="font-size:16px;color:#aaa;">Выберите серию</span>
                 ${externalPlayer ? `<a href="${externalPlayer}" target="_blank" class="video-link">▶️ Открыть плеер</a>` : ''}
                 ${code ? `<a href="https://www.anilibria.tv/release/${code}" target="_blank" class="video-link">🌐 Открыть на Anilibria</a>` : ''}
             </div>
@@ -1701,7 +1687,88 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 11. ВОСПРОИЗВЕДЕНИЕ СЕРИИ
+// 11. ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА СЕРИЙ
+// ============================================
+async function forceLoadEpisodes(animeId) {
+    console.log('🔍 Принудительная загрузка серий для:', animeId);
+    
+    const cleanId = animeId.replace('anilibria_', '');
+    const episodeBtns = document.getElementById('episodeBtns');
+    
+    if (!episodeBtns) return;
+    
+    episodeBtns.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">⏳ Загрузка серий...</span>';
+    
+    try {
+        // Пробуем через API
+        const data = await API.getVideoLinksForEpisode(cleanId, 1);
+        
+        if (data && data.totalEpisodes > 0) {
+            let btnsHtml = '';
+            const total = Math.min(data.totalEpisodes, 100);
+            for (let i = 1; i <= total; i++) {
+                btnsHtml += `
+                    <button class="ep-btn" onclick="playEpisode('${animeId}', ${i})" 
+                            style="padding:8px 16px;border-radius:8px;border:1px solid rgba(0,245,255,0.1);
+                                   background:rgba(0,245,255,0.02);color:var(--text-primary);cursor:pointer;
+                                   transition:all 0.3s ease;font-size:13px;"
+                            onmouseover="this.style.background='rgba(0,245,255,0.05)'" 
+                            onmouseout="this.style.background='rgba(0,245,255,0.02)'">
+                        ${i}
+                    </button>
+                `;
+            }
+            episodeBtns.innerHTML = btnsHtml;
+            return true;
+        }
+        
+        // Пробуем через детали
+        const details = await API.getAnimeDetails(animeId);
+        if (details && details.episodes_list && details.episodes_list.length > 0) {
+            let btnsHtml = '';
+            details.episodes_list.forEach(ep => {
+                const epNum = ep.episode || ep.number || 1;
+                btnsHtml += `
+                    <button class="ep-btn" onclick="playEpisode('${animeId}', ${epNum})" 
+                            style="padding:8px 16px;border-radius:8px;border:1px solid rgba(0,245,255,0.1);
+                                   background:rgba(0,245,255,0.02);color:var(--text-primary);cursor:pointer;
+                                   transition:all 0.3s ease;font-size:13px;"
+                            onmouseover="this.style.background='rgba(0,245,255,0.05)'" 
+                            onmouseout="this.style.background='rgba(0,245,255,0.02)'">
+                        ${epNum}
+                    </button>
+                `;
+            });
+            episodeBtns.innerHTML = btnsHtml;
+            return true;
+        }
+        
+        // Если ничего не найдено
+        const code = details?._raw?.code || '';
+        const externalPlayer = details?.external_player || '';
+        episodeBtns.innerHTML = `
+            <div style="text-align:center;padding:10px;color:var(--text-muted);width:100%;">
+                <span>😕 Серии не найдены</span>
+                ${code ? `<br><a href="https://www.anilibria.tv/release/${code}" target="_blank" class="video-link" style="display:inline-block;margin-top:8px;">🌐 Открыть на Anilibria</a>` : ''}
+                ${externalPlayer ? `<br><a href="${externalPlayer}" target="_blank" class="video-link" style="display:inline-block;margin-top:8px;">▶️ Открыть плеер</a>` : ''}
+            </div>
+        `;
+        return false;
+        
+    } catch (e) {
+        console.error('Ошибка загрузки серий:', e);
+        episodeBtns.innerHTML = `
+            <div style="text-align:center;padding:10px;color:var(--text-muted);width:100%;">
+                <span>⚠️ Ошибка загрузки серий</span>
+                <br><button onclick="forceLoadEpisodes('${animeId}')" class="random-retry-btn" style="margin-top:8px;">🔄 Попробовать снова</button>
+            </div>
+        `;
+        return false;
+    }
+}
+
+// ============================================
+// 12. ВОСПРОИЗВЕДЕНИЕ СЕРИИ
 // ============================================
 function playEpisode(id, episode) {
     console.log(`🎬 Загрузка ${episode} серии для ${id}`);
@@ -1873,7 +1940,7 @@ function playEpisode(id, episode) {
 }
 
 // ============================================
-// 12. ПЕРЕКЛЮЧЕНИЕ КАЧЕСТВА ВИДЕО
+// 13. ПЕРЕКЛЮЧЕНИЕ КАЧЕСТВА ВИДЕО
 // ============================================
 function switchVideoQuality(releaseId, episode, index) {
     const links = window._videoLinks;
@@ -1916,7 +1983,7 @@ function switchVideoQuality(releaseId, episode, index) {
 }
 
 // ============================================
-// 13. ТОРРЕНТ-ПЛЕЕР
+// 14. ТОРРЕНТ-ПЛЕЕР
 // ============================================
 function renderTorrentPlayer(torrents, animeTitle) {
     const section = document.getElementById('torrentPlayerSection');
@@ -2023,7 +2090,7 @@ function selectTorrentQuality() {
 }
 
 // ============================================
-// 14. КОММЕНТАРИИ
+// 15. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -2118,7 +2185,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 15. ИЗБРАННОЕ
+// 16. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -2192,7 +2259,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 16. ДОСТИЖЕНИЯ
+// 17. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -2290,7 +2357,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 17. ПРОФИЛЬ
+// 18. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -2381,7 +2448,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 18. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 19. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -2535,7 +2602,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 19. АВАТАР
+// 20. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) {
@@ -2583,7 +2650,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 20. TOAST
+// 21. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -2615,7 +2682,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 21. МОДАЛЬНЫЕ ОКНА
+// 22. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -2679,7 +2746,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 22. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 23. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -2799,7 +2866,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 23. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 24. ВОССТАНОВЛЕНИЕ ДАННЫХ
 // ============================================
 function restoreAllData() {
     console.log('🔄 Восстановление данных...');
@@ -2836,7 +2903,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 24. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
+// 25. ЖИВАЯ СТАТИСТИКА СОЦСЕТЕЙ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2874,7 +2941,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 25. МОИ КОММЕНТАРИИ
+// 26. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2913,7 +2980,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 26. ЗАПУСК
+// 27. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime загружается...');
@@ -2934,7 +3001,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 27. ЭКСПОРТ
+// 28. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2988,5 +3055,6 @@ window.selectTorrentQuality = selectTorrentQuality;
 window.renderTorrentPlayer = renderTorrentPlayer;
 window.playEpisode = playEpisode;
 window.switchVideoQuality = switchVideoQuality;
+window.forceLoadEpisodes = forceLoadEpisodes;
 
 console.log('✅ OnikaAnime полностью загружен!');
