@@ -1228,96 +1228,66 @@ function showDetail(anime) {
     
     // ===== ДИАГНОСТИКА В КОНСОЛЬ =====
     console.log('📦 Данные аниме в showDetail:', anime);
-    console.log('📛 Все поля с названиями:', {
-        title: anime.title,
-        title_russian: anime.title_russian,
-        russian: anime.russian,
-        title_english: anime.title_english,
-        name: anime.name,
-        names: anime.names,
-        '_raw.names': anime._raw?.names,
-        '_raw.name': anime._raw?.name,
-        '_raw.title': anime._raw?.title
-    });
     
     // ===== ИСПРАВЛЕННОЕ ОТОБРАЖЕНИЕ НАЗВАНИЯ =====
     let displayTitle = 'Без названия';
     
-    // 1. Пробуем anime.title_russian (самое частое)
-    if (anime.title_russian && anime.title_russian.length > 0) {
-        displayTitle = anime.title_russian;
-    }
-    // 2. Пробуем anime.russian
-    else if (anime.russian && anime.russian.length > 0) {
-        displayTitle = anime.russian;
-    }
-    // 3. Пробуем anime.title (если есть и не ID)
-    else if (anime.title && anime.title.length > 0 && !/^\d+$/.test(anime.title)) {
-        displayTitle = anime.title;
-    }
-    // 4. Пробуем anime.title_english
-    else if (anime.title_english && anime.title_english.length > 0) {
-        displayTitle = anime.title_english;
-    }
-    // 5. Пробуем anime.name (если это строка)
-    else if (typeof anime.name === 'string' && anime.name.length > 0) {
-        displayTitle = anime.name;
-    }
-    // 6. Пробуем anime.name (если это объект)
-    else if (anime.name && typeof anime.name === 'object') {
-        displayTitle = anime.name.main || anime.name.english || anime.name.russian || 'Без названия';
-    }
-    // 7. Пробуем anime.names (если это объект)
-    else if (anime.names && typeof anime.names === 'object') {
-        displayTitle = anime.names.ru || anime.names.en || anime.names.main || 'Без названия';
-    }
-    // 8. Пробуем anime._raw.names
-    else if (anime._raw?.names && typeof anime._raw.names === 'object') {
-        displayTitle = anime._raw.names.ru || anime._raw.names.en || anime._raw.names.main || 'Без названия';
-    }
-    // 9. Пробуем anime._raw.name
-    else if (anime._raw?.name && typeof anime._raw.name === 'object') {
-        displayTitle = anime._raw.name.main || anime._raw.name.english || anime._raw.name.russian || 'Без названия';
-    }
-    // 10. Пробуем anime._raw.title
-    else if (anime._raw?.title && anime._raw.title.length > 0) {
-        displayTitle = anime._raw.title;
-    }
-    // 11. Если ничего не найдено, пробуем найти любое поле с не-цифровым значением
-    else {
-        for (const key of ['title', 'name', 'names', 'russian', 'english', 'main']) {
-            if (anime[key] && typeof anime[key] === 'string' && anime[key].length > 0 && !/^\d+$/.test(anime[key])) {
-                displayTitle = anime[key];
-                break;
-            }
-            if (anime._raw && anime._raw[key] && typeof anime._raw[key] === 'string' && anime._raw[key].length > 0 && !/^\d+$/.test(anime._raw[key])) {
-                displayTitle = anime._raw[key];
-                break;
-            }
+    // Пробуем все возможные источники названия
+    const possibleTitles = [
+        anime.title_russian,
+        anime.russian,
+        anime.title,
+        anime.title_english,
+        anime.name,
+        anime.names?.ru,
+        anime.names?.en,
+        anime.names?.main,
+        anime._raw?.names?.ru,
+        anime._raw?.names?.en,
+        anime._raw?.names?.main,
+        anime._raw?.name?.main,
+        anime._raw?.name?.russian,
+        anime._raw?.name?.english,
+        anime._raw?.title,
+        anime._raw?.name
+    ];
+    
+    // Ищем первое непустое значение, которое не является ID
+    for (const val of possibleTitles) {
+        if (val && typeof val === 'string' && val.length > 0 && !val.startsWith('anilibria_') && !/^\d+$/.test(val)) {
+            displayTitle = val;
+            break;
         }
     }
     
-    // Если всё ещё цифры — пробуем найти в любом строковом поле
-    if (/^\d+$/.test(displayTitle) || displayTitle === 'Без названия') {
+    // Если название всё ещё не найдено, пробуем найти в любом поле
+    if (displayTitle === 'Без названия' || displayTitle.startsWith('anilibria_')) {
         const allFields = Object.keys(anime);
         for (const field of allFields) {
             const val = anime[field];
-            if (typeof val === 'string' && val.length > 0 && !/^\d+$/.test(val) && val !== 'anilibria_') {
+            if (typeof val === 'string' && val.length > 0 && !val.startsWith('anilibria_') && !/^\d+$/.test(val) && val !== 'anilibria_') {
                 displayTitle = val;
                 break;
             }
-            if (anime._raw && typeof anime._raw[field] === 'string' && anime._raw[field].length > 0 && !/^\d+$/.test(anime._raw[field])) {
+            if (anime._raw && typeof anime._raw[field] === 'string' && anime._raw[field].length > 0 && !anime._raw[field].startsWith('anilibria_') && !/^\d+$/.test(anime._raw[field])) {
                 displayTitle = anime._raw[field];
                 break;
             }
         }
     }
     
-    // Самый последний запасной вариант — ID без префикса
-    if (/^\d+$/.test(displayTitle) || displayTitle === 'Без названия' || displayTitle === 'anilibria_') {
-        const cleanId = anime.id?.replace('anilibria_', '') || anime.mal_id?.replace('anilibria_', '') || '';
-        if (cleanId && !/^\d+$/.test(cleanId)) {
-            displayTitle = cleanId;
+    // Если всё ещё ID, пробуем получить название из кэша каталога
+    if (displayTitle.startsWith('anilibria_') || /^\d+$/.test(displayTitle)) {
+        // Пробуем найти аниме в allData по ID
+        for (const key in allData) {
+            const item = allData[key];
+            if (item.id === anime.id || item.mal_id === anime.id || item.id === anime.mal_id) {
+                const title = item.title_russian || item.russian || item.title;
+                if (title && !title.startsWith('anilibria_')) {
+                    displayTitle = title;
+                    break;
+                }
+            }
         }
     }
     
