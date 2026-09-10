@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР (ДЛЯ RELAXDEV - ИСПРАВЛЕННЫЙ)
+// ONIKAANIME - СЕРВЕР (С ПРОКСИ SHIKIMORI)
 // ============================================
 
 require('dotenv').config();
@@ -22,13 +22,12 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
 
-// ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL (БЕЗ SSL) =====
+// ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL =====
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: false
 });
 
-// ===== ПРОВЕРКА ПОДКЛЮЧЕНИЯ =====
 pool.connect((err, client, release) => {
     if (err) {
         console.error('❌ Ошибка подключения к PostgreSQL:', err.message);
@@ -38,7 +37,48 @@ pool.connect((err, client, release) => {
     release();
 });
 
-// ===== СОЗДАНИЕ ТАБЛИЦ =====
+// ============================================
+// ПРОКСИ ДЛЯ SHIKIMORI GRAPHQL
+// ============================================
+app.post('/api/shikimori', async (req, res) => {
+    try {
+        const query = req.body.query;
+        if (!query) {
+            return res.status(400).json({ error: 'Query обязателен' });
+        }
+
+        console.log('📡 Shikimori запрос:', query.slice(0, 100));
+
+        const response = await fetch('https://shikimori.io/api/graphql', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'OnikaAnime/1.0'
+            },
+            body: JSON.stringify({ query })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Shikimori HTTP', response.status, errorText.slice(0, 200));
+            return res.status(response.status).json({ 
+                error: 'Shikimori ошибка: ' + response.status 
+            });
+        }
+
+        const data = await response.json();
+        console.log('✅ Shikimori ответ получен');
+        res.json(data);
+    } catch (err) {
+        console.error('❌ Shikimori прокси ошибка:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// СОЗДАНИЕ ТАБЛИЦ
+// ============================================
 async function initDatabase() {
     try {
         console.log('📦 Создание таблиц...');
@@ -115,7 +155,6 @@ async function initDatabase() {
             )
         `);
 
-        // Индексы
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_name ON users(name)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_anime ON comments(anime)`);
@@ -152,7 +191,6 @@ const schemas = {
 // ============================================
 // API РЕГИСТРАЦИИ
 // ============================================
-
 app.post('/api/register', async (req, res, next) => {
     try {
         const { error, value } = schemas.register.validate(req.body);
@@ -168,8 +206,7 @@ app.post('/api/register', async (req, res, next) => {
             return res.status(400).json({ error: 'Пользователь с таким email или именем уже существует' });
         }
 
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
             'INSERT INTO users (email, name, password) VALUES ($1, $2, $3) RETURNING id',
@@ -181,12 +218,9 @@ app.post('/api/register', async (req, res, next) => {
         await pool.query('INSERT INTO profiles (user_id, bio, avatar) VALUES ($1, $2, $3)', [userId, '', '']);
         await pool.query('INSERT INTO active_titles (user_id, title_id) VALUES ($1, $2)', [userId, null]);
         
-        console.log('✅ Новый пользователь создан, ID:', userId, 'Имя:', name);
+        console.log('✅ Новый пользователь создан, ID:', userId);
         
-        res.json({ 
-            success: true, 
-            user: { id: userId, email, name } 
-        });
+        res.json({ success: true, user: { id: userId, email, name } });
     } catch (err) {
         next(err);
     }
@@ -195,14 +229,12 @@ app.post('/api/register', async (req, res, next) => {
 // ============================================
 // API ВХОДА
 // ============================================
-
 app.post('/api/login', async (req, res, next) => {
     try {
         const { error, value } = schemas.login.validate(req.body);
         if (error) return res.status(400).json({ error: error.details[0].message });
 
         const { email, password } = value;
-
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         
         if (result.rows.length === 0) {
@@ -216,7 +248,7 @@ app.post('/api/login', async (req, res, next) => {
             return res.status(400).json({ error: 'Неверный email или пароль' });
         }
         
-        console.log('✅ Вход:', user.name, 'ID:', user.id);
+        console.log('✅ Вход:', user.name);
         res.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
     } catch (err) {
         next(err);
@@ -226,12 +258,11 @@ app.post('/api/login', async (req, res, next) => {
 // ============================================
 // API ПОЛЬЗОВАТЕЛЯ
 // ============================================
-
 app.get('/api/user/:id', async (req, res, next) => {
     try {
         const userId = parseInt(req.params.id);
         if (isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID пользователя' });
+            return res.status(400).json({ error: 'Неверный ID' });
         }
 
         const userResult = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [userId]);
@@ -241,12 +272,8 @@ app.get('/api/user/:id', async (req, res, next) => {
         
         const user = userResult.rows[0];
         const result = { 
-            id: user.id, 
-            email: user.email, 
-            name: user.name, 
-            favorites: [], 
-            achievements: [], 
-            activeTitle: null
+            id: user.id, email: user.email, name: user.name, 
+            favorites: [], achievements: [], activeTitle: null
         };
         
         const favs = await pool.query('SELECT anime FROM favorites WHERE user_id = $1', [userId]);
@@ -286,13 +313,11 @@ app.post('/api/update-name', async (req, res, next) => {
 // ============================================
 // API ИЗБРАННОГО
 // ============================================
-
 app.post('/api/favorites', async (req, res, next) => {
     try {
         const { userId, favorites } = req.body;
-        
         if (!userId || isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID пользователя' });
+            return res.status(400).json({ error: 'Неверный ID' });
         }
         
         await pool.query('DELETE FROM favorites WHERE user_id = $1', [userId]);
@@ -314,13 +339,11 @@ app.post('/api/favorites', async (req, res, next) => {
 // ============================================
 // API ДОСТИЖЕНИЙ
 // ============================================
-
 app.post('/api/achievements', async (req, res, next) => {
     try {
         const { userId, achievements } = req.body;
-        
         if (!userId || isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID пользователя' });
+            return res.status(400).json({ error: 'Неверный ID' });
         }
         
         await pool.query('DELETE FROM achievements WHERE user_id = $1', [userId]);
@@ -342,9 +365,8 @@ app.post('/api/achievements', async (req, res, next) => {
 app.post('/api/active-title', async (req, res, next) => {
     try {
         const { userId, titleId } = req.body;
-        
         if (!userId || isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID пользователя' });
+            return res.status(400).json({ error: 'Неверный ID' });
         }
         
         await pool.query(
@@ -361,7 +383,6 @@ app.post('/api/active-title', async (req, res, next) => {
 // ============================================
 // API КОММЕНТАРИЕВ
 // ============================================
-
 app.get('/api/comments/:anime', async (req, res, next) => {
     try {
         const anime = req.params.anime;
@@ -396,13 +417,7 @@ app.post('/api/comments', async (req, res, next) => {
         
         res.json({ 
             success: true, 
-            comment: { 
-                id: result.rows[0].id, 
-                anime, 
-                user_name, 
-                text, 
-                date 
-            } 
+            comment: { id: result.rows[0].id, anime, user_name, text, date } 
         });
     } catch (err) {
         next(err);
@@ -414,20 +429,12 @@ app.delete('/api/comments/:id', async (req, res, next) => {
         const id = parseInt(req.params.id);
         const { user_name } = req.body;
         
-        if (isNaN(id)) {
-            return res.status(400).json({ error: 'Неверный ID комментария' });
-        }
-        if (!user_name) {
-            return res.status(400).json({ error: 'Имя пользователя обязательно' });
-        }
+        if (isNaN(id)) return res.status(400).json({ error: 'Неверный ID' });
+        if (!user_name) return res.status(400).json({ error: 'Имя обязательно' });
         
         const comment = await pool.query('SELECT * FROM comments WHERE id = $1', [id]);
-        if (comment.rows.length === 0) {
-            return res.status(404).json({ error: 'Комментарий не найден' });
-        }
-        if (comment.rows[0].user_name !== user_name) {
-            return res.status(403).json({ error: 'Вы не можете удалить этот комментарий' });
-        }
+        if (comment.rows.length === 0) return res.status(404).json({ error: 'Не найден' });
+        if (comment.rows[0].user_name !== user_name) return res.status(403).json({ error: 'Нет доступа' });
         
         await pool.query('DELETE FROM comments WHERE id = $1', [id]);
         res.json({ success: true });
@@ -439,14 +446,10 @@ app.delete('/api/comments/:id', async (req, res, next) => {
 // ============================================
 // API УДАЛЕНИЯ АККАУНТА
 // ============================================
-
 app.post('/api/delete-account', async (req, res, next) => {
     try {
         const { userId } = req.body;
-        
-        if (!userId || isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID пользователя' });
-        }
+        if (!userId || isNaN(userId)) return res.status(400).json({ error: 'Неверный ID' });
         
         await pool.query('DELETE FROM users WHERE id = $1', [userId]);
         res.json({ success: true });
@@ -458,29 +461,20 @@ app.post('/api/delete-account', async (req, res, next) => {
 // ============================================
 // ОБРАБОТЧИК ОШИБОК
 // ============================================
-
 app.use((err, req, res, next) => {
     console.error('❌ Ошибка:', err.message);
     
-    if (err.isJoi) {
-        return res.status(400).json({ error: err.details[0].message });
-    }
-    
-    if (err.code === '23505') {
-        return res.status(400).json({ error: 'Пользователь с таким email или именем уже существует' });
-    }
+    if (err.isJoi) return res.status(400).json({ error: err.details[0].message });
+    if (err.code === '23505') return res.status(400).json({ error: 'Уже существует' });
     
     res.status(500).json({ 
-        error: process.env.NODE_ENV === 'production' 
-            ? 'Внутренняя ошибка сервера' 
-            : err.message 
+        error: process.env.NODE_ENV === 'production' ? 'Внутренняя ошибка' : err.message 
     });
 });
 
 // ============================================
-// ЗАПУСК СЕРВЕРА
+// ЗАПУСК
 // ============================================
-
 initDatabase().then(() => {
     app.listen(PORT, () => {
         console.log('🚀 OnikaAnime сервер запущен!');
