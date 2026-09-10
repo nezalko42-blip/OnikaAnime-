@@ -41,13 +41,12 @@
     <meta name="msapplication-TileImage" content="/icon-192.png">
     <meta name="msapplication-navbutton-color" content="#6c5ce7">
     
-    <!-- ===== OPENGRAPH ДЛЯ СОЦСЕТЕЙ (VK, Facebook) ===== -->
+    <!-- ===== OPENGRAPH ===== -->
     <meta property="og:title" content="OnikaAnime - Космический портал в мир аниме" />
     <meta property="og:description" content="Смотри аниме онлайн, общайся, получай достижения и развивайся вместе с OnikaAnime!" />
     <meta property="og:image" content="https://onikaanime.relaxdev.ru/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:url" content="https://onikaanime.relaxdev.ru/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="OnikaAnime" />
@@ -58,12 +57,6 @@
     <meta name="twitter:title" content="OnikaAnime - Смотри аниме онлайн" />
     <meta name="twitter:description" content="Твой космический портал в мир аниме. Смотри, общайся и развивайся!" />
     <meta name="twitter:image" content="https://onikaanime.relaxdev.ru/og-image.jpg" />
-    <meta name="twitter:site" content="@onikaanime" />
-    <meta name="twitter:creator" content="@onikaanime" />
-    
-    <!-- ===== ДЛЯ TELEGRAM ===== -->
-    <meta property="telegram:title" content="OnikaAnime" />
-    <meta property="telegram:image" content="https://onikaanime.relaxdev.ru/og-image.jpg" />
     
     <title>OnikaAnime - Смотри аниме онлайн бесплатно</title>
     <link rel="stylesheet" href="style/main.css">
@@ -132,9 +125,7 @@
                 <svg width="24" height="24"><use href="icons/icons.svg#icon-menu"/></svg>
             </button>
         </div>
-        <div class="header-center">
-            <!-- Поиск убран из верхней панели -->
-        </div>
+        <div class="header-center"></div>
         <div class="header-right">
             <span class="site-title">OnikaAnime</span>
         </div>
@@ -156,10 +147,9 @@
         <div class="content">
             <div class="content-inner">
 
-                <!-- ===== ГЛАВНАЯ СТРАНИЦА ===== -->
+                <!-- ===== ГЛАВНАЯ ===== -->
                 <div id="page-home">
-
-                    <!-- ===== КАРУСЕЛЬ РЕКОМЕНДАЦИЙ ===== -->
+                    <!-- Карусель -->
                     <section class="hero-slider-section">
                         <div class="hero-slider-container">
                             <div class="hero-slider" id="heroSlider">
@@ -182,37 +172,26 @@
                         </div>
                     </section>
 
-                    <!-- ===== СЛУЧАЙНОЕ АНИМЕ ===== -->
+                    <!-- Случайное аниме -->
                     <section class="random-section">
                         <div class="random-container">
                             <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:16px;">
-                                <button class="random-btn" onclick="randomAnime()">
-                                    🎲 Не знаю что посмотреть?
-                                </button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('1')" style="background:linear-gradient(135deg, #e74c3c, #e17055);">
-                                    ⚔️ Экшен
-                                </button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('21')" style="background:linear-gradient(135deg, #f1c40f, #f39c12);">
-                                    😂 Комедия
-                                </button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('22')" style="background:linear-gradient(135deg, #e84393, #fd79a8);">
-                                    💕 Романтика
-                                </button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('10')" style="background:linear-gradient(135deg, #0984e3, #6c5ce7);">
-                                    🧙 Фэнтези
-                                </button>
+                                <button class="random-btn" onclick="randomAnime()">🎲 Не знаю что посмотреть?</button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('1')" style="background:linear-gradient(135deg, #e74c3c, #e17055);">⚔️ Экшен</button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('21')" style="background:linear-gradient(135deg, #f1c40f, #f39c12);">😂 Комедия</button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('22')" style="background:linear-gradient(135deg, #e84393, #fd79a8);">💕 Романтика</button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('10')" style="background:linear-gradient(135deg, #0984e3, #6c5ce7);">🧙 Фэнтези</button>
                             </div>
                             <div class="random-result" id="randomResult"></div>
                         </div>
                     </section>
 
-                    <!-- ===== КАТАЛОГ С ФИЛЬТРОМ ===== -->
+                    <!-- Каталог -->
                     <section class="catalog-section">
                         <div class="catalog-header">
                             <h2>📚 ВСЕ АНИМЕ</h2>
                         </div>
 
-                        <!-- ===== ПОИСКОВАЯ СТРОКА (ВЫНЕСЕНА ИЗ ФИЛЬТРА) ===== -->
                         <div class="catalog-search-row">
                             <div class="catalog-search-wrapper">
                                 <span class="catalog-search-icon">🔍</span>
@@ -221,7 +200,6 @@
                             </div>
                         </div>
 
-                        <!-- ===== КНОПКА ПОКАЗАТЬ/СКРЫТЬ ФИЛЬТР ===== -->
                         <div class="filter-toggle-wrapper">
                             <button class="filter-toggle-btn" onclick="toggleFilterPanel()">
                                 <span id="filterToggleIcon">🔽</span>
@@ -229,9 +207,7 @@
                             </button>
                         </div>
 
-                        <!-- ===== ФИЛЬТР (СКРЫВАЕМЫЙ) ===== -->
                         <div class="filter-panel" id="filterPanel" style="display:none;">
-                            <!-- Основные фильтры -->
                             <div class="filter-row">
                                 <div class="filter-group">
                                     <label>📅 Год</label>
@@ -264,7 +240,6 @@
 
                             <div class="filter-divider"></div>
 
-                            <!-- Фильтры-категории -->
                             <div class="filter-categories">
                                 <div class="filter-category">
                                     <div class="filter-category-header" onclick="toggleCategory(this)">
@@ -273,7 +248,6 @@
                                     </div>
                                     <div class="filter-category-body" id="filterGenres"></div>
                                 </div>
-
                                 <div class="filter-category">
                                     <div class="filter-category-header" onclick="toggleCategory(this)">
                                         <span>🔞 Возраст</span>
@@ -284,7 +258,6 @@
                             </div>
                         </div>
 
-                        <!-- ===== СТАТИСТИКА КАТАЛОГА ===== -->
                         <div class="catalog-stats" id="catalogStats">
                             <span id="totalCount"></span>
                         </div>
@@ -293,12 +266,10 @@
                             <div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка каталога...</div>
                         </div>
                         
-                        <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreCatalog()" style="display:none;">
-                            📥 Загрузить ещё
-                        </button>
+                        <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreCatalog()" style="display:none;">📥 Загрузить ещё</button>
                     </section>
 
-                    <!-- ===== ПОДПИШИСЬ НА НАС ===== -->
+                    <!-- Соцсети -->
                     <section class="social-section">
                         <div class="social-container">
                             <div class="social-header">
@@ -322,9 +293,7 @@
                                         <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-telegram"/></svg>
                                         Подписаться
                                     </a>
-                                    <div class="social-stats">
-                                        <span id="tgStats">👥 0 подписчиков</span>
-                                    </div>
+                                    <div class="social-stats"><span id="tgStats">👥 0 подписчиков</span></div>
                                 </div>
 
                                 <div class="social-card vk-card">
@@ -342,9 +311,7 @@
                                         <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-vk"/></svg>
                                         Подписаться
                                     </a>
-                                    <div class="social-stats">
-                                        <span id="vkStats">👥 0 подписчиков</span>
-                                    </div>
+                                    <div class="social-stats"><span id="vkStats">👥 0 подписчиков</span></div>
                                 </div>
 
                                 <div class="social-card tiktok-card">
@@ -362,9 +329,7 @@
                                         <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-tiktok"/></svg>
                                         Подписаться
                                     </a>
-                                    <div class="social-stats">
-                                        <span id="ttStats">👥 0 подписчиков</span>
-                                    </div>
+                                    <div class="social-stats"><span id="ttStats">👥 0 подписчиков</span></div>
                                 </div>
                             </div>
 
@@ -426,31 +391,60 @@
                         </div>
                     </div>
 
-                    <!-- ===== ТОРРЕНТ-ПЛЕЕР ===== -->
-                    <div class="torrent-player-section" id="torrentPlayerSection" style="display:none;">
-                        <h3>🧲 Смотреть через торрент</h3>
-                        <div id="torrentPlayerContainer"></div>
-                    </div>
-                    
-                    <!-- ===== ПЛЕЕР С ВКЛАДКАМИ (ТОЛЬКО СЕРИИ) ===== -->
-                    <div class="player-section">
-                        <div class="player-tabs">
-                            <button class="player-tab active" data-tab="episodes" onclick="switchPlayerTab('episodes')">
-                                📺 Серии
-                            </button>
+                    <!-- ===== ГДЕ СМОТРЕТЬ ===== -->
+                    <div class="watch-section" id="watchSection">
+                        <div class="watch-header">
+                            <h3>🎬 Где смотреть</h3>
+                            <p>Выберите удобный источник для просмотра</p>
                         </div>
                         
-                        <!-- Вкладка: Серии -->
-                        <div class="player-tab-content active" id="tab-episodes">
-                            <div class="player-wrapper" id="playerWrapper">
-                                <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#666;flex-direction:column;gap:8px;background:rgba(0,0,0,0.7);">
-                                    <span style="font-size:48px;">🎬</span>
-                                    <span>Выберите серию</span>
+                        <div class="watch-grid">
+                            <a href="https://vk.ru/deep" target="_blank" rel="noopener" class="watch-card watch-vk">
+                                <div class="watch-icon">
+                                    <svg width="40" height="40" fill="#4e80b4" viewBox="0 0 24 24">
+                                        <path d="M13.162 18.994c.609 0 .858-.406.851-.915-.031-1.917.714-2.949 2.059-1.604 1.488 1.488 1.796 2.519 3.603 2.519h3.2c.808 0 1.126-.26 1.126-.668 0-.863-1.421-2.386-2.625-3.504-1.686-1.565-1.765-1.602-.313-3.486 1.801-2.339 4.157-5.336 2.073-5.336h-3.981c-.772 0-.828.435-1.103 1.083-.995 2.347-2.886 5.387-3.604 4.922-.751-.485-.407-2.406-.35-5.261.015-.754.011-1.271-1.141-1.539-.629-.145-1.241-.205-1.809-.205-2.273 0-3.841.953-2.95 1.119 1.571.293 1.42 3.692 1.054 5.16-.638 2.556-3.036-2.024-4.035-4.305-.241-.548-.315-.974-1.175-.974H.787c-.492 0-.787.16-.787.516 0 .602 2.96 6.72 5.786 9.77 2.756 2.975 5.48 2.708 7.376 2.708z"/>
+                                    </svg>
                                 </div>
-                            </div>
-                            <div id="episodeBtns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
-                                <span style="color:var(--text-muted);font-size:13px;">⏳ Загрузка серий...</span>
-                            </div>
+                                <div class="watch-content">
+                                    <h4>VK Сообщество DEEP</h4>
+                                    <p>Официальное сообщество с озвучкой</p>
+                                    <div class="watch-tags">
+                                        <span>🎙️ Озвучка</span>
+                                        <span>🔥 287K подписчиков</span>
+                                    </div>
+                                </div>
+                                <div class="watch-arrow">→</div>
+                            </a>
+
+                            <a href="https://deep-ent.ru/" target="_blank" rel="noopener" class="watch-card watch-deep">
+                                <div class="watch-icon">
+                                    <span style="font-size:36px;">🎬</span>
+                                </div>
+                                <div class="watch-content">
+                                    <h4>DEEP Entertainment</h4>
+                                    <p>Официальный сайт с онлайн-просмотром</p>
+                                    <div class="watch-tags">
+                                        <span>✅ Без рекламы</span>
+                                        <span>📺 HD качество</span>
+                                    </div>
+                                </div>
+                                <div class="watch-arrow">→</div>
+                            </a>
+
+                            <button onclick="openKodiModal()" class="watch-card watch-kodi">
+                                <div class="watch-icon">
+                                    <span style="font-size:36px;">🎞️</span>
+                                </div>
+                                <div class="watch-content">
+                                    <h4>Kodi плеер</h4>
+                                    <p>Просмотр через приложение Kodi</p>
+                                    <div class="watch-tags">
+                                        <span>💻 Десктоп</span>
+                                        <span>📱 Мобильный</span>
+                                    </div>
+                                </div>
+                                <div class="watch-arrow">→</div>
+                            </button>
                         </div>
                     </div>
 
@@ -466,19 +460,6 @@
                         </div>
                         <div id="commentsList">
                             <div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== ВИДЕО ПЛЕЕР (МОДАЛЬНОЕ ОКНО) ===== -->
-                <div class="modal" id="videoPlayerModal" onclick="if(event.target===this) closeVideoPlayer()">
-                    <div class="modal-box video-player-modal">
-                        <button class="modal-close" onclick="closeVideoPlayer()">
-                            <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
-                        </button>
-                        <div id="videoPlayerInfo" style="color:var(--text-primary);font-size:16px;margin-bottom:12px;"></div>
-                        <div style="position:relative;padding-bottom:56.25%;height:0;background:#000;border-radius:var(--radius-sm);overflow:hidden;">
-                            <iframe id="videoPlayerIframe" src="" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen allow="autoplay; encrypted-media"></iframe>
                         </div>
                     </div>
                 </div>
@@ -563,31 +544,44 @@
                 <!-- ===== ПРОФИЛЬ ===== -->
                 <div id="page-profile" style="display:none;">
                     <div class="profile-container">
-                        <div class="profile-header-card">
-                            <div class="profile-avatar-wrapper">
-                                <div class="avatar-large" onclick="document.getElementById('avatarFileInput').click()">
-                                    <img id="avatarImg" src="" style="display:none;">
-                                    <span id="avatarLetter">?</span>
-                                    <div class="avatar-overlay">
-                                        <span class="avatar-edit-icon">
-                                            <svg width="24" height="24"><use href="icons/icons.svg#icon-profile"/></svg>
-                                        </span>
-                                        <span class="avatar-edit-text">Сменить</span>
+                        <div class="profile-banner" id="profileBanner" style="background: linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);">
+                            <div class="banner-overlay"></div>
+                            <div class="profile-header-card">
+                                <div class="profile-avatar-wrapper">
+                                    <div class="avatar-large" onclick="document.getElementById('avatarFileInput').click()">
+                                        <img id="avatarImg" src="" style="display:none;">
+                                        <span id="avatarLetter">?</span>
+                                        <div class="avatar-overlay">
+                                            <span class="avatar-edit-icon">
+                                                <svg width="24" height="24"><use href="icons/icons.svg#icon-profile"/></svg>
+                                            </span>
+                                            <span class="avatar-edit-text">Сменить</span>
+                                        </div>
+                                        <div class="level-badge" id="profileLevelBadge">Lv.1</div>
                                     </div>
+                                    <div class="avatar-status online" id="profileStatusDot"></div>
                                 </div>
-                                <div class="avatar-status online"></div>
-                            </div>
-                            <div class="profile-name-section">
-                                <div class="profile-name-row">
-                                    <h1 id="profileName">--</h1>
-                                    <span class="title-badge" id="profileTitle"></span>
-                                    <button class="profile-edit-btn" onclick="editProfile('name')" title="Редактировать никнейм">
-                                        <svg width="16" height="16"><use href="icons/icons.svg#icon-settings"/></svg>
-                                    </button>
+                                <div class="profile-name-section">
+                                    <div class="profile-name-row">
+                                        <h1 id="profileName">--</h1>
+                                        <span class="title-badge" id="profileTitle"></span>
+                                        <button class="profile-edit-btn" onclick="editProfile('name')" title="Редактировать никнейм">
+                                            <svg width="16" height="16"><use href="icons/icons.svg#icon-settings"/></svg>
+                                        </button>
+                                    </div>
+                                    <div class="profile-email" id="profileEmail" style="color:var(--text-secondary);font-size:13px;margin-top:2px;">📧 --</div>
+                                    <div class="profile-level-xp">
+                                        <div class="xp-bar">
+                                            <div class="xp-fill" id="profileXpFill" style="width:0%"></div>
+                                            <span class="xp-text" id="profileXpText">0 / 100 XP</span>
+                                        </div>
+                                    </div>
+                                    <div class="status" id="profileStatus">Пользователь</div>
+                                    <div class="profile-join-date" id="profileJoinDate">Присоединился: --</div>
                                 </div>
-                                <div class="profile-email" id="profileEmail" style="color:var(--text-secondary);font-size:13px;margin-top:2px;">📧 --</div>
-                                <div class="status" id="profileStatus">Пользователь</div>
-                                <div class="profile-join-date" id="profileJoinDate">Присоединился: --</div>
+                                <button class="profile-banner-edit" onclick="changeBanner()" title="Сменить баннер">
+                                    <svg width="18" height="18"><use href="icons/icons.svg#icon-settings"/></svg>
+                                </button>
                             </div>
                         </div>
                         
@@ -598,31 +592,58 @@
                         </div>
                         
                         <div class="stats-cards">
-                            <a class="stat-card" onclick="navigate('favorites')">
-                                <div class="stat-icon">
-                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-favorites"/></svg>
-                                </div>
+                            <div class="stat-card" onclick="navigate('favorites')">
+                                <div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-favorites"/></svg></div>
                                 <div class="num" id="statFav">0</div>
                                 <div class="lbl">В избранном</div>
-                            </a>
-                            <a class="stat-card" onclick="navigate('mycomments')">
-                                <div class="stat-icon">
-                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-comment"/></svg>
-                                </div>
+                            </div>
+                            <div class="stat-card" onclick="navigate('mycomments')">
+                                <div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-comment"/></svg></div>
                                 <div class="num" id="statComments">0</div>
                                 <div class="lbl">Комментариев</div>
-                            </a>
-                            <a class="stat-card" onclick="navigate('achievements')">
-                                <div class="stat-icon">
-                                    <svg width="24" height="24"><use href="icons/icons.svg#icon-achievements"/></svg>
-                                </div>
+                            </div>
+                            <div class="stat-card" onclick="navigate('achievements')">
+                                <div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-achievements"/></svg></div>
                                 <div class="num" id="statAchievements">0</div>
                                 <div class="lbl">Достижений</div>
-                            </a>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">⏱️</div>
+                                <div class="num" id="statTime">0ч</div>
+                                <div class="lbl">Время на сайте</div>
+                            </div>
+                        </div>
+
+                        <div class="continue-watching-section" id="continueWatchingSection">
+                            <div class="section-header">
+                                <h3>▶️ Продолжить просмотр</h3>
+                                <span class="section-count" id="continueCount">0</span>
+                            </div>
+                            <div class="continue-grid" id="continueGrid">
+                                <div style="color:var(--text-muted);text-align:center;padding:12px;width:100%;">Нет сохранённых серий</div>
+                            </div>
+                        </div>
+
+                        <div class="activity-feed-section">
+                            <div class="section-header">
+                                <h3>📋 Последние действия</h3>
+                            </div>
+                            <div class="activity-feed" id="activityFeed">
+                                <div style="color:var(--text-muted);text-align:center;padding:12px;">Активность появится здесь</div>
+                            </div>
+                        </div>
+                        
+                        <div class="genre-stats-section">
+                            <div class="section-header">
+                                <h3>🎭 Любимые жанры</h3>
+                            </div>
+                            <div class="genre-stats" id="genreStats">
+                                <div style="color:var(--text-muted);text-align:center;padding:12px;">Нет данных</div>
+                            </div>
                         </div>
                         
                         <div class="profile-achievements-preview">
-                            <div class="profile-section-header">
+                            <div class="section-header">
                                 <h3>🏆 Последние достижения</h3>
                                 <a onclick="navigate('achievements')">Смотреть все →</a>
                             </div>
@@ -652,34 +673,16 @@
                     
                     <div class="settings-group">
                         <h3>👤 Аккаунт</h3>
-                        <div class="setting-row">
-                            <div class="label">Никнейм</div>
-                            <button onclick="editProfile('name')">Изменить</button>
-                        </div>
-                        <div class="setting-row">
-                            <div class="label">Email</div>
-                            <button onclick="editProfile('email')">Изменить</button>
-                        </div>
-                        <div class="setting-row">
-                            <div class="label">Пароль</div>
-                            <button onclick="editProfile('pass')">Изменить</button>
-                        </div>
-                        <div class="setting-row">
-                            <div class="label">Описание</div>
-                            <button onclick="editProfile('bio')">Изменить</button>
-                        </div>
-                        <div class="setting-row">
-                            <div class="label">Аватар</div>
-                            <button onclick="document.getElementById('avatarFileInput').click()">Загрузить</button>
-                        </div>
+                        <div class="setting-row"><div class="label">Никнейм</div><button onclick="editProfile('name')">Изменить</button></div>
+                        <div class="setting-row"><div class="label">Email</div><button onclick="editProfile('email')">Изменить</button></div>
+                        <div class="setting-row"><div class="label">Пароль</div><button onclick="editProfile('pass')">Изменить</button></div>
+                        <div class="setting-row"><div class="label">Описание</div><button onclick="editProfile('bio')">Изменить</button></div>
+                        <div class="setting-row"><div class="label">Аватар</div><button onclick="document.getElementById('avatarFileInput').click()">Загрузить</button></div>
                     </div>
                     
                     <div class="settings-group">
                         <h3>⚠️ Опасная зона</h3>
-                        <div class="setting-row">
-                            <div class="label">Удалить аккаунт</div>
-                            <button class="danger" onclick="deleteAccount()">Удалить</button>
-                        </div>
+                        <div class="setting-row"><div class="label">Удалить аккаунт</div><button class="danger" onclick="deleteAccount()">Удалить</button></div>
                     </div>
                     
                     <button class="logout-btn" onclick="logout()">🚪 Выйти из аккаунта</button>
@@ -689,12 +692,11 @@
         </div>
     </div>
 
-    <!-- ===== КНОПКА ВВЕРХ ===== -->
     <button class="scroll-top" id="scrollTopBtn" onclick="scrollToTop()">
         <svg width="24" height="24"><use href="icons/icons.svg#icon-arrow-up"/></svg>
     </button>
 
-    <!-- ===== ПОПАП ДОСТИЖЕНИЙ ===== -->
+    <!-- Попап достижений -->
     <div class="achievement-popup" id="achievementPopup">
         <div class="popup-inner">
             <button class="popup-close" onclick="hidePopup()">
@@ -709,9 +711,7 @@
     </div>
     <div class="confetti" id="confetti"></div>
 
-    <!-- ===== МОДАЛЬНЫЕ ОКНА ===== -->
-
-    <!-- Вход/Регистрация -->
+    <!-- Модальные окна -->
     <div class="modal" id="loginModal">
         <div class="modal-box">
             <button class="modal-close" onclick="closeLoginModal()">
@@ -735,7 +735,6 @@
         </div>
     </div>
 
-    <!-- Редактирование -->
     <div class="modal" id="editModal">
         <div class="modal-box">
             <button class="modal-close" onclick="closeModal('editModal')">
@@ -751,7 +750,6 @@
         </div>
     </div>
 
-    <!-- Подтверждение -->
     <div class="modal" id="confirmModal">
         <div class="modal-box">
             <button class="modal-close" onclick="closeModal('confirmModal')">
@@ -767,34 +765,12 @@
         </div>
     </div>
 
-    <!-- Удаление аккаунта -->
-    <div class="modal" id="deleteAccountModal">
-        <div class="modal-box">
-            <button class="modal-close" onclick="closeModal('deleteAccountModal')">
-                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
-            </button>
-            <div class="modal-icon">💀</div>
-            <h2>Удаление аккаунта</h2>
-            <p>Это действие <strong>нельзя отменить</strong>. Все ваши данные будут удалены навсегда.</p>
-            <div class="warning-text">⚠️ Введите ваш никнейм для подтверждения</div>
-            <input type="text" id="deleteConfirmName" placeholder="Введите ваш никнейм">
-            <p style="color:var(--text-muted);font-size:12px;text-align:center;margin-bottom:12px;">
-                Ваш никнейм: <strong class="highlight-text" id="deleteCurrentUser"></strong>
-            </p>
-            <div class="btn-row">
-                <button class="btn-cancel" onclick="closeModal('deleteAccountModal')">Отмена</button>
-                <button class="btn-danger" onclick="confirmDeleteAccount()">💀 Удалить навсегда</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== МОДАЛЬНОЕ ОКНО СЕРИЙЧИКА ===== -->
+    <!-- Модалка питомца -->
     <div class="modal" id="petModal">
         <div class="modal-box pet-modal-box">
             <button class="modal-close" onclick="closePetModal()">
                 <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
             </button>
-            
             <div class="pet-modal-content">
                 <div class="pet-modal-header">
                     <span class="pet-modal-avatar" id="petModalAvatar">🐱</span>
@@ -804,7 +780,6 @@
                         <div class="pet-modal-skin" id="petModalSkin">🥚 Яйцо</div>
                     </div>
                 </div>
-                
                 <div class="pet-modal-progress">
                     <div class="pet-modal-progress-info">
                         <span id="petModalProgressText">0 / 50 очков</span>
@@ -815,7 +790,6 @@
                     </div>
                     <div class="pet-modal-next" id="petModalNext">🐣 50 очков до нового облика</div>
                 </div>
-                
                 <div class="pet-modal-stats">
                     <div class="pet-modal-stat">
                         <span class="pet-modal-stat-icon">📅</span>
@@ -833,12 +807,10 @@
                         <span class="pet-modal-stat-label">очков</span>
                     </div>
                 </div>
-                
                 <div class="pet-modal-skins">
                     <div class="pet-modal-skins-title">🎨 Облики</div>
                     <div class="pet-modal-skins-grid" id="petModalSkinsGrid"></div>
                 </div>
-                
                 <div class="pet-modal-actions">
                     <button class="pet-modal-btn daily" onclick="claimDailyBonusPet()" id="petDailyBtn">
                         📅 Ежедневный бонус <span class="pet-modal-btn-reward">+5</span>
@@ -851,7 +823,7 @@
         </div>
     </div>
 
-    <!-- ===== ФУТЕР ===== -->
+    <!-- Футер -->
     <footer class="site-footer">
         <div class="footer-content">
             <div class="footer-column">
@@ -908,78 +880,43 @@
         </div>
     </footer>
 
-    <!-- ===== СКРИПТЫ ===== -->
-    <!-- HLS.js для воспроизведения HLS-потоков -->
+    <!-- Скрипты -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17/dist/hls.min.js"></script>
-    <!-- WebTorrent -->
-    <script src="https://cdn.jsdelivr.net/npm/webtorrent@0.128.0/webtorrent.min.js"></script>
-    
     <script src="script/storage.js"></script>
     <script src="script/api.js"></script>
     <script src="script/utils.js"></script>
     <script src="script/auth.js"></script>
-    <script src="script/shikimori-player.js"></script>
     <script src="script/pet.js"></script>
-    <script src="script/webtorrent-player.js"></script>
     <script src="script/main.js"></script>
 
     <script>
-        // ===== ИНИЦИАЛИЗАЦИЯ =====
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🌟 OnikaAnime загружается...');
-            
             const preloader = document.getElementById('preloader');
             if (preloader) {
                 setTimeout(function() {
                     preloader.classList.add('hidden');
-                    setTimeout(function() {
-                        preloader.style.display = 'none';
-                    }, 600);
+                    setTimeout(function() { preloader.style.display = 'none'; }, 600);
                 }, 500);
             }
             
-            if (typeof restoreAllData === 'function') {
-                restoreAllData();
-            }
-            
-            if (typeof updateUI === 'function') {
-                updateUI();
-            }
-            
-            if (typeof navigate === 'function') {
-                setTimeout(function() {
-                    navigate('home');
-                }, 100);
-            }
-            
-            if (typeof resetCatalogFilters === 'function') {
-                setTimeout(function() {
-                    resetCatalogFilters();
-                }, 200);
-            }
+            if (typeof restoreAllData === 'function') restoreAllData();
+            if (typeof updateUI === 'function') updateUI();
+            if (typeof navigate === 'function') setTimeout(function() { navigate('home'); }, 100);
+            if (typeof resetCatalogFilters === 'function') setTimeout(function() { resetCatalogFilters(); }, 200);
             
             const user = DB.get('currentUser');
             if (user) {
-                if (typeof startOnlineTracking === 'function') {
-                    startOnlineTracking();
-                }
-                if (typeof initPet === 'function') {
-                    initPet();
-                }
+                if (typeof startOnlineTracking === 'function') startOnlineTracking();
+                if (typeof initPet === 'function') initPet();
                 const userNameEl = document.getElementById('sidebarUserName');
-                if (userNameEl) {
-                    userNameEl.textContent = user.name;
-                }
+                if (userNameEl) userNameEl.textContent = user.name;
             }
             
             window.addEventListener('scroll', function() {
                 const btn = document.getElementById('scrollTopBtn');
-                if (btn) {
-                    btn.classList.toggle('visible', window.scrollY > 300);
-                }
+                if (btn) btn.classList.toggle('visible', window.scrollY > 300);
             });
             
-            // ===== ОБРАБОТЧИК ДЛЯ НОВОЙ ПОИСКОВОЙ СТРОКИ =====
             const searchInput = document.getElementById('catalogSearchInput');
             const clearBtn = document.getElementById('catalogSearchClear');
             if (searchInput && clearBtn) {
@@ -987,11 +924,8 @@
                     clearBtn.style.display = this.value.length > 0 ? 'flex' : 'none';
                 });
             }
-            
-            console.log('✅ OnikaAnime готов!');
         });
 
-        // ===== ОЧИСТКА ПОИСКА В КАТАЛОГЕ =====
         window.clearCatalogSearch = function() {
             const input = document.getElementById('catalogSearchInput');
             const clearBtn = document.getElementById('catalogSearchClear');
@@ -1003,23 +937,9 @@
             }
         };
 
-        // ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
-        window.scrollToTop = function() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        window.closeModal = function(id) {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        };
-
-        window.goBack = function() {
-            if (window._previousPage) {
-                navigate(window._previousPage);
-            } else {
-                navigate('home');
-            }
-        };
+        window.scrollToTop = function() { window.scrollTo({ top: 0, behavior: 'smooth' }); };
+        window.closeModal = function(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+        window.goBack = function() { if (window._previousPage) { navigate(window._previousPage); } else { navigate('home'); } };
 
         window.toggleDescription = function() {
             const desc = document.getElementById('detailDesc');
@@ -1053,9 +973,7 @@
             const arrow = header.querySelector('.filter-category-arrow');
             if (body) {
                 body.classList.toggle('open');
-                if (arrow) {
-                    arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
-                }
+                if (arrow) arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
             }
         };
 
@@ -1076,21 +994,6 @@
                 }
             }
         };
-
-        window.clearSearchInput = function() {
-            const input = document.getElementById('catalogSearchInput');
-            const clearBtn = document.getElementById('catalogSearchClear');
-            if (input) {
-                input.value = '';
-                input.focus();
-                if (clearBtn) clearBtn.style.display = 'none';
-                applyCatalogFilters();
-            }
-        };
-
-        console.log('🌟 OnikaAnime загружен!');
-        console.log('💡 Используйте checkData() для проверки данных');
-        console.log('💡 Используйте forceRestore() для восстановления из бэкапа');
     </script>
 </body>
 </html>
