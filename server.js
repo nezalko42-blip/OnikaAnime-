@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME - СЕРВЕР (С ПРОКСИ SHIKIMORI)
+// ONIKAANIME — СЕРВЕР (ГИБРИД)
 // ============================================
 
 require('dotenv').config();
@@ -12,7 +12,6 @@ const Joi = require('joi');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ===== НАСТРОЙКА CORS =====
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -22,7 +21,6 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
 
-// ===== ПОДКЛЮЧЕНИЕ К POSTGRESQL =====
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: false
@@ -47,8 +45,6 @@ app.post('/api/shikimori', async (req, res) => {
             return res.status(400).json({ error: 'Query обязателен' });
         }
 
-        console.log('📡 Shikimori запрос:', query.slice(0, 100));
-
         const response = await fetch('https://shikimori.io/api/graphql', {
             method: 'POST',
             headers: {
@@ -68,7 +64,6 @@ app.post('/api/shikimori', async (req, res) => {
         }
 
         const data = await response.json();
-        console.log('✅ Shikimori ответ получен');
         res.json(data);
     } catch (err) {
         console.error('❌ Shikimori прокси ошибка:', err);
@@ -155,10 +150,28 @@ async function initDatabase() {
             )
         `);
 
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS anime_sources (
+                id SERIAL PRIMARY KEY,
+                anime_title TEXT NOT NULL,
+                anime_id TEXT,
+                source TEXT NOT NULL,
+                url TEXT NOT NULL,
+                episode INTEGER DEFAULT 1,
+                quality TEXT DEFAULT '720p',
+                video_title TEXT,
+                added_by TEXT DEFAULT 'admin',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_name ON users(name)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_anime ON comments(anime)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_sources_title ON anime_sources(anime_title)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_sources_anime_id ON anime_sources(anime_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_sources_source ON anime_sources(source)`);
 
         console.log('✅ Все таблицы и индексы созданы!');
     } catch (err) {
@@ -189,7 +202,172 @@ const schemas = {
 };
 
 // ============================================
-// API РЕГИСТРАЦИИ
+// API ИСТОЧНИКОВ ВИДЕО
+// ============================================
+app.get('/api/sources/:animeTitle', async (req, res, next) => {
+    try {
+        const animeTitle = decodeURIComponent(req.params.animeTitle);
+        
+        const result = await pool.query(
+            'SELECT * FROM anime_sources WHERE anime_title = $1 ORDER BY source, episode',
+            [animeTitle]
+        );
+        
+        const grouped = {};
+        result.rows.forEach(row => {
+            if (!grouped[row.source]) grouped[row.source] = [];
+            grouped[row.source].push({
+                id: row.id,
+                url: row.url,
+                episode: row.episode,
+                quality: row.quality,
+                title: row.video_title
+            });
+        });
+        
+        res.json({ success: true, sources: grouped, animeTitle });
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.get('/api/sources/by-id/:animeId', async (req, res, next) => {
+    try {
+        const animeId = req.params.animeId;
+        const result = await pool.query(
+            'SELECT * FROM anime_sources WHERE anime_id = $1 ORDER BY source, episode',
+            [animeId]
+        );
+        
+        const grouped = {};
+        result.rows.forEach(row => {
+            if (!grouped[row.source]) grouped[row.source] = [];
+            grouped[row.source].push({
+                id: row.id,
+                url: row.url,
+                episode: row.episode,
+                quality: row.quality
+            });
+        });
+        
+        res.json({ success: true, sources: grouped });
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.post('/api/sources', async (req, res, next) => {
+    try {
+        const { anime_title, anime_id, source, url, episode, quality, video_title, admin_key } = req.body;
+        
+        const ADMIN_KEY = process.env.ADMIN_KEY || 'onika_admin_secret_2026';
+        if (admin_key !== ADMIN_KEY) {
+            return res.status(403).json({ error: 'Неверный админ-ключ' });
+        }
+        
+        if (!anime_title || !source || !url) {
+            return res.status(400).json({ error: 'Заполните обязательные поля' });
+        }
+        
+        const existing = await pool.query(
+            'SELECT id FROM anime_sources WHERE anime_title = $1 AND source = $2 AND url = $3',
+            [anime_title, source, url]
+        );
+        
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ error: 'Такой источник уже добавлен' });
+        }
+        
+        const result = await pool.query(
+            `INSERT INTO anime_sources (anime_title, anime_id, source, url, episode, quality, video_title, added_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+            [anime_title, anime_id || null, source, url, episode || 1, quality || '720p', video_title || null, 'admin']
+        );
+        
+        console.log('✅ Источник добавлен:', anime_title, '-', source);
+        res.json({ success: true, id: result.rows[0].id });
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.delete('/api/sources/:id', async (req, res, next) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { admin_key } = req.body;
+        
+        const ADMIN_KEY = process.env.ADMIN_KEY || 'onika_admin_secret_2026';
+        if (admin_key !== ADMIN_KEY) {
+            return res.status(403).json({ error: 'Неверный админ-ключ' });
+        }
+        
+        await pool.query('DELETE FROM anime_sources WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.put('/api/sources/:id', async (req, res, next) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { url, episode, quality, admin_key } = req.body;
+        
+        const ADMIN_KEY = process.env.ADMIN_KEY || 'onika_admin_secret_2026';
+        if (admin_key !== ADMIN_KEY) {
+            return res.status(403).json({ error: 'Неверный админ-ключ' });
+        }
+        
+        await pool.query(
+            'UPDATE anime_sources SET url = $1, episode = $2, quality = $3 WHERE id = $4',
+            [url, episode, quality, id]
+        );
+        
+        res.json({ success: true });
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.get('/api/sources-list', async (req, res, next) => {
+    try {
+        const result = await pool.query(`
+            SELECT anime_title, anime_id, 
+                   COUNT(*) as total,
+                   COUNT(DISTINCT source) as sources_count,
+                   ARRAY_AGG(DISTINCT source) as sources,
+                   MAX(created_at) as last_updated
+            FROM anime_sources 
+            GROUP BY anime_title, anime_id 
+            ORDER BY anime_title
+        `);
+        
+        res.json({ success: true, list: result.rows });
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.get('/api/sources-search/:query', async (req, res, next) => {
+    try {
+        const query = '%' + decodeURIComponent(req.params.query).toLowerCase() + '%';
+        
+        const result = await pool.query(`
+            SELECT DISTINCT anime_title, anime_id 
+            FROM anime_sources 
+            WHERE LOWER(anime_title) LIKE $1
+            ORDER BY anime_title
+            LIMIT 20
+        `, [query]);
+        
+        res.json({ success: true, results: result.rows });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// ============================================
+// API ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 app.post('/api/register', async (req, res, next) => {
     try {
@@ -203,22 +381,18 @@ app.post('/api/register', async (req, res, next) => {
             [email, name]
         );
         if (existing.rows.length > 0) {
-            return res.status(400).json({ error: 'Пользователь с таким email или именем уже существует' });
+            return res.status(400).json({ error: 'Пользователь уже существует' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
         const result = await pool.query(
             'INSERT INTO users (email, name, password) VALUES ($1, $2, $3) RETURNING id',
             [email, name, hashedPassword]
         );
         
         const userId = result.rows[0].id;
-
         await pool.query('INSERT INTO profiles (user_id, bio, avatar) VALUES ($1, $2, $3)', [userId, '', '']);
         await pool.query('INSERT INTO active_titles (user_id, title_id) VALUES ($1, $2)', [userId, null]);
-        
-        console.log('✅ Новый пользователь создан, ID:', userId);
         
         res.json({ success: true, user: { id: userId, email, name } });
     } catch (err) {
@@ -226,9 +400,6 @@ app.post('/api/register', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API ВХОДА
-// ============================================
 app.post('/api/login', async (req, res, next) => {
     try {
         const { error, value } = schemas.login.validate(req.body);
@@ -248,27 +419,19 @@ app.post('/api/login', async (req, res, next) => {
             return res.status(400).json({ error: 'Неверный email или пароль' });
         }
         
-        console.log('✅ Вход:', user.name);
         res.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
     } catch (err) {
         next(err);
     }
 });
 
-// ============================================
-// API ПОЛЬЗОВАТЕЛЯ
-// ============================================
 app.get('/api/user/:id', async (req, res, next) => {
     try {
         const userId = parseInt(req.params.id);
-        if (isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID' });
-        }
+        if (isNaN(userId)) return res.status(400).json({ error: 'Неверный ID' });
 
         const userResult = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [userId]);
-        if (userResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Пользователь не найден' });
-        }
+        if (userResult.rows.length === 0) return res.status(404).json({ error: 'Не найден' });
         
         const user = userResult.rows[0];
         const result = { 
@@ -299,9 +462,7 @@ app.post('/api/update-name', async (req, res, next) => {
         const { userId, newName } = value;
         
         const existing = await pool.query('SELECT id FROM users WHERE name = $1 AND id != $2', [newName, userId]);
-        if (existing.rows.length > 0) {
-            return res.status(400).json({ error: 'Это имя уже занято' });
-        }
+        if (existing.rows.length > 0) return res.status(400).json({ error: 'Имя занято' });
         
         await pool.query('UPDATE users SET name = $1 WHERE id = $2', [newName, userId]);
         res.json({ success: true, name: newName });
@@ -311,14 +472,12 @@ app.post('/api/update-name', async (req, res, next) => {
 });
 
 // ============================================
-// API ИЗБРАННОГО
+// ИЗБРАННОЕ, ДОСТИЖЕНИЯ, КОММЕНТАРИИ
 // ============================================
 app.post('/api/favorites', async (req, res, next) => {
     try {
         const { userId, favorites } = req.body;
-        if (!userId || isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID' });
-        }
+        if (!userId || isNaN(userId)) return res.status(400).json({ error: 'Неверный ID' });
         
         await pool.query('DELETE FROM favorites WHERE user_id = $1', [userId]);
         
@@ -336,15 +495,10 @@ app.post('/api/favorites', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API ДОСТИЖЕНИЙ
-// ============================================
 app.post('/api/achievements', async (req, res, next) => {
     try {
         const { userId, achievements } = req.body;
-        if (!userId || isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID' });
-        }
+        if (!userId || isNaN(userId)) return res.status(400).json({ error: 'Неверный ID' });
         
         await pool.query('DELETE FROM achievements WHERE user_id = $1', [userId]);
         
@@ -365,9 +519,7 @@ app.post('/api/achievements', async (req, res, next) => {
 app.post('/api/active-title', async (req, res, next) => {
     try {
         const { userId, titleId } = req.body;
-        if (!userId || isNaN(userId)) {
-            return res.status(400).json({ error: 'Неверный ID' });
-        }
+        if (!userId || isNaN(userId)) return res.status(400).json({ error: 'Неверный ID' });
         
         await pool.query(
             `INSERT INTO active_titles (user_id, title_id) VALUES ($1, $2) 
@@ -380,9 +532,6 @@ app.post('/api/active-title', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API КОММЕНТАРИЕВ
-// ============================================
 app.get('/api/comments/:anime', async (req, res, next) => {
     try {
         const anime = req.params.anime;
@@ -443,9 +592,6 @@ app.delete('/api/comments/:id', async (req, res, next) => {
     }
 });
 
-// ============================================
-// API УДАЛЕНИЯ АККАУНТА
-// ============================================
 app.post('/api/delete-account', async (req, res, next) => {
     try {
         const { userId } = req.body;
@@ -479,7 +625,7 @@ initDatabase().then(() => {
     app.listen(PORT, () => {
         console.log('🚀 OnikaAnime сервер запущен!');
         console.log(`📡 http://localhost:${PORT}`);
-        console.log(`🌍 Режим: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`🔧 Админка: http://localhost:${PORT}/admin-sources.html`);
     });
 });
 
