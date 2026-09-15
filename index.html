@@ -5,39 +5,31 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- ===== ОСНОВНЫЕ МЕТА-ТЕГИ ===== -->
     <meta name="theme-color" content="#6c5ce7">
     <meta name="description" content="OnikaAnime - Космический портал в мир аниме. Смотри аниме онлайн, общайся и развивайся!">
     <meta name="keywords" content="аниме, смотреть аниме, онлайн, anime, onikaanime">
     
-    <!-- ===== FAVICON ===== -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png">
     
-    <!-- ===== ДЛЯ ANDROID / iOS ===== -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="OnikaAnime">
-    <meta name="msapplication-TileColor" content="#6c5ce7">
-    <meta name="msapplication-TileImage" content="/icon-192.png">
     
-    <!-- ===== OPENGRAPH ===== -->
     <meta property="og:title" content="OnikaAnime - Космический портал в мир аниме" />
-    <meta property="og:description" content="Смотри аниме онлайн, общайся, получай достижения и развивайся вместе с OnikaAnime!" />
+    <meta property="og:description" content="Смотри аниме онлайн, общайся, получай достижения!" />
     <meta property="og:image" content="https://onikaanime.relaxdev.ru/og-image.jpg" />
     <meta property="og:url" content="https://onikaanime.relaxdev.ru/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="OnikaAnime" />
     <meta property="og:locale" content="ru_RU" />
     
-    <!-- ===== ДЛЯ TWITTER ===== -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="OnikaAnime - Смотри аниме онлайн" />
-    <meta name="twitter:description" content="Твой космический портал в мир аниме. Смотри, общайся и развивайся!" />
+    <meta name="twitter:title" content="OnikaAnime" />
+    <meta name="twitter:description" content="Твой портал в мир аниме!" />
     <meta name="twitter:image" content="https://onikaanime.relaxdev.ru/og-image.jpg" />
     
     <title>OnikaAnime - Смотри аниме онлайн бесплатно</title>
@@ -101,7 +93,6 @@
 
     <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
 
-    <!-- ✅ ХЕДЕР С ЦЕНТРИРОВАННЫМ НАЗВАНИЕМ -->
     <header class="header">
         <div class="header-left">
             <button class="menu-toggle" onclick="toggleMenu()">
@@ -133,7 +124,6 @@
                 <!-- ===== ГЛАВНАЯ ===== -->
                 <div id="page-home">
 
-                    <!-- Карусель -->
                     <section class="hero-slider-section">
                         <div class="hero-slider-container">
                             <div class="hero-slider" id="heroSlider">
@@ -156,7 +146,6 @@
                         </div>
                     </section>
 
-                    <!-- Случайное аниме -->
                     <section class="random-section">
                         <div class="random-container">
                             <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:16px;">
@@ -170,13 +159,11 @@
                         </div>
                     </section>
 
-                    <!-- Каталог -->
                     <section class="catalog-section">
                         <div class="catalog-header">
                             <h2 id="catalogTitle">📚 ВСЕ АНИМЕ</h2>
                         </div>
 
-                        <!-- Поиск -->
                         <div class="catalog-search-row">
                             <div class="catalog-search-wrapper">
                                 <span class="catalog-search-icon">🔍</span>
@@ -185,12 +172,10 @@
                             </div>
                         </div>
 
-                        <!-- Статистика -->
                         <div class="catalog-stats" id="catalogStats">
                             <span id="totalCount"></span>
                         </div>
 
-                        <!-- Сетка -->
                         <div class="grid" id="grid">
                             <div style="text-align:center;padding:40px;color:#888;grid-column:1/-1;">
                                 <div class="spinner-small"></div>
@@ -198,26 +183,22 @@
                             </div>
                         </div>
                         
-                        <!-- ✅ ПАГИНАЦИЯ -->
                         <div class="pagination" id="pagination" style="display:none;">
                             <button class="pagination-btn" id="prevPageBtn" onclick="goToPrevPage()">
                                 ‹ <span>Назад</span>
                             </button>
-                            
                             <div class="pagination-pages" id="paginationPages"></div>
-                            
                             <button class="pagination-btn" id="nextPageBtn" onclick="goToNextPage()">
                                 <span>Вперёд</span> ›
                             </button>
                         </div>
                     </section>
 
-                    <!-- Соцсети -->
                     <section class="social-section">
                         <div class="social-container">
                             <div class="social-header">
                                 <h2>🌐 Подпишись на нас!</h2>
-                                <p>Будь в курсе всех новинок, участвуй в голосованиях и получай эксклюзивный контент первым</p>
+                                <p>Будь в курсе всех новинок!</p>
                             </div>
 
                             <div class="social-grid-3">
@@ -226,77 +207,27 @@
                                         <svg width="48" height="48" fill="#0088cc"><use href="icons/icons.svg#icon-telegram"/></svg>
                                     </div>
                                     <h3>Telegram</h3>
-                                    <p>Новости, розыгрыши, общение</p>
-                                    <div class="social-features">
-                                        <span>Розыгрыши Premium</span>
-                                        <span>Эксклюзивы</span>
-                                        <span>Новости первыми</span>
-                                    </div>
-                                    <a href="https://t.me/onikaanime" target="_blank" class="social-btn telegram-btn">
-                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-telegram"/></svg>
-                                        Подписаться
-                                    </a>
+                                    <p>Новости, розыгрыши</p>
+                                    <a href="https://t.me/onikaanime" target="_blank" class="social-btn telegram-btn">Подписаться</a>
                                     <div class="social-stats"><span id="tgStats">👥 0 подписчиков</span></div>
                                 </div>
-
                                 <div class="social-card vk-card">
                                     <div class="social-card-icon">
                                         <svg width="48" height="48" fill="#4e80b4"><use href="icons/icons.svg#icon-vk"/></svg>
                                     </div>
                                     <h3>VKontakte</h3>
-                                    <p>Сообщество, обсуждения, опросы</p>
-                                    <div class="social-features">
-                                        <span>Анонсы серий</span>
-                                        <span>Обсуждения</span>
-                                        <span>Арты и мемы</span>
-                                    </div>
-                                    <a href="https://vk.com/onikaanime" target="_blank" class="social-btn vk-btn">
-                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-vk"/></svg>
-                                        Подписаться
-                                    </a>
+                                    <p>Обсуждения, опросы</p>
+                                    <a href="https://vk.com/onikaanime" target="_blank" class="social-btn vk-btn">Подписаться</a>
                                     <div class="social-stats"><span id="vkStats">👥 0 подписчиков</span></div>
                                 </div>
-
                                 <div class="social-card tiktok-card">
                                     <div class="social-card-icon">
                                         <svg width="48" height="48" fill="#25f4ee"><use href="icons/icons.svg#icon-tiktok"/></svg>
                                     </div>
                                     <h3>TikTok</h3>
-                                    <p>Клипы, тренды, моменты</p>
-                                    <div class="social-features">
-                                        <span>Короткие клипы</span>
-                                        <span>Трендовые моменты</span>
-                                        <span>Лучшие сцены</span>
-                                    </div>
-                                    <a href="https://tiktok.com/@onikaanime" target="_blank" class="social-btn tiktok-btn">
-                                        <svg width="18" height="18" style="display:inline-block;vertical-align:middle;margin-right:6px;fill:#fff;"><use href="icons/icons.svg#icon-tiktok"/></svg>
-                                        Подписаться
-                                    </a>
+                                    <p>Клипы, тренды</p>
+                                    <a href="https://tiktok.com/@onikaanime" target="_blank" class="social-btn tiktok-btn">Подписаться</a>
                                     <div class="social-stats"><span id="ttStats">👥 0 подписчиков</span></div>
-                                </div>
-                            </div>
-
-                            <div class="social-bonus">
-                                <div class="bonus-item">
-                                    <span>🎁</span>
-                                    <div>
-                                        <strong>Розыгрыши</strong>
-                                        <p>Еженедельные розыгрыши Premium-доступа</p>
-                                    </div>
-                                </div>
-                                <div class="bonus-item">
-                                    <span>🌟</span>
-                                    <div>
-                                        <strong>Эксклюзивы</strong>
-                                        <p>Только для подписчиков соцсетей</p>
-                                    </div>
-                                </div>
-                                <div class="bonus-item">
-                                    <span>🗳️</span>
-                                    <div>
-                                        <strong>Голосования</strong>
-                                        <p>Выбирай, что смотреть следующим</p>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -334,7 +265,6 @@
                         </div>
                     </div>
 
-                    <!-- Где смотреть -->
                     <div class="watch-section" id="watchSection">
                         <div class="watch-header">
                             <h3>🎬 Где смотреть</h3>
@@ -353,7 +283,7 @@
                                     <p>Озвучка от студии DEEP</p>
                                     <div class="watch-tags">
                                         <span>🎙️ Дубляж</span>
-                                        <span>🔥 287K подписчиков</span>
+                                        <span>🔥 287K</span>
                                     </div>
                                 </div>
                                 <div class="watch-arrow">→</div>
@@ -365,10 +295,10 @@
                                 </div>
                                 <div class="watch-content">
                                     <h4>DEEP Entertainment</h4>
-                                    <p>Официальный сайт с озвучкой</p>
+                                    <p>Официальный сайт</p>
                                     <div class="watch-tags">
                                         <span>✅ Без рекламы</span>
-                                        <span>📺 HD качество</span>
+                                        <span>📺 HD</span>
                                     </div>
                                 </div>
                                 <div class="watch-arrow">→</div>
@@ -380,7 +310,7 @@
                                 </div>
                                 <div class="watch-content">
                                     <h4>Kodi плеер</h4>
-                                    <p>Просмотр через приложение Kodi</p>
+                                    <p>Через приложение</p>
                                     <div class="watch-tags">
                                         <span>💻 Десктоп</span>
                                         <span>📱 Мобильный</span>
@@ -393,7 +323,6 @@
                         <div id="watchEmbedContainer" class="watch-embed-container" style="display:none;"></div>
                     </div>
 
-                    <!-- Комментарии -->
                     <div class="comments-section">
                         <h3>💬 Комментарии</h3>
                         <div class="comment-form">
@@ -416,17 +345,12 @@
                         Назад
                     </span>
                     <div class="list-page-header">
-                        <span class="icon">
-                            <svg width="40" height="40"><use href="icons/icons.svg#icon-favorites"/></svg>
-                        </span>
+                        <span class="icon"><svg width="40" height="40"><use href="icons/icons.svg#icon-favorites"/></svg></span>
                         <h2>❤️ Избранное</h2>
                         <div class="count" id="favCount">0 аниме</div>
                     </div>
                     <div class="anime-grid" id="favGrid">
-                        <div class="empty-state">
-                            <span class="empty-icon">💔</span>
-                            <p>У вас нет избранных аниме</p>
-                        </div>
+                        <div class="empty-state"><span class="empty-icon">💔</span><p>У вас нет избранных аниме</p></div>
                     </div>
                 </div>
 
@@ -439,28 +363,16 @@
                     <div class="achievements-container">
                         <div class="achievements-header">
                             <div class="achievements-stats">
-                                <div class="ach-stat">
-                                    <span class="ach-stat-num" id="achEarnedCount">0</span>
-                                    <span class="ach-stat-label">Получено</span>
-                                </div>
-                                <div class="ach-stat">
-                                    <span class="ach-stat-num" id="achTotalCount">0</span>
-                                    <span class="ach-stat-label">Всего</span>
-                                </div>
-                                <div class="ach-stat">
-                                    <span class="ach-stat-num" id="achProgress">0%</span>
-                                    <span class="ach-stat-label">Прогресс</span>
-                                </div>
+                                <div class="ach-stat"><span class="ach-stat-num" id="achEarnedCount">0</span><span class="ach-stat-label">Получено</span></div>
+                                <div class="ach-stat"><span class="ach-stat-num" id="achTotalCount">0</span><span class="ach-stat-label">Всего</span></div>
+                                <div class="ach-stat"><span class="ach-stat-num" id="achProgress">0%</span><span class="ach-stat-label">Прогресс</span></div>
                             </div>
                             <div class="achievements-progress-bar">
                                 <div class="ach-progress-fill" id="achProgressFill" style="width:0%"></div>
                             </div>
                         </div>
                         <div class="achievements-grid" id="achievementsGrid">
-                            <div class="empty-state">
-                                <span class="empty-icon">🏆</span>
-                                <p>Достижения загружаются...</p>
-                            </div>
+                            <div class="empty-state"><span class="empty-icon">🏆</span><p>Достижения загружаются...</p></div>
                         </div>
                     </div>
                 </div>
@@ -472,17 +384,12 @@
                         Назад
                     </span>
                     <div class="list-page-header">
-                        <span class="icon">
-                            <svg width="40" height="40"><use href="icons/icons.svg#icon-comment"/></svg>
-                        </span>
+                        <span class="icon"><svg width="40" height="40"><use href="icons/icons.svg#icon-comment"/></svg></span>
                         <h2>💬 Мои комментарии</h2>
                         <div class="count" id="myCommentsCount">0 комментариев</div>
                     </div>
                     <div id="myCommentsList">
-                        <div class="empty-state">
-                            <span class="empty-icon">💬</span>
-                            <p>У вас нет комментариев</p>
-                        </div>
+                        <div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>
                     </div>
                 </div>
 
@@ -497,9 +404,7 @@
                                         <img id="avatarImg" src="" style="display:none;">
                                         <span id="avatarLetter">?</span>
                                         <div class="avatar-overlay">
-                                            <span class="avatar-edit-icon">
-                                                <svg width="24" height="24"><use href="icons/icons.svg#icon-profile"/></svg>
-                                            </span>
+                                            <span class="avatar-edit-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-profile"/></svg></span>
                                             <span class="avatar-edit-text">Сменить</span>
                                         </div>
                                         <div class="level-badge" id="profileLevelBadge">Lv.1</div>
@@ -510,9 +415,7 @@
                                     <div class="profile-name-row">
                                         <h1 id="profileName">--</h1>
                                         <span class="title-badge" id="profileTitle"></span>
-                                        <button class="profile-edit-btn" onclick="editProfile('name')" title="Редактировать никнейм">
-                                            <svg width="16" height="16"><use href="icons/icons.svg#icon-settings"/></svg>
-                                        </button>
+                                        <button class="profile-edit-btn" onclick="editProfile('name')"><svg width="16" height="16"><use href="icons/icons.svg#icon-settings"/></svg></button>
                                     </div>
                                     <div class="profile-email" id="profileEmail" style="color:var(--text-secondary);font-size:13px;margin-top:2px;">📧 --</div>
                                     <div class="profile-level-xp">
@@ -524,9 +427,7 @@
                                     <div class="status" id="profileStatus">Пользователь</div>
                                     <div class="profile-join-date" id="profileJoinDate">Присоединился: --</div>
                                 </div>
-                                <button class="profile-banner-edit" onclick="changeBanner()" title="Сменить баннер">
-                                    <svg width="18" height="18"><use href="icons/icons.svg#icon-settings"/></svg>
-                                </button>
+                                <button class="profile-banner-edit" onclick="changeBanner()"><svg width="18" height="18"><use href="icons/icons.svg#icon-settings"/></svg></button>
                             </div>
                         </div>
                         
@@ -570,18 +471,14 @@
                         </div>
 
                         <div class="activity-feed-section">
-                            <div class="section-header">
-                                <h3>📋 Последние действия</h3>
-                            </div>
+                            <div class="section-header"><h3>📋 Последние действия</h3></div>
                             <div class="activity-feed" id="activityFeed">
                                 <div style="color:var(--text-muted);text-align:center;padding:12px;">Активность появится здесь</div>
                             </div>
                         </div>
                         
                         <div class="genre-stats-section">
-                            <div class="section-header">
-                                <h3>🎭 Любимые жанры</h3>
-                            </div>
+                            <div class="section-header"><h3>🎭 Любимые жанры</h3></div>
                             <div class="genre-stats" id="genreStats">
                                 <div style="color:var(--text-muted);text-align:center;padding:12px;">Нет данных</div>
                             </div>
@@ -641,12 +538,9 @@
         <svg width="24" height="24"><use href="icons/icons.svg#icon-arrow-up"/></svg>
     </button>
 
-    <!-- Попап достижений -->
     <div class="achievement-popup" id="achievementPopup">
         <div class="popup-inner">
-            <button class="popup-close" onclick="hidePopup()">
-                <svg width="20" height="20"><use href="icons/icons.svg#icon-close"/></svg>
-            </button>
+            <button class="popup-close" onclick="hidePopup()"><svg width="20" height="20"><use href="icons/icons.svg#icon-close"/></svg></button>
             <span class="popup-icon" id="popupIcon">🏆</span>
             <div class="popup-label">🎉 Новое достижение!</div>
             <div class="popup-name" id="popupName"></div>
@@ -656,12 +550,9 @@
     </div>
     <div class="confetti" id="confetti"></div>
 
-    <!-- Модальные окна -->
     <div class="modal" id="loginModal">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeLoginModal()">
-                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
-            </button>
+            <button class="modal-close" onclick="closeLoginModal()"><svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg></button>
             <div class="modal-tabs">
                 <button class="modal-tab active" onclick="switchAuthTab('login', this)">Вход</button>
                 <button class="modal-tab" onclick="switchAuthTab('register', this)">Регистрация</button>
@@ -682,9 +573,7 @@
 
     <div class="modal" id="editModal">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeModal('editModal')">
-                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
-            </button>
+            <button class="modal-close" onclick="closeModal('editModal')"><svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg></button>
             <h2 id="editTitle">✏️ Изменить</h2>
             <input type="text" id="editInput" placeholder="Введите значение...">
             <textarea id="editTextarea" style="display:none;width:100%;padding:12px;border-radius:10px;border:1px solid rgba(108,92,231,0.1);background:rgba(255,255,255,0.02);color:#fff;font-size:14px;margin-bottom:12px;resize:vertical;min-height:70px;" placeholder="Введите описание..."></textarea>
@@ -697,9 +586,7 @@
 
     <div class="modal" id="confirmModal">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeModal('confirmModal')">
-                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
-            </button>
+            <button class="modal-close" onclick="closeModal('confirmModal')"><svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg></button>
             <div class="modal-icon" id="confirmIcon">⚠️</div>
             <h2 id="confirmTitle">Подтверждение</h2>
             <p id="confirmText"></p>
@@ -712,15 +599,12 @@
 
     <div class="modal" id="petModal">
         <div class="modal-box pet-modal-box">
-            <button class="modal-close" onclick="closePetModal()">
-                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
-            </button>
+            <button class="modal-close" onclick="closePetModal()"><svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg></button>
             <div class="pet-modal-content">
                 <div class="pet-modal-header">
                     <span class="pet-modal-avatar" id="petModalAvatar">🐱</span>
                     <div class="pet-modal-title">
-                        <h2 onclick="changePetName()" title="Нажмите, чтобы изменить имя">Серийчик ✏️</h2>
-                        <span class="pet-rename-hint" onclick="changePetName()">Нажмите на имя, чтобы изменить</span>
+                        <h2 onclick="changePetName()">Серийчик ✏️</h2>
                         <div class="pet-modal-skin" id="petModalSkin">🥚 Яйцо</div>
                     </div>
                 </div>
@@ -732,60 +616,26 @@
                     <div class="pet-modal-progress-bar">
                         <div class="pet-modal-progress-fill" id="petModalProgressFill" style="width:0%"></div>
                     </div>
-                    <div class="pet-modal-next" id="petModalNext">🐣 50 очков до нового облика</div>
-                </div>
-                <div class="pet-modal-stats">
-                    <div class="pet-modal-stat">
-                        <span class="pet-modal-stat-icon">📅</span>
-                        <span class="pet-modal-stat-value" id="petModalDays">0</span>
-                        <span class="pet-modal-stat-label">дней</span>
-                    </div>
-                    <div class="pet-modal-stat">
-                        <span class="pet-modal-stat-icon">📺</span>
-                        <span class="pet-modal-stat-value" id="petModalEpisodes">0</span>
-                        <span class="pet-modal-stat-label">серий</span>
-                    </div>
-                    <div class="pet-modal-stat">
-                        <span class="pet-modal-stat-icon">⭐</span>
-                        <span class="pet-modal-stat-value" id="petModalExp">0</span>
-                        <span class="pet-modal-stat-label">очков</span>
-                    </div>
-                </div>
-                <div class="pet-modal-skins">
-                    <div class="pet-modal-skins-title">🎨 Облики</div>
-                    <div class="pet-modal-skins-grid" id="petModalSkinsGrid"></div>
                 </div>
                 <div class="pet-modal-actions">
-                    <button class="pet-modal-btn daily" onclick="claimDailyBonusPet()" id="petDailyBtn">
-                        📅 Ежедневный бонус <span class="pet-modal-btn-reward">+5</span>
-                    </button>
-                    <button class="pet-modal-btn" onclick="watchAnimeForPet()">
-                        🎬 Смотреть аниме <span class="pet-modal-btn-reward">+10</span>
-                    </button>
+                    <button class="pet-modal-btn daily" onclick="claimDailyBonusPet()" id="petDailyBtn">📅 Ежедневный бонус</button>
+                    <button class="pet-modal-btn" onclick="watchAnimeForPet()">🎬 Смотреть аниме</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Футер -->
     <footer class="site-footer">
         <div class="footer-content">
             <div class="footer-column">
                 <h4>🌟 OnikaAnime</h4>
-                <p>Твой космический портал в мир аниме. Смотри, общайся и развивайся вместе с нами!</p>
+                <p>Твой космический портал в мир аниме!</p>
                 <div class="footer-social">
-                    <a href="https://t.me/onikaanime" target="_blank" title="Telegram">
-                        <svg width="24" height="24" fill="#0088cc"><use href="icons/icons.svg#icon-telegram"/></svg>
-                    </a>
-                    <a href="https://vk.com/onikaanime" target="_blank" title="VK">
-                        <svg width="24" height="24" fill="#4e80b4"><use href="icons/icons.svg#icon-vk"/></svg>
-                    </a>
-                    <a href="https://tiktok.com/@onikaanime" target="_blank" title="TikTok">
-                        <svg width="24" height="24" fill="#25f4ee"><use href="icons/icons.svg#icon-tiktok"/></svg>
-                    </a>
+                    <a href="https://t.me/onikaanime" target="_blank"><svg width="24" height="24" fill="#0088cc"><use href="icons/icons.svg#icon-telegram"/></svg></a>
+                    <a href="https://vk.com/onikaanime" target="_blank"><svg width="24" height="24" fill="#4e80b4"><use href="icons/icons.svg#icon-vk"/></svg></a>
+                    <a href="https://tiktok.com/@onikaanime" target="_blank"><svg width="24" height="24" fill="#25f4ee"><use href="icons/icons.svg#icon-tiktok"/></svg></a>
                 </div>
             </div>
-            
             <div class="footer-column">
                 <h4>📂 Разделы</h4>
                 <ul>
@@ -793,38 +643,29 @@
                     <li><a href="#" onclick="navigate('favorites');return false;">❤️ Избранное</a></li>
                     <li><a href="#" onclick="navigate('achievements');return false;">🏆 Достижения</a></li>
                     <li><a href="#" onclick="navigate('profile');return false;">👤 Профиль</a></li>
-                    <li><a href="#" onclick="navigate('settings');return false;">⚙️ Настройки</a></li>
                 </ul>
             </div>
-            
             <div class="footer-column">
                 <h4>📧 Контакты</h4>
                 <ul>
                     <li>📧 <a href="mailto:support@onikaanime.com">support@onikaanime.com</a></li>
-                    <li>📱 <a href="https://t.me/onikaanime" target="_blank">Telegram-канал</a></li>
                 </ul>
             </div>
-            
             <div class="footer-column">
                 <h4>📋 Информация</h4>
                 <ul>
-                    <li><a href="oferta.html">Публичная оферта</a></li>
-                    <li><a href="policy.html">Политика конфиденциальности</a></li>
-                    <li><a href="agreement.html">Пользовательское соглашение</a></li>
+                    <li><a href="oferta.html">Оферта</a></li>
+                    <li><a href="policy.html">Политика</a></li>
+                    <li><a href="agreement.html">Соглашение</a></li>
                     <li><a href="copyright.html">Для правообладателей</a></li>
                 </ul>
             </div>
         </div>
-        
         <div class="footer-bottom">
             <p>© 2026 OnikaAnime. Все права защищены.</p>
-            <div class="footer-links">
-                <a href="#" onclick="if(DB.get('currentUser')){deleteAccount()}else{showToast('Войдите в аккаунт', 'warning')}">Удалить аккаунт</a>
-            </div>
         </div>
     </footer>
 
-    <!-- Скрипты -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17/dist/hls.min.js"></script>
     <script src="script/storage.js"></script>
     <script src="script/api.js"></script>
