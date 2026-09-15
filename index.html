@@ -124,29 +124,27 @@
                 <!-- ===== ГЛАВНАЯ ===== -->
                 <div id="page-home">
 
-                    <section class="hero-slider-section">
-                        <div class="hero-slider-container">
-                            <div class="hero-slider" id="heroSlider">
-                                <div class="hero-slide" style="background: linear-gradient(135deg, #6c5ce7, #fd79a8);">
-                                    <div class="hero-slide-overlay"></div>
-                                    <div class="hero-slide-content">
-                                        <div class="hero-slide-badge">🔥 Горячая новинка</div>
-                                        <h2 class="hero-slide-title">Загрузка...</h2>
-                                        <p class="hero-slide-desc">Рекомендации загружаются...</p>
-                                        <button class="hero-slide-btn" onclick="randomAnime()">🎲 Смотреть сейчас</button>
-                                    </div>
-                                    <div class="hero-slide-poster" id="heroPoster">
-                                        <span style="font-size:64px;">🎬</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="hero-slider-btn hero-slider-prev" onclick="slideHero(-1)">‹</button>
-                            <button class="hero-slider-btn hero-slider-next" onclick="slideHero(1)">›</button>
-                            <div class="hero-slider-dots" id="heroDots"></div>
+                    <!-- ✅ КАРУСЕЛЬ 3D -->
+                    <section class="hero-3d-section">
+                        <div class="hero-3d-container">
+                            <div class="hero-3d-track" id="heroSlider"></div>
+                            
+                            <button class="hero-3d-nav hero-3d-prev" onclick="slideHero(-1)" aria-label="Назад">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                            <button class="hero-3d-nav hero-3d-next" onclick="slideHero(1)" aria-label="Вперёд">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
                         </div>
+                        
+                        <div class="hero-3d-dots" id="heroDots"></div>
                     </section>
 
-                    <!-- ✅ НОВЫЙ БЛОК "НЕ ЗНАЮ ЧТО ПОСМОТРЕТЬ" -->
+                    <!-- Блок "Не знаю что посмотреть" -->
                     <section class="random-section">
                         <div class="random-container">
                             <div class="random-header">
@@ -164,6 +162,7 @@
                         </div>
                     </section>
 
+                    <!-- Каталог -->
                     <section class="catalog-section">
                         <div class="catalog-header">
                             <h2 id="catalogTitle">📚 ВСЕ АНИМЕ</h2>
@@ -199,6 +198,7 @@
                         </div>
                     </section>
 
+                    <!-- Соцсети -->
                     <section class="social-section">
                         <div class="social-container">
                             <div class="social-header">
