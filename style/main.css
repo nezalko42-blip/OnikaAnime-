@@ -5048,3 +5048,188 @@ svg use {
         padding: 8px 12px;
     }
 }
+
+/* ============================================
+   ЦЕНТРИРОВАННОЕ НАЗВАНИЕ САЙТА
+   ============================================ */
+
+.header {
+    display: grid !important;
+    grid-template-columns: 60px 1fr 60px !important;
+    align-items: center !important;
+}
+
+.header-center {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 1 !important;
+}
+
+.header-left,
+.header-right {
+    display: flex !important;
+    align-items: center !important;
+    min-width: 60px !important;
+}
+
+.header-right {
+    justify-content: flex-end !important;
+}
+
+/* ✅ Название сайта — всегда видно и по центру */
+.site-title {
+    display: block !important;
+    font-size: 22px !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, #fff, var(--neon-cyan), var(--neon-purple), var(--neon-pink)) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    letter-spacing: 1.5px !important;
+    white-space: nowrap !important;
+    text-shadow: 0 0 40px rgba(0, 245, 255, 0.2);
+    animation: neonPulse 3s ease-in-out infinite;
+}
+
+@media (max-width: 480px) {
+    .site-title {
+        font-size: 18px !important;
+        letter-spacing: 1px !important;
+    }
+    
+    .header {
+        grid-template-columns: 50px 1fr 50px !important;
+    }
+    
+    .header-left,
+    .header-right {
+        min-width: 50px !important;
+    }
+}
+
+@media (max-width: 360px) {
+    .site-title {
+        font-size: 16px !important;
+    }
+}
+
+/* ============================================
+   ПАГИНАЦИЯ КАТАЛОГА
+   ============================================ */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 32px;
+    padding: 20px 0;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 245, 255, 0.1);
+    background: rgba(0, 245, 255, 0.02);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: rgba(0, 245, 255, 0.08);
+    border-color: var(--neon-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 245, 255, 0.15);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.pagination-pages {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pagination-page {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+}
+
+.pagination-page:hover:not(.active) {
+    background: rgba(0, 245, 255, 0.05);
+    border-color: rgba(0, 245, 255, 0.2);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+}
+
+.pagination-page.active {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 20px rgba(0, 245, 255, 0.25);
+    transform: scale(1.05);
+}
+
+.pagination-dots {
+    padding: 0 6px;
+    color: var(--text-muted);
+    font-size: 14px;
+    user-select: none;
+}
+
+@media (max-width: 600px) {
+    .pagination {
+        gap: 6px;
+        margin-top: 24px;
+    }
+    
+    .pagination-btn {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+    
+    .pagination-page {
+        min-width: 34px;
+        height: 34px;
+        padding: 0 8px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 380px) {
+    .pagination-btn span {
+        display: none;
+    }
+    
+    .pagination-btn {
+        padding: 8px 12px;
+    }
+}
