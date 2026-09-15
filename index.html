@@ -146,15 +146,20 @@
                         </div>
                     </section>
 
+                    <!-- ✅ НОВЫЙ БЛОК "НЕ ЗНАЮ ЧТО ПОСМОТРЕТЬ" -->
                     <section class="random-section">
                         <div class="random-container">
-                            <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:16px;">
-                                <button class="random-btn" onclick="randomAnime()">🎲 Не знаю что посмотреть?</button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('1')" style="background:linear-gradient(135deg, #e74c3c, #e17055);">⚔️ Экшен</button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('4')" style="background:linear-gradient(135deg, #f1c40f, #f39c12);">😂 Комедия</button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('22')" style="background:linear-gradient(135deg, #e84393, #fd79a8);">💕 Романтика</button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('10')" style="background:linear-gradient(135deg, #0984e3, #6c5ce7);">🧙 Фэнтези</button>
+                            <div class="random-header">
+                                <div class="random-header-icon">🎲</div>
+                                <h2 class="random-header-title">Не знаю что посмотреть?</h2>
+                                <p class="random-header-subtitle">Нажми на кнопку — мы подберём для тебя идеальное аниме</p>
                             </div>
+                            
+                            <button class="random-trigger-btn" onclick="randomAnime()">
+                                <span class="random-trigger-icon">🎬</span>
+                                <span class="random-trigger-text">Подобрать аниме</span>
+                            </button>
+
                             <div class="random-result" id="randomResult"></div>
                         </div>
                     </section>
