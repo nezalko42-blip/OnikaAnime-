@@ -1,8 +1,7 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + ПАГИНАЦИЯ (12 на стр.)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + ПАГИНАЦИЯ
 // ============================================
 
-// ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
 const allData = {};
 let currentPage = 'home';
 let previousPage = null;
@@ -20,7 +19,6 @@ let heroSliderData = [];
 let heroCurrentSlide = 0;
 let heroAutoSlideTimer = null;
 
-// ✅ ФИКСИРОВАННОЕ КОЛИЧЕСТВО НА СТРАНИЦУ
 const CATALOG_LIMIT = 12;
 
 // ===== ДОСТИЖЕНИЯ =====
@@ -283,7 +281,7 @@ function goToHeroSlide(index) {
 }
 
 // ============================================
-// 2. КАТАЛОГ (12 НА СТРАНИЦУ + ПАГИНАЦИЯ)
+// 2. КАТАЛОГ (12 НА СТРАНИЦУ)
 // ============================================
 async function loadCatalog(targetPage = null) {
     if (isLoading) return;
@@ -299,7 +297,6 @@ async function loadCatalog(targetPage = null) {
     const searchInput = document.getElementById('catalogSearchInput');
     const searchValue = searchInput ? searchInput.value.trim() : '';
     
-    // Кэш только для стр. 1 без поиска
     if (!allItems.length && !searchValue && !genre && page === 1) {
         const cachedCatalog = sessionStorage.getItem('onika_catalog_cache');
         if (cachedCatalog) {
@@ -327,7 +324,6 @@ async function loadCatalog(targetPage = null) {
     try {
         let result;
         if (searchValue && searchValue.length > 0) {
-            console.log(`🔍 Поиск: "${searchValue}", стр. ${page}`);
             result = await API.searchAnime(searchValue, page, CATALOG_LIMIT);
         } else if (genre === 'latest') {
             result = await API.getLatest(page, CATALOG_LIMIT);
@@ -344,7 +340,6 @@ async function loadCatalog(targetPage = null) {
             
             renderCatalog(allItems);
             
-            // Кэш для стр. 1
             if (!searchValue && !genre && page === 1) {
                 try {
                     sessionStorage.setItem('onika_catalog_cache', JSON.stringify({
@@ -354,7 +349,6 @@ async function loadCatalog(targetPage = null) {
                 } catch(e) {}
             }
             
-            // Статистика
             if (stats) {
                 const searchText = searchValue ? `по запросу "${searchValue}"` : '';
                 stats.textContent = searchText 
@@ -362,9 +356,7 @@ async function loadCatalog(targetPage = null) {
                     : `📄 Страница ${page}`;
             }
             
-            // ✅ Пагинация
             renderPagination(page, result.items.length);
-            
             isAllLoaded = result.items.length < CATALOG_LIMIT;
         } else {
             if (page > 1) {
@@ -454,9 +446,6 @@ function renderPagination(currentPageNum, itemsCount) {
     pagesContainer.innerHTML = pagesHtml;
 }
 
-// ============================================
-// ПЕРЕХОД НА СТРАНИЦУ
-// ============================================
 function goToPage(pageNum) {
     if (pageNum < 1 || pageNum === page) return;
     
@@ -788,9 +777,11 @@ function selectSearchSuggestion(id) {
 }
 
 // ============================================
-// 6. ОТКРЫТЬ ДЕТАЛИ
+// 6. ОТКРЫТЬ ДЕТАЛИ — ✅ ИСПРАВЛЕНО С ОБРАБОТКОЙ ОШИБОК
 // ============================================
 async function openDetail(id) {
+    console.log('📖 Открываем детали:', id);
+    
     if (!id) {
         showToast('Ошибка ID', 'error');
         return;
@@ -802,12 +793,21 @@ async function openDetail(id) {
     const titleEl = document.getElementById('detailTitle');
     if (titleEl) titleEl.textContent = 'Загрузка...';
     
+    // Показываем спиннер в postere
+    const posterEl = document.getElementById('detailPoster');
+    if (posterEl) {
+        posterEl.style.display = 'none';
+    }
+    
     try {
         const data = await API.getAnimeDetails(id);
+        console.log('📦 Данные:', data);
         
         if (!data) {
             showToast('❌ Аниме не найдено', 'error');
-            setTimeout(() => goBack(), 1500);
+            const descEl = document.getElementById('detailDesc');
+            if (descEl) descEl.textContent = 'Не удалось загрузить данные аниме.';
+            if (titleEl) titleEl.textContent = 'Ошибка загрузки';
             return;
         }
         
@@ -815,15 +815,26 @@ async function openDetail(id) {
         showDetail(data);
     } catch (e) {
         console.error('❌ Ошибка:', e);
-        if (allData[id]) showDetail(allData[id]);
+        showToast('❌ Ошибка загрузки', 'error');
+        
+        // Если есть в кэше — показываем
+        if (allData[id]) {
+            showDetail(allData[id]);
+        } else {
+            if (titleEl) titleEl.textContent = 'Ошибка загрузки';
+            const descEl = document.getElementById('detailDesc');
+            if (descEl) descEl.textContent = 'Попробуйте открыть другое аниме.';
+        }
     }
 }
 
 // ============================================
-// 7. ПОКАЗАТЬ ДЕТАЛИ
+// 7. ПОКАЗАТЬ ДЕТАЛИ — ✅ С ЗАЩИТОЙ ОТ ОШИБОК
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
+    
+    console.log('🎬 showDetail:', anime.title);
     
     const titleEl = document.getElementById('detailTitle');
     const engEl = document.getElementById('detailEng');
@@ -839,13 +850,21 @@ function showDetail(anime) {
     
     if (titleEl) titleEl.textContent = displayTitle;
     if (engEl) engEl.textContent = engTitle;
-    if (metaEl) metaEl.textContent = `${anime.year || '--'} | ${anime.episodes || '?'} эп.`;
+    
+    const year = anime.year || '--';
+    const episodes = anime.episodes || '?';
+    if (metaEl) metaEl.textContent = `${year} | ${episodes} эп.`;
+    
     if (descEl) descEl.textContent = anime.synopsis || anime.description || 'Описание отсутствует';
     
     const img = anime.images?.jpg?.image_url || '';
     if (posterEl) {
-        posterEl.src = img;
-        posterEl.style.display = img ? 'block' : 'none';
+        if (img) {
+            posterEl.src = img;
+            posterEl.style.display = 'block';
+        } else {
+            posterEl.style.display = 'none';
+        }
     }
     
     if (ageBadge) {
@@ -855,7 +874,8 @@ function showDetail(anime) {
     }
     
     if (tagsEl) {
-        tagsEl.innerHTML = (anime.genres || []).map(g => `<span class="detail-tag">${g}</span>`).join('');
+        const genres = anime.genres || [];
+        tagsEl.innerHTML = genres.map(g => `<span class="detail-tag">${g}</span>`).join('');
     }
     
     const user = DB.get('currentUser');
@@ -2067,10 +2087,9 @@ window.watchOnDeep = watchOnDeep;
 window.playSourceEpisode = playSourceEpisode;
 window.closeWatchEmbed = closeWatchEmbed;
 
-// ===== ПАГИНАЦИЯ =====
 window.goToPage = goToPage;
 window.goToPrevPage = goToPrevPage;
 window.goToNextPage = goToNextPage;
 window.renderPagination = renderPagination;
 
-console.log('✅ OnikaAnime (Shikimori + 12 на стр.) полностью загружен!');
+console.log('✅ OnikaAnime полностью загружен!');
