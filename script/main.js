@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + ПАГИНАЦИЯ
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + 3D-КАРУСЕЛЬ
 // ============================================
 
 const allData = {};
@@ -167,7 +167,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// 1. КАРУСЕЛЬ РЕКОМЕНДАЦИЙ
+// 1. КАРУСЕЛЬ РЕКОМЕНДАЦИЙ (3D)
 // ============================================
 async function loadRecommendationsForHero() {
     try {
@@ -183,12 +183,12 @@ async function loadRecommendationsForHero() {
             } catch(e) {}
         }
         
-        const recs = await API.getRecommended(6);
+        const recs = await API.getRecommended(7);
         if (recs && recs.length > 0) {
             heroSliderData = recs;
             renderHeroSlider(recs);
             startHeroAutoSlide();
-            sessionStorage.setItem('onika_hero_recs', JSON.stringify(recs.slice(0, 6)));
+            sessionStorage.setItem('onika_hero_recs', JSON.stringify(recs.slice(0, 7)));
         }
     } catch (e) {
         console.error('Ошибка загрузки рекомендаций:', e);
@@ -196,46 +196,77 @@ async function loadRecommendationsForHero() {
 }
 
 function renderHeroSlider(items) {
-    const slider = document.getElementById('heroSlider');
+    const track = document.getElementById('heroSlider');
     const dots = document.getElementById('heroDots');
-    if (!slider) return;
+    if (!track) return;
     
+    const limitedItems = items.slice(0, 7);
+    
+    heroSliderData = limitedItems;
     heroCurrentSlide = 0;
-    let slidesHtml = '';
-    let dotsHtml = '';
     
-    items.forEach((item, index) => {
+    let cardsHtml = '';
+    limitedItems.forEach((item, index) => {
         const img = item.images?.jpg?.image_url || '';
         const title = item.title || 'Без названия';
-        const genres = (item.genres || []).slice(0, 3).join(' • ');
         const year = item.year || '';
-        const id = item.id;
+        const episodes = item.episodes || '?';
         const age = item.age_rating || '0+';
-        const isActive = index === 0 ? ' active' : '';
-        const posterBg = img ? `url(${img})` : 'none';
+        const id = item.id;
         
-        slidesHtml += `
-            <div class="hero-slide${isActive}" onclick="openDetail('${id}')" style="background-image: ${posterBg};">
-                <div class="hero-slide-overlay"></div>
-                <div class="hero-slide-content">
-                    <div class="hero-slide-badge">${age} • ${year || 'Новинка'}</div>
-                    <h2 class="hero-slide-title">${title}</h2>
-                    <p class="hero-slide-desc">${genres || 'Рекомендуем к просмотру'}</p>
-                    <button class="hero-slide-btn" onclick="event.stopPropagation(); openDetail('${id}')">
-                        🎬 Смотреть сейчас
-                    </button>
-                </div>
-                <div class="hero-slide-poster">
-                    ${img ? `<img src="${img}" alt="${title}">` : '<span style="font-size:64px;">🎬</span>'}
+        cardsHtml += `
+            <div class="hero-3d-card initial" data-index="${index}" onclick="openDetail('${id}')">
+                <div class="hero-3d-card-poster" style="background-image: url('${img}');"></div>
+                <div class="hero-3d-card-age">${age}</div>
+                <div class="hero-3d-card-content">
+                    <h3 class="hero-3d-card-title">${title}</h3>
+                    <div class="hero-3d-card-info">
+                        ${year && year !== '--' ? `<span>📅 ${year}</span>` : ''}
+                        <span>📺 ${episodes}</span>
+                    </div>
                 </div>
             </div>
         `;
-        
-        dotsHtml += `<span class="hero-dot${isActive}" onclick="goToHeroSlide(${index})"></span>`;
     });
     
-    slider.innerHTML = slidesHtml;
+    let dotsHtml = '';
+    limitedItems.forEach((_, index) => {
+        dotsHtml += `<button class="hero-3d-dot${index === 0 ? ' active' : ''}" onclick="goToHeroSlide(${index})" aria-label="Слайд ${index + 1}"></button>`;
+    });
+    
+    track.innerHTML = cardsHtml;
     if (dots) dots.innerHTML = dotsHtml;
+    
+    setTimeout(() => {
+        document.querySelectorAll('.hero-3d-card.initial').forEach(c => c.classList.remove('initial'));
+    }, 1500);
+    
+    updateHeroCards();
+}
+
+function updateHeroCards() {
+    const cards = document.querySelectorAll('.hero-3d-card');
+    const dots = document.querySelectorAll('.hero-3d-dot');
+    const total = cards.length;
+    if (!total) return;
+    
+    cards.forEach((card, i) => {
+        card.classList.remove('active', 'prev', 'next', 'far-prev', 'far-next', 'hidden');
+        
+        let position = 'hidden';
+        
+        if (i === heroCurrentSlide) position = 'active';
+        else if (i === (heroCurrentSlide + 1) % total) position = 'next';
+        else if (i === (heroCurrentSlide - 1 + total) % total) position = 'prev';
+        else if (i === (heroCurrentSlide + 2) % total) position = 'far-next';
+        else if (i === (heroCurrentSlide - 2 + total) % total) position = 'far-prev';
+        
+        card.classList.add(position);
+    });
+    
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === heroCurrentSlide);
+    });
 }
 
 function startHeroAutoSlide() {
@@ -244,17 +275,12 @@ function startHeroAutoSlide() {
 }
 
 function slideHero(direction) {
-    const slides = document.querySelectorAll('.hero-slide');
-    const dots = document.querySelectorAll('.hero-dot');
-    if (!slides.length) return;
+    const cards = document.querySelectorAll('.hero-3d-card');
+    if (!cards.length) return;
     
-    slides.forEach(s => s.classList.remove('active'));
-    dots.forEach(d => d.classList.remove('active'));
+    heroCurrentSlide = (heroCurrentSlide + direction + cards.length) % cards.length;
     
-    heroCurrentSlide = (heroCurrentSlide + direction + slides.length) % slides.length;
-    
-    slides[heroCurrentSlide].classList.add('active');
-    if (dots[heroCurrentSlide]) dots[heroCurrentSlide].classList.add('active');
+    updateHeroCards();
     
     if (heroAutoSlideTimer) {
         clearInterval(heroAutoSlideTimer);
@@ -263,16 +289,11 @@ function slideHero(direction) {
 }
 
 function goToHeroSlide(index) {
-    const slides = document.querySelectorAll('.hero-slide');
-    const dots = document.querySelectorAll('.hero-dot');
-    if (!slides.length || index === heroCurrentSlide) return;
-    
-    slides.forEach(s => s.classList.remove('active'));
-    dots.forEach(d => d.classList.remove('active'));
+    const cards = document.querySelectorAll('.hero-3d-card');
+    if (!cards.length || index === heroCurrentSlide) return;
     
     heroCurrentSlide = index;
-    slides[index].classList.add('active');
-    dots[index].classList.add('active');
+    updateHeroCards();
     
     if (heroAutoSlideTimer) {
         clearInterval(heroAutoSlideTimer);
@@ -581,7 +602,7 @@ function setGenre(genreId, btn) {
 }
 
 // ============================================
-// 4. СЛУЧАЙНОЕ АНИМЕ — НОВЫЙ ДИЗАЙН
+// 4. СЛУЧАЙНОЕ АНИМЕ
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
@@ -629,9 +650,6 @@ async function randomAnime() {
     }
 }
 
-// ============================================
-// 5. КРАСИВАЯ КАРТОЧКА АНИМЕ (НОВАЯ)
-// ============================================
 function renderRandomCard(anime) {
     const img = anime.images?.jpg?.image_url || '';
     const title = anime.title || 'Без названия';
@@ -684,7 +702,7 @@ function getAgeColor(age) {
 }
 
 // ============================================
-// 6. АВТОДОПОЛНЕНИЕ
+// 5. АВТОДОПОЛНЕНИЕ
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('catalogSearchInput');
@@ -755,7 +773,7 @@ function selectSearchSuggestion(id) {
 }
 
 // ============================================
-// 7. ОТКРЫТЬ ДЕТАЛИ
+// 6. ОТКРЫТЬ ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
     console.log('📖 Открываем детали:', id);
@@ -805,7 +823,7 @@ async function openDetail(id) {
 }
 
 // ============================================
-// 8. ПОКАЗАТЬ ДЕТАЛИ
+// 7. ПОКАЗАТЬ ДЕТАЛИ
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
@@ -869,7 +887,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 9. KODI МОДАЛЬНОЕ ОКНО
+// 8. KODI МОДАЛЬНОЕ ОКНО
 // ============================================
 function openKodiModal() {
     let modal = document.getElementById('kodiModal');
@@ -918,7 +936,7 @@ function openKodiModal() {
 }
 
 // ============================================
-// 10. ПРОСМОТР ИСТОЧНИКОВ
+// 9. ПРОСМОТР ИСТОЧНИКОВ
 // ============================================
 function getCurrentAnimeTitle() {
     const titleEl = document.getElementById('detailTitle');
@@ -1120,7 +1138,7 @@ function closeWatchEmbed() {
 }
 
 // ============================================
-// 11. КОММЕНТАРИИ
+// 10. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1204,7 +1222,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 12. ИЗБРАННОЕ
+// 11. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1275,7 +1293,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 13. ДОСТИЖЕНИЯ
+// 12. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1362,7 +1380,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 14. ПРОФИЛЬ
+// 13. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1646,7 +1664,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 15. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 14. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1739,7 +1757,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 16. АВАТАР
+// 15. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) { showToast('Выберите файл!', 'error'); return; }
@@ -1767,7 +1785,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 17. TOAST
+// 16. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1793,7 +1811,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 18. МОДАЛЬНЫЕ ОКНА
+// 17. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1846,7 +1864,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 19. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 18. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1928,7 +1946,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 20. ВОССТАНОВЛЕНИЕ
+// 19. ВОССТАНОВЛЕНИЕ
 // ============================================
 function restoreAllData() {
     const user = DB.get('currentUser');
@@ -1947,7 +1965,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 21. СОЦСЕТИ
+// 20. СОЦСЕТИ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -1964,7 +1982,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 22. МОИ КОММЕНТАРИИ
+// 21. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2001,10 +2019,10 @@ function renderMyComments() {
 }
 
 // ============================================
-// 23. ЗАПУСК
+// 22. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🌟 OnikaAnime (Shikimori + 12 на стр.) загружается...');
+    console.log('🌟 OnikaAnime (Shikimori + 3D карусель) загружается...');
     restoreAllData();
     updateUI();
     navigate('home');
@@ -2015,7 +2033,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 24. ЭКСПОРТ
+// 23. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2054,6 +2072,7 @@ window.clearCatalogSearch = clearCatalogSearch;
 window.setGenre = setGenre;
 window.slideHero = slideHero;
 window.goToHeroSlide = goToHeroSlide;
+window.updateHeroCards = updateHeroCards;
 window.changeBanner = changeBanner;
 window.addActivity = addActivity;
 window.saveContinueWatching = saveContinueWatching;
