@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME — СЕРВЕР (SHIKIMORI PROXY)
+// ONIKAANIME — СЕРВЕР (SHIKIMORI PROXY + REST)
 // ============================================
 
 require('dotenv').config();
@@ -36,7 +36,7 @@ pool.connect((err, client, release) => {
 });
 
 // ============================================
-// ПРОКСИ SHIKIMORI — ПРАВИЛЬНЫЕ ЗАГОЛОВКИ
+// ПРОКСИ SHIKIMORI GraphQL
 // ============================================
 app.post('/api/shikimori', async (req, res) => {
     try {
@@ -45,7 +45,7 @@ app.post('/api/shikimori', async (req, res) => {
             return res.status(400).json({ error: 'Query обязателен' });
         }
 
-        console.log('📡 Shikimori запрос:', query.slice(0, 100).replace(/\s+/g, ' '));
+        console.log('📡 Shikimori GraphQL:', query.slice(0, 80).replace(/\s+/g, ' '));
 
         const response = await fetch('https://shikimori.one/api/graphql', {
             method: 'POST',
@@ -59,7 +59,7 @@ app.post('/api/shikimori', async (req, res) => {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('❌ Shikimori HTTP', response.status, errorText.slice(0, 300));
+            console.error('❌ Shikimori GraphQL HTTP', response.status, errorText.slice(0, 200));
             return res.status(response.status).json({ 
                 error: 'Shikimori: ' + response.status 
             });
@@ -68,14 +68,48 @@ app.post('/api/shikimori', async (req, res) => {
         const data = await response.json();
         
         if (data.errors) {
-            console.error('❌ Shikimori errors:', JSON.stringify(data.errors).slice(0, 300));
+            console.error('❌ GraphQL errors:', JSON.stringify(data.errors).slice(0, 200));
         } else {
-            console.log('✅ Shikimori OK');
+            console.log('✅ GraphQL OK');
         }
         
         res.json(data);
     } catch (err) {
         console.error('❌ Shikimori прокси ошибка:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// ПРОКСИ SHIKIMORI REST API (для деталей с описанием)
+// ============================================
+app.get('/api/shikimori-rest/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        if (!id || !/^\d+$/.test(id)) {
+            return res.status(400).json({ error: 'Неверный ID' });
+        }
+        
+        console.log('📡 Shikimori REST запрос для ID:', id);
+        
+        const response = await fetch(`https://shikimori.one/api/animes/${id}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'OnikaAnime/1.0 (https://onikaanime.relaxdev.ru)'
+            }
+        });
+        
+        if (!response.ok) {
+            console.error('❌ Shikimori REST HTTP', response.status);
+            return res.status(response.status).json({ error: 'Shikimori: ' + response.status });
+        }
+        
+        const data = await response.json();
+        console.log('✅ REST OK:', data.russian || data.name);
+        res.json(data);
+    } catch (err) {
+        console.error('❌ Shikimori REST ошибка:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
