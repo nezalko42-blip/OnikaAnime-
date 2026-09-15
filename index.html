@@ -10,43 +10,25 @@
     <meta name="description" content="OnikaAnime - Космический портал в мир аниме. Смотри аниме онлайн, общайся и развивайся!">
     <meta name="keywords" content="аниме, смотреть аниме, онлайн, anime, onikaanime">
     
-    <!-- ===== FAVICON И ИКОНКИ ДЛЯ ЗАКЛАДОК ===== -->
+    <!-- ===== FAVICON ===== -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-    <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-57x57.png">
-    <link rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon-60x60.png">
-    <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-72x72.png">
-    <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png">
-    <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114x114.png">
-    <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144x144.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png">
-    <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png">
     
-    <!-- ===== ДЛЯ ANDROID (Chrome) ===== -->
+    <!-- ===== ДЛЯ ANDROID / iOS ===== -->
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#6c5ce7">
-    
-    <!-- ===== ДЛЯ iOS ===== -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="OnikaAnime">
-    
-    <!-- ===== ДЛЯ WINDOWS PHONE ===== -->
     <meta name="msapplication-TileColor" content="#6c5ce7">
     <meta name="msapplication-TileImage" content="/icon-192.png">
-    <meta name="msapplication-navbutton-color" content="#6c5ce7">
     
     <!-- ===== OPENGRAPH ===== -->
     <meta property="og:title" content="OnikaAnime - Космический портал в мир аниме" />
     <meta property="og:description" content="Смотри аниме онлайн, общайся, получай достижения и развивайся вместе с OnikaAnime!" />
     <meta property="og:image" content="https://onikaanime.relaxdev.ru/og-image.jpg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
     <meta property="og:url" content="https://onikaanime.relaxdev.ru/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="OnikaAnime" />
@@ -149,6 +131,7 @@
 
                 <!-- ===== ГЛАВНАЯ ===== -->
                 <div id="page-home">
+
                     <!-- Карусель -->
                     <section class="hero-slider-section">
                         <div class="hero-slider-container">
@@ -178,7 +161,7 @@
                             <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:16px;">
                                 <button class="random-btn" onclick="randomAnime()">🎲 Не знаю что посмотреть?</button>
                                 <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('1')" style="background:linear-gradient(135deg, #e74c3c, #e17055);">⚔️ Экшен</button>
-                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('21')" style="background:linear-gradient(135deg, #f1c40f, #f39c12);">😂 Комедия</button>
+                                <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('4')" style="background:linear-gradient(135deg, #f1c40f, #f39c12);">😂 Комедия</button>
                                 <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('22')" style="background:linear-gradient(135deg, #e84393, #fd79a8);">💕 Романтика</button>
                                 <button class="random-btn random-btn-secondary" onclick="randomAnimeByGenre('10')" style="background:linear-gradient(135deg, #0984e3, #6c5ce7);">🧙 Фэнтези</button>
                             </div>
@@ -189,9 +172,10 @@
                     <!-- Каталог -->
                     <section class="catalog-section">
                         <div class="catalog-header">
-                            <h2>📚 ВСЕ АНИМЕ</h2>
+                            <h2 id="catalogTitle">📚 ВСЕ АНИМЕ</h2>
                         </div>
 
+                        <!-- Поиск -->
                         <div class="catalog-search-row">
                             <div class="catalog-search-wrapper">
                                 <span class="catalog-search-icon">🔍</span>
@@ -200,6 +184,7 @@
                             </div>
                         </div>
 
+                        <!-- Фильтр -->
                         <div class="filter-toggle-wrapper">
                             <button class="filter-toggle-btn" onclick="toggleFilterPanel()">
                                 <span id="filterToggleIcon">🔽</span>
@@ -210,29 +195,12 @@
                         <div class="filter-panel" id="filterPanel" style="display:none;">
                             <div class="filter-row">
                                 <div class="filter-group">
-                                    <label>📅 Год</label>
-                                    <div class="filter-year-group">
-                                        <input type="number" id="filterYearFrom" placeholder="От" class="filter-input-small" min="1900" max="2100" onchange="applyCatalogFilters()">
-                                        <span>—</span>
-                                        <input type="number" id="filterYearTo" placeholder="До" class="filter-input-small" min="1900" max="2100" onchange="applyCatalogFilters()">
-                                    </div>
-                                </div>
-                                <div class="filter-group">
                                     <label>📊 Сортировка</label>
                                     <select id="filterSorting" class="filter-select" onchange="applyCatalogFilters()">
-                                        <option value="CREATED_AT_DESC">Новинки</option>
-                                        <option value="FRESH_AT_DESC">Свежие</option>
-                                        <option value="RATING_DESC">Популярные</option>
-                                        <option value="TITLE_ASC">По алфавиту</option>
-                                    </select>
-                                </div>
-                                <div class="filter-group">
-                                    <label>📦 Количество</label>
-                                    <select id="filterLimit" class="filter-select" onchange="applyCatalogFilters()">
-                                        <option value="24">24</option>
-                                        <option value="48">48</option>
-                                        <option value="96">96</option>
-                                        <option value="0">Все</option>
+                                        <option value="popularity">🔥 Популярные</option>
+                                        <option value="ranked">⭐ По рейтингу</option>
+                                        <option value="aired_on">🆕 Новые</option>
+                                        <option value="name">🔤 По алфавиту</option>
                                     </select>
                                 </div>
                                 <button class="filter-reset-btn" onclick="resetCatalogFilters()">✕ Сбросить фильтры</button>
@@ -248,25 +216,34 @@
                                     </div>
                                     <div class="filter-category-body" id="filterGenres"></div>
                                 </div>
-                                <div class="filter-category">
-                                    <div class="filter-category-header" onclick="toggleCategory(this)">
-                                        <span>🔞 Возраст</span>
-                                        <span class="filter-category-arrow">▼</span>
-                                    </div>
-                                    <div class="filter-category-body" id="filterAgeRatings"></div>
-                                </div>
                             </div>
                         </div>
 
+                        <!-- Статистика -->
                         <div class="catalog-stats" id="catalogStats">
                             <span id="totalCount"></span>
                         </div>
 
+                        <!-- Сетка каталога -->
                         <div class="grid" id="grid">
-                            <div style="text-align:center;padding:40px;color:#888;"><div class="spinner-small"></div><br>⏳ Загрузка каталога...</div>
+                            <div style="text-align:center;padding:40px;color:#888;grid-column:1/-1;">
+                                <div class="spinner-small"></div>
+                                <br>⏳ Загрузка каталога...
+                            </div>
                         </div>
                         
-                        <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreCatalog()" style="display:none;">📥 Загрузить ещё</button>
+                        <!-- ✅ ПАГИНАЦИЯ -->
+                        <div class="pagination" id="pagination" style="display:none;">
+                            <button class="pagination-btn" id="prevPageBtn" onclick="goToPrevPage()">
+                                ‹ <span>Назад</span>
+                            </button>
+                            
+                            <div class="pagination-pages" id="paginationPages"></div>
+                            
+                            <button class="pagination-btn" id="nextPageBtn" onclick="goToNextPage()">
+                                <span>Вперёд</span> ›
+                            </button>
+                        </div>
                     </section>
 
                     <!-- Соцсети -->
@@ -391,45 +368,45 @@
                         </div>
                     </div>
 
-                    <!-- ===== ГДЕ СМОТРЕТЬ ===== -->
+                    <!-- Где смотреть -->
                     <div class="watch-section" id="watchSection">
                         <div class="watch-header">
                             <h3>🎬 Где смотреть</h3>
-                            <p>Выберите удобный источник для просмотра</p>
+                            <p>Выберите источник для просмотра</p>
                         </div>
                         
                         <div class="watch-grid">
-                            <a href="https://vk.ru/deep" target="_blank" rel="noopener" class="watch-card watch-vk">
+                            <button onclick="watchOnVK()" class="watch-card watch-vk">
                                 <div class="watch-icon">
                                     <svg width="40" height="40" fill="#4e80b4" viewBox="0 0 24 24">
                                         <path d="M13.162 18.994c.609 0 .858-.406.851-.915-.031-1.917.714-2.949 2.059-1.604 1.488 1.488 1.796 2.519 3.603 2.519h3.2c.808 0 1.126-.26 1.126-.668 0-.863-1.421-2.386-2.625-3.504-1.686-1.565-1.765-1.602-.313-3.486 1.801-2.339 4.157-5.336 2.073-5.336h-3.981c-.772 0-.828.435-1.103 1.083-.995 2.347-2.886 5.387-3.604 4.922-.751-.485-.407-2.406-.35-5.261.015-.754.011-1.271-1.141-1.539-.629-.145-1.241-.205-1.809-.205-2.273 0-3.841.953-2.95 1.119 1.571.293 1.42 3.692 1.054 5.16-.638 2.556-3.036-2.024-4.035-4.305-.241-.548-.315-.974-1.175-.974H.787c-.492 0-.787.16-.787.516 0 .602 2.96 6.72 5.786 9.77 2.756 2.975 5.48 2.708 7.376 2.708z"/>
                                     </svg>
                                 </div>
                                 <div class="watch-content">
-                                    <h4>VK Сообщество DEEP</h4>
-                                    <p>Официальное сообщество с озвучкой</p>
+                                    <h4>VK Video — DEEP</h4>
+                                    <p>Озвучка от студии DEEP</p>
                                     <div class="watch-tags">
-                                        <span>🎙️ Озвучка</span>
+                                        <span>🎙️ Дубляж</span>
                                         <span>🔥 287K подписчиков</span>
                                     </div>
                                 </div>
                                 <div class="watch-arrow">→</div>
-                            </a>
+                            </button>
 
-                            <a href="https://deep-ent.ru/" target="_blank" rel="noopener" class="watch-card watch-deep">
+                            <button onclick="watchOnDeep()" class="watch-card watch-deep">
                                 <div class="watch-icon">
                                     <span style="font-size:36px;">🎬</span>
                                 </div>
                                 <div class="watch-content">
                                     <h4>DEEP Entertainment</h4>
-                                    <p>Официальный сайт с онлайн-просмотром</p>
+                                    <p>Официальный сайт с озвучкой</p>
                                     <div class="watch-tags">
                                         <span>✅ Без рекламы</span>
                                         <span>📺 HD качество</span>
                                     </div>
                                 </div>
                                 <div class="watch-arrow">→</div>
-                            </a>
+                            </button>
 
                             <button onclick="openKodiModal()" class="watch-card watch-kodi">
                                 <div class="watch-icon">
@@ -446,9 +423,11 @@
                                 <div class="watch-arrow">→</div>
                             </button>
                         </div>
+
+                        <div id="watchEmbedContainer" class="watch-embed-container" style="display:none;"></div>
                     </div>
 
-                    <!-- ===== КОММЕНТАРИИ ===== -->
+                    <!-- Комментарии -->
                     <div class="comments-section">
                         <h3>💬 Комментарии</h3>
                         <div class="comment-form">
@@ -765,7 +744,6 @@
         </div>
     </div>
 
-    <!-- Модалка питомца -->
     <div class="modal" id="petModal">
         <div class="modal-box pet-modal-box">
             <button class="modal-close" onclick="closePetModal()">
