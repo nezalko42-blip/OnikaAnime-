@@ -36,7 +36,7 @@ pool.connect((err, client, release) => {
 });
 
 // ============================================
-// ПРОКСИ SHIKIMORI GraphQL
+// ПРОКСИ SHIKIMORI GraphQL (каталог, поиск)
 // ============================================
 app.post('/api/shikimori', async (req, res) => {
     try {
@@ -81,7 +81,7 @@ app.post('/api/shikimori', async (req, res) => {
 });
 
 // ============================================
-// ПРОКСИ SHIKIMORI REST API (для деталей с описанием)
+// ПРОКСИ SHIKIMORI REST API (детали с описанием)
 // ============================================
 app.get('/api/shikimori-rest/:id', async (req, res) => {
     try {
