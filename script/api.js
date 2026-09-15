@@ -76,7 +76,7 @@ const API = {
         if (!data || !data.animes) return { items: [], totalPages: 1, totalCount: 0 };
         
         const items = data.animes.map(a => this._convertAnime(a));
-        return { items: items, totalPages: 1, totalCount: items.length };
+        return { items, totalPages: 1, totalCount: items.length };
     },
 
     // ============================================
@@ -108,7 +108,7 @@ const API = {
         if (!data || !data.animes) return { items: [], totalPages: 1, totalCount: 0 };
         
         const items = data.animes.map(a => this._convertAnime(a));
-        return { items: items, totalPages: 1, totalCount: items.length };
+        return { items, totalPages: 1, totalCount: items.length };
     },
 
     // ============================================
@@ -138,7 +138,7 @@ const API = {
         if (!data || !data.animes) return { items: [], totalPages: 1, totalCount: 0 };
         
         const items = data.animes.map(a => this._convertAnime(a));
-        return { items: items, totalPages: 1, totalCount: items.length };
+        return { items, totalPages: 1, totalCount: items.length };
     },
 
     // ============================================
@@ -173,7 +173,7 @@ const API = {
         if (!data || !data.animes) return { items: [], totalPages: 1, totalCount: 0 };
         
         const items = data.animes.map(a => this._convertAnime(a));
-        return { items: items, totalPages: 1, totalCount: items.length };
+        return { items, totalPages: 1, totalCount: items.length };
     },
 
     // ============================================
@@ -207,21 +207,21 @@ const API = {
     },
 
     // ============================================
-    // 6. ДЕТАЛИ — ✅ ИСПРАВЛЕНО (без videos/screenshots/externalLinks)
+    // 6. ДЕТАЛИ — ✅ МИНИМАЛЬНЫЙ БЕЗОПАСНЫЙ ЗАПРОС
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
+        console.log('🔍 Запрос деталей для ID:', cleanId);
         
+        // ✅ Только базовые поля — 100% поддерживаются
         const query = `{
             anime(id: ${cleanId}) {
                 id
                 malId
                 name
                 russian
-                licenseNameRu
                 english
                 japanese
-                synonyms
                 kind
                 rating
                 score
@@ -229,33 +229,29 @@ const API = {
                 episodes
                 episodesAired
                 duration
-                airedOn { year month day date }
-                releasedOn { year month day date }
+                description
                 url
                 season
-                description
-                descriptionHtml
-                descriptionSource
-                poster { id originalUrl mainUrl }
+                airedOn { year month day date }
+                poster { originalUrl mainUrl }
                 genres { id name russian kind }
-                studios { id name imageUrl }
-                related {
-                    id
-                    anime { id name russian }
-                    relationKind
-                    relationText
-                }
-                scoresStats { score count }
-                statusesStats { status count }
+                studios { id name }
             }
         }`;
         
         const data = await this._graphql(query, false);
-        if (!data || !data.anime) {
-            console.warn('⚠️ Детали аниме не получены для id:', cleanId);
+        
+        if (!data) {
+            console.error('❌ data = null');
             return null;
         }
         
+        if (!data.anime) {
+            console.error('❌ data.anime отсутствует:', JSON.stringify(data).slice(0, 200));
+            return null;
+        }
+        
+        console.log('✅ Детали получены:', data.anime.russian || data.anime.name);
         return this._convertAnimeDetails(data.anime);
     },
 
@@ -314,10 +310,9 @@ const API = {
     },
 
     // ============================================
-    // 9. ЖАНРЫ (возвращает статический список)
+    // 9. ЖАНРЫ
     // ============================================
     async getGenres() {
-        // ✅ Статический список популярных жанров Shikimori
         return [
             { id: 1, name: 'Экшен', icon: '⚔️' },
             { id: 2, name: 'Приключения', icon: '🗺️' },
@@ -330,33 +325,23 @@ const API = {
             { id: 37, name: 'Триллер', icon: '🔪' },
             { id: 14, name: 'Ужасы', icon: '👻' },
             { id: 30, name: 'Спорт', icon: '⚽' },
-            { id: 39, name: 'Детектив', icon: '🔍' },
-            { id: 40, name: 'Психологическое', icon: '🧠' },
-            { id: 13, name: 'Историческое', icon: '🏯' },
-            { id: 42, name: 'Музыка', icon: '🎵' },
-            { id: 18, name: 'Меха', icon: '🤖' },
-            { id: 25, name: 'Сёдзё', icon: '🌸' },
-            { id: 27, name: 'Сёнен', icon: '👊' },
-            { id: 41, name: 'Сэйнэн', icon: '🍺' }
+            { id: 39, name: 'Детектив', icon: '🔍' }
         ];
     },
 
-    // ============================================
-    // 10. ВОЗРАСТНЫЕ РЕЙТИНГИ
-    // ============================================
     async getAgeRatings() {
         return [
             { value: 'g', label: 'G — Для всех' },
             { value: 'pg', label: 'PG — Дети' },
             { value: 'pg_13', label: 'PG-13 — 13+' },
             { value: 'r', label: 'R — 17+' },
-            { value: 'r_plus', label: 'R+ — 17+ (насилие)' },
+            { value: 'r_plus', label: 'R+ — 17+' },
             { value: 'rx', label: 'Rx — 18+' }
         ];
     },
 
     // ============================================
-    // 11. СОВМЕСТИМОСТЬ
+    // 10. СОВМЕСТИМОСТЬ
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
         if (query && query.length > 1) return await this.searchAnime(query, page, 12);
@@ -371,20 +356,8 @@ const API = {
     async getShikimoriTitle() { return null; },
 
     // ============================================
-    // 12. КОНВЕРТАЦИЯ
+    // 11. КОНВЕРТАЦИЯ
     // ============================================
-    _getGenreIcon(name) {
-        const icons = {
-            'Экшен': '⚔️', 'Приключения': '🗺️', 'Комедия': '😂', 'Драма': '🎭',
-            'Фэнтези': '🧙', 'Романтика': '💕', 'Фантастика': '🚀',
-            'Повседневность': '🏠', 'Триллер': '🔪', 'Ужасы': '👻',
-            'Мистика': '🔮', 'Спорт': '⚽', 'Детектив': '🔍',
-            'Психологическое': '🧠', 'Историческое': '🏯', 'Музыка': '🎵',
-            'Меха': '🤖', 'Сёдзё': '🌸', 'Сёнен': '👊', 'Сэйнэн': '🍺'
-        };
-        return icons[name] || '📚';
-    },
-
     _convertAnime(a) {
         let title = a.russian || a.name || 'Без названия';
         let poster = '';
@@ -441,21 +414,16 @@ const API = {
         const base = this._convertAnime(a);
         
         let description = a.description || '';
-        if (!description && a.descriptionHtml) {
-            description = a.descriptionHtml.replace(/<[^>]*>/g, '').trim();
-        }
+        // Убираем HTML-теги
+        description = description.replace(/<[^>]*>/g, '').trim();
         
         base.synopsis = description || 'Описание отсутствует';
         base.description = description;
         base.title_japanese = a.japanese || '';
-        base.licenseNameRu = a.licenseNameRu || '';
-        base.synonyms = a.synonyms || [];
         base.studios = (a.studios || []).map(s => s.name);
-        base.related = a.related || [];
         base.rating = a.rating || '';
         base.url = a.url || `https://shikimori.one/animes/${a.id}`;
         base.airedOn = a.airedOn || {};
-        base.releasedOn = a.releasedOn || {};
         base.season = a.season || '';
         
         return base;
