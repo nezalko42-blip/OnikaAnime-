@@ -1,5 +1,5 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME — SHIKIMORI GRAPHQL (ФИНАЛ)
+// API МОДУЛЬ ONIKAANIME — SHIKIMORI GRAPHQL
 // ============================================
 
 const API = {
@@ -207,102 +207,64 @@ const API = {
     },
 
     // ============================================
-    // 6. ДЕТАЛИ — ИСПРАВЛЕНО (по ID, потом по названию)
+    // 6. ДЕТАЛИ — ✅ ТОЛЬКО ПО ID, БЕЗ ПОИСКА ПО НАЗВАНИЮ!
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
-        console.log('🔍 Детали:', id, '(ID:', cleanId + ')');
+        console.log('🔍 Детали для ID:', cleanId);
         
-        // Получаем данные из кэша каталога
-        const cached = allData[id];
-        
-        // ✅ ПЕРВАЯ ПОПЫТКА: по ID (anime(id: X))
-        if (cleanId && /^\d+$/.test(cleanId)) {
-            try {
-                const query = `{
-                    anime(id: ${cleanId}) {
-                        id
-                        malId
-                        name
-                        russian
-                        english
-                        japanese
-                        kind
-                        rating
-                        score
-                        status
-                        episodes
-                        episodesAired
-                        duration
-                        description
-                        url
-                        season
-                        airedOn { year month day date }
-                        poster { originalUrl mainUrl }
-                        genres { id name russian kind }
-                        studios { id name }
-                    }
-                }`;
-                
-                const data = await this._graphql(query, false);
-                
-                if (data && data.anime && (data.anime.russian || data.anime.name)) {
-                    console.log('✅ По ID:', data.anime.russian || data.anime.name);
-                    return this._convertAnimeDetails(data.anime);
-                }
-            } catch (e) {
-                console.warn('⚠️ По ID не сработало');
-            }
+        // ✅ ВСЕГДА по ID — это точный поиск!
+        if (!cleanId || !/^\d+$/.test(cleanId)) {
+            console.error('❌ Неверный ID:', cleanId);
+            return null;
         }
         
-        // ✅ ВТОРАЯ ПОПЫТКА: по названию из кэша
-        if (cached) {
-            const searchTitle = cached.title_russian || cached.title;
-            
-            if (searchTitle && searchTitle.length > 1) {
-                try {
-                    const searchQuery = `{
-                        animes(search: ${JSON.stringify(searchTitle)}, limit: 1) {
-                            id
-                            malId
-                            name
-                            russian
-                            english
-                            japanese
-                            kind
-                            rating
-                            score
-                            status
-                            episodes
-                            episodesAired
-                            duration
-                            description
-                            url
-                            season
-                            airedOn { year month day date }
-                            poster { originalUrl mainUrl }
-                            genres { id name russian kind }
-                            studios { id name }
-                        }
-                    }`;
-                    
-                    const data = await this._graphql(searchQuery, false);
-                    
-                    if (data && data.animes && data.animes[0] && (data.animes[0].russian || data.animes[0].name)) {
-                        console.log('✅ По названию:', data.animes[0].russian || data.animes[0].name);
-                        return this._convertAnimeDetails(data.animes[0]);
-                    }
-                } catch (e) {
-                    console.warn('⚠️ По названию не сработало');
+        try {
+            const query = `{
+                anime(id: ${cleanId}) {
+                    id
+                    malId
+                    name
+                    russian
+                    english
+                    japanese
+                    kind
+                    rating
+                    score
+                    status
+                    episodes
+                    episodesAired
+                    duration
+                    description
+                    url
+                    season
+                    airedOn { year month day date }
+                    poster { originalUrl mainUrl }
+                    genres { id name russian kind }
+                    studios { id name }
                 }
+            }`;
+            
+            const data = await this._graphql(query, false);
+            
+            if (data && data.anime && (data.anime.russian || data.anime.name)) {
+                console.log('✅ Найдено:', data.anime.russian || data.anime.name);
+                return this._convertAnimeDetails(data.anime);
             }
             
-            // ✅ ТРЕТЬЯ ПОПЫТКА: возвращаем данные из каталога
-            console.log('⚠️ Возвращаем данные из каталога');
+            console.warn('⚠️ Не найдено по ID, используем кэш каталога');
+        } catch (e) {
+            console.warn('⚠️ Ошибка запроса:', e.message);
+        }
+        
+        // Fallback: возвращаем данные из каталога (если открывали из каталога)
+        const cached = allData[id];
+        if (cached) {
+            console.log('⚠️ Fallback: данные из каталога');
             return cached;
         }
         
-        console.error('❌ Детали не найдены');
+        console.error('❌ Детали не найдены для:', id);
         return null;
     },
 
