@@ -124,7 +124,6 @@
                 <!-- ===== ГЛАВНАЯ ===== -->
                 <div id="page-home">
 
-                    <!-- ✅ КАРУСЕЛЬ 3D -->
                     <section class="hero-3d-section">
                         <div class="hero-3d-container">
                             <div class="hero-3d-track" id="heroSlider"></div>
@@ -144,7 +143,6 @@
                         <div class="hero-3d-dots" id="heroDots"></div>
                     </section>
 
-                    <!-- Блок "Не знаю что посмотреть" -->
                     <section class="random-section">
                         <div class="random-container">
                             <div class="random-header">
@@ -162,7 +160,6 @@
                         </div>
                     </section>
 
-                    <!-- Каталог -->
                     <section class="catalog-section">
                         <div class="catalog-header">
                             <h2 id="catalogTitle">📚 ВСЕ АНИМЕ</h2>
@@ -198,7 +195,6 @@
                         </div>
                     </section>
 
-                    <!-- Соцсети -->
                     <section class="social-section">
                         <div class="social-container">
                             <div class="social-header">
@@ -343,20 +339,88 @@
                     </div>
                 </div>
 
-                <!-- ===== ИЗБРАННОЕ ===== -->
+                <!-- ===== ИЗБРАННОЕ (v2.0) ===== -->
                 <div id="page-favorites" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">
-                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
-                        Назад
-                    </span>
-                    <div class="list-page-header">
-                        <span class="icon"><svg width="40" height="40"><use href="icons/icons.svg#icon-favorites"/></svg></span>
-                        <h2>❤️ Избранное</h2>
-                        <div class="count" id="favCount">0 аниме</div>
+                    
+                    <div class="fav-header">
+                        <div class="fav-header-left">
+                            <div class="fav-header-icon">❤️</div>
+                            <div>
+                                <h1 class="fav-header-title">Избранное</h1>
+                                <p class="fav-header-subtitle">Твоя коллекция любимых аниме</p>
+                            </div>
+                        </div>
+                        <div class="fav-header-actions">
+                            <button class="fav-action-btn" onclick="toggleFavView()" id="favViewBtn" title="Переключить вид">
+                                📋 Список
+                            </button>
+                            <button class="fav-action-btn" onclick="randomFromFav()" title="Случайное из избранного">
+                                🎲 Случайное
+                            </button>
+                            <button class="fav-action-btn danger" onclick="toggleMassMode()" id="favMassBtn" title="Массовое выделение">
+                                ☑️ Выбрать
+                            </button>
+                        </div>
                     </div>
-                    <div class="anime-grid" id="favGrid">
-                        <div class="empty-state"><span class="empty-icon">💔</span><p>У вас нет избранных аниме</p></div>
+
+                    <div class="fav-stats">
+                        <div class="fav-stat-card">
+                            <div class="fav-stat-icon">❤️</div>
+                            <div class="fav-stat-value" id="favStatTotal">0</div>
+                            <div class="fav-stat-label">Всего аниме</div>
+                        </div>
+                        <div class="fav-stat-card">
+                            <div class="fav-stat-icon">🎭</div>
+                            <div class="fav-stat-value" id="favStatGenres">0</div>
+                            <div class="fav-stat-label">Жанров</div>
+                        </div>
+                        <div class="fav-stat-card">
+                            <div class="fav-stat-icon">📺</div>
+                            <div class="fav-stat-value" id="favStatEpisodes">0</div>
+                            <div class="fav-stat-label">Серий</div>
+                        </div>
+                        <div class="fav-stat-card">
+                            <div class="fav-stat-icon">⭐</div>
+                            <div class="fav-stat-value" id="favStatScore">—</div>
+                            <div class="fav-stat-label">Средний балл</div>
+                        </div>
                     </div>
+
+                    <div class="fav-controls">
+                        <div class="fav-search-wrapper">
+                            <span class="fav-search-icon">🔍</span>
+                            <input type="text" id="favSearchInput" placeholder="Поиск по избранному..." class="fav-search-input" oninput="filterFavorites()">
+                            <button class="fav-search-clear" id="favSearchClear" onclick="clearFavSearch()" style="display:none;">✕</button>
+                        </div>
+                        
+                        <div class="fav-sort-wrapper">
+                            <select id="favSortSelect" class="fav-sort-select" onchange="filterFavorites()">
+                                <option value="added_desc">📅 Недавно добавленные</option>
+                                <option value="added_asc">📅 Старые сначала</option>
+                                <option value="title_asc">🔤 А-Я</option>
+                                <option value="title_desc">🔤 Я-А</option>
+                                <option value="score_desc">⭐ По рейтингу ↓</option>
+                                <option value="score_asc">⭐ По рейтингу ↑</option>
+                                <option value="episodes_desc">📺 По сериям ↓</option>
+                                <option value="episodes_asc">📺 По сериям ↑</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="fav-mass-panel" id="favMassPanel" style="display:none;">
+                        <div class="fav-mass-info">
+                            Выбрано: <strong id="favMassCount">0</strong>
+                        </div>
+                        <div class="fav-mass-actions">
+                            <button class="fav-mass-btn" onclick="selectAllFav()">Выбрать все</button>
+                            <button class="fav-mass-btn" onclick="deselectAllFav()">Снять всё</button>
+                            <button class="fav-mass-btn danger" onclick="deleteSelectedFav()">🗑 Удалить</button>
+                            <button class="fav-mass-btn cancel" onclick="toggleMassMode()">Отмена</button>
+                        </div>
+                    </div>
+
+                    <div id="favGrouped"></div>
+
                 </div>
 
                 <!-- ===== ДОСТИЖЕНИЯ ===== -->
