@@ -408,6 +408,9 @@ async function loadCatalog() {
     }
 }
 
+// ============================================
+// ЗАГРУЗКА ДОПОЛНИТЕЛЬНЫХ
+// ============================================
 async function loadMoreCatalog() {
     if (isLoading || isAllLoaded) return;
     isLoading = true;
@@ -479,13 +482,11 @@ async function loadMoreCatalog() {
     }
 }
 
+// ============================================
+// ФИЛЬТРЫ
+// ============================================
 function getCatalogFilters() {
     const filters = {};
-    
-    const yearFrom = document.getElementById('filterYearFrom');
-    const yearTo = document.getElementById('filterYearTo');
-    if (yearFrom && yearFrom.value) filters.year_from = parseInt(yearFrom.value);
-    if (yearTo && yearTo.value) filters.year_to = parseInt(yearTo.value);
     
     const genreChecks = document.querySelectorAll('#filterGenres input:checked');
     if (genreChecks.length) {
@@ -594,6 +595,9 @@ function resetCatalogFilters() {
     loadCatalog();
 }
 
+// ============================================
+// ОТРИСОВКА КАТАЛОГА
+// ============================================
 function renderCatalog(list) {
     const grid = document.getElementById('grid');
     if (!grid) return;
@@ -1100,6 +1104,12 @@ function renderSourceEpisodes(source, episodes, title) {
                 <span>Нажмите на серию выше</span>
             </div>
         </div>
+        
+        <div style="margin-top:12px;text-align:center;">
+            <a href="${firstEp.url}" target="_blank" rel="noopener" style="color:var(--neon-cyan);font-size:13px;text-decoration:none;">
+                🔗 Открыть в новой вкладке
+            </a>
+        </div>
     `;
     
     playSourceEpisode(source, 0, title);
@@ -1147,7 +1157,7 @@ async function playSourceEpisode(source, index, title) {
                     <span style="font-size:16px;font-weight:600;color:#fff;">Серия ${episode.episode}</span>
                     <span style="font-size:13px;color:#888;">Откройте источник в новой вкладке</span>
                     <a href="${episode.url}" target="_blank" rel="noopener" 
-                       style="padding:12px 32px;border-radius:50px;background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));color:#fff;text-decoration:none;font-weight:700;font-size:14px;">
+                       style="padding:12px 32px;border-radius:50px;background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));color:#fff;text-decoration:none;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,245,255,0.2);">
                         ▶️ Открыть серию ${episode.episode}
                     </a>
                 </div>
