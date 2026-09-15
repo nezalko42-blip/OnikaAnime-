@@ -101,16 +101,17 @@
 
     <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
 
+    <!-- ✅ ХЕДЕР С ЦЕНТРИРОВАННЫМ НАЗВАНИЕМ -->
     <header class="header">
         <div class="header-left">
             <button class="menu-toggle" onclick="toggleMenu()">
                 <svg width="24" height="24"><use href="icons/icons.svg#icon-menu"/></svg>
             </button>
         </div>
-        <div class="header-center"></div>
-        <div class="header-right">
+        <div class="header-center">
             <span class="site-title">OnikaAnime</span>
         </div>
+        <div class="header-right"></div>
     </header>
 
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
@@ -184,47 +185,12 @@
                             </div>
                         </div>
 
-                        <!-- Фильтр -->
-                        <div class="filter-toggle-wrapper">
-                            <button class="filter-toggle-btn" onclick="toggleFilterPanel()">
-                                <span id="filterToggleIcon">🔽</span>
-                                <span id="filterToggleText">Показать фильтры</span>
-                            </button>
-                        </div>
-
-                        <div class="filter-panel" id="filterPanel" style="display:none;">
-                            <div class="filter-row">
-                                <div class="filter-group">
-                                    <label>📊 Сортировка</label>
-                                    <select id="filterSorting" class="filter-select" onchange="applyCatalogFilters()">
-                                        <option value="popularity">🔥 Популярные</option>
-                                        <option value="ranked">⭐ По рейтингу</option>
-                                        <option value="aired_on">🆕 Новые</option>
-                                        <option value="name">🔤 По алфавиту</option>
-                                    </select>
-                                </div>
-                                <button class="filter-reset-btn" onclick="resetCatalogFilters()">✕ Сбросить фильтры</button>
-                            </div>
-
-                            <div class="filter-divider"></div>
-
-                            <div class="filter-categories">
-                                <div class="filter-category">
-                                    <div class="filter-category-header" onclick="toggleCategory(this)">
-                                        <span>🎭 Жанры</span>
-                                        <span class="filter-category-arrow">▼</span>
-                                    </div>
-                                    <div class="filter-category-body" id="filterGenres"></div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Статистика -->
                         <div class="catalog-stats" id="catalogStats">
                             <span id="totalCount"></span>
                         </div>
 
-                        <!-- Сетка каталога -->
+                        <!-- Сетка -->
                         <div class="grid" id="grid">
                             <div style="text-align:center;padding:40px;color:#888;grid-column:1/-1;">
                                 <div class="spinner-small"></div>
@@ -880,7 +846,6 @@
             if (typeof restoreAllData === 'function') restoreAllData();
             if (typeof updateUI === 'function') updateUI();
             if (typeof navigate === 'function') setTimeout(function() { navigate('home'); }, 100);
-            if (typeof resetCatalogFilters === 'function') setTimeout(function() { resetCatalogFilters(); }, 200);
             
             const user = DB.get('currentUser');
             if (user) {
@@ -944,33 +909,6 @@
             const overlay = document.getElementById('sidebarOverlay');
             if (sidebar) sidebar.classList.remove('open');
             if (overlay) overlay.classList.remove('open');
-        };
-
-        window.toggleCategory = function(header) {
-            const body = header.nextElementSibling;
-            const arrow = header.querySelector('.filter-category-arrow');
-            if (body) {
-                body.classList.toggle('open');
-                if (arrow) arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
-            }
-        };
-
-        window.toggleFilterPanel = function() {
-            const panel = document.getElementById('filterPanel');
-            const icon = document.getElementById('filterToggleIcon');
-            const text = document.getElementById('filterToggleText');
-            
-            if (panel) {
-                if (panel.style.display === 'none') {
-                    panel.style.display = 'block';
-                    if (icon) icon.textContent = '🔼';
-                    if (text) text.textContent = 'Скрыть фильтры';
-                } else {
-                    panel.style.display = 'none';
-                    if (icon) icon.textContent = '🔽';
-                    if (text) text.textContent = 'Показать фильтры';
-                }
-            }
         };
     </script>
 </body>
