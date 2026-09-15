@@ -8,6 +8,7 @@ const API = {
     _cache: new Map(),
     _cacheTTL: 15 * 60 * 1000,
 
+    // ===== БАЗОВЫЙ GRAPHQL ЗАПРОС =====
     async _graphql(query, useCache = true, cacheKey = null) {
         const key = cacheKey || query;
         
@@ -33,7 +34,7 @@ const API = {
             const data = await response.json();
             
             if (data.errors) {
-                console.error('❌ GraphQL errors:', data.errors);
+                console.error('❌ GraphQL errors:', JSON.stringify(data.errors));
                 throw new Error(data.errors[0]?.message || 'GraphQL error');
             }
             
@@ -51,7 +52,7 @@ const API = {
     // ============================================
     // 1. КАТАЛОГ
     // ============================================
-    async getCatalog(page = 1, limit = 24, order = 'popularity') {
+    async getCatalog(page = 1, limit = 12, order = 'popularity') {
         const query = `{
             animes(page: ${page}, limit: ${limit}, order: ${order}) {
                 id
@@ -81,7 +82,7 @@ const API = {
     // ============================================
     // 2. ПОИСК
     // ============================================
-    async searchAnime(query, page = 1, limit = 24) {
+    async searchAnime(query, page = 1, limit = 12) {
         if (!query || query.length < 2) return { items: [], totalPages: 1, totalCount: 0 };
         
         const gql = `{
@@ -113,7 +114,7 @@ const API = {
     // ============================================
     // 3. НОВИНКИ
     // ============================================
-    async getLatest(page = 1, limit = 48) {
+    async getLatest(page = 1, limit = 12) {
         const query = `{
             animes(page: ${page}, limit: ${limit}, order: aired_on) {
                 id
@@ -143,7 +144,7 @@ const API = {
     // ============================================
     // 4. ЖАНР
     // ============================================
-    async getByGenre(genreId, page = 1, limit = 24) {
+    async getByGenre(genreId, page = 1, limit = 12) {
         const query = `{
             animes(
                 page: ${page}, 
@@ -206,7 +207,7 @@ const API = {
     },
 
     // ============================================
-    // 6. ДЕТАЛИ
+    // 6. ДЕТАЛИ — ✅ ИСПРАВЛЕНО (без videos/screenshots/externalLinks)
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
@@ -238,9 +239,6 @@ const API = {
                 poster { id originalUrl mainUrl }
                 genres { id name russian kind }
                 studios { id name imageUrl }
-                screenshots { id originalUrl x166Url x332Url }
-                videos { id url name kind playerUrl imageUrl }
-                externalLinks { id kind url }
                 related {
                     id
                     anime { id name russian }
@@ -253,7 +251,10 @@ const API = {
         }`;
         
         const data = await this._graphql(query, false);
-        if (!data || !data.anime) return null;
+        if (!data || !data.anime) {
+            console.warn('⚠️ Детали аниме не получены для id:', cleanId);
+            return null;
+        }
         
         return this._convertAnimeDetails(data.anime);
     },
@@ -313,28 +314,31 @@ const API = {
     },
 
     // ============================================
-    // 9. ЖАНРЫ
+    // 9. ЖАНРЫ (возвращает статический список)
     // ============================================
     async getGenres() {
-        const query = `{
-            genres {
-                id
-                name
-                russian
-                kind
-            }
-        }`;
-        
-        const data = await this._graphql(query, true, 'genres_list');
-        if (!data || !data.genres) return [];
-        
-        return data.genres
-            .filter(g => g.kind === 'anime' || !g.kind)
-            .map(g => ({
-                id: g.id,
-                name: g.russian || g.name,
-                icon: this._getGenreIcon(g.russian || g.name)
-            }));
+        // ✅ Статический список популярных жанров Shikimori
+        return [
+            { id: 1, name: 'Экшен', icon: '⚔️' },
+            { id: 2, name: 'Приключения', icon: '🗺️' },
+            { id: 4, name: 'Комедия', icon: '😂' },
+            { id: 8, name: 'Драма', icon: '🎭' },
+            { id: 10, name: 'Фэнтези', icon: '🧙' },
+            { id: 22, name: 'Романтика', icon: '💕' },
+            { id: 24, name: 'Фантастика', icon: '🚀' },
+            { id: 36, name: 'Повседневность', icon: '🏠' },
+            { id: 37, name: 'Триллер', icon: '🔪' },
+            { id: 14, name: 'Ужасы', icon: '👻' },
+            { id: 30, name: 'Спорт', icon: '⚽' },
+            { id: 39, name: 'Детектив', icon: '🔍' },
+            { id: 40, name: 'Психологическое', icon: '🧠' },
+            { id: 13, name: 'Историческое', icon: '🏯' },
+            { id: 42, name: 'Музыка', icon: '🎵' },
+            { id: 18, name: 'Меха', icon: '🤖' },
+            { id: 25, name: 'Сёдзё', icon: '🌸' },
+            { id: 27, name: 'Сёнен', icon: '👊' },
+            { id: 41, name: 'Сэйнэн', icon: '🍺' }
+        ];
     },
 
     // ============================================
@@ -352,18 +356,18 @@ const API = {
     },
 
     // ============================================
-    // 11. СОВМЕСТИМОСТЬ СО СТАРЫМ API
+    // 11. СОВМЕСТИМОСТЬ
     // ============================================
     async searchAll(query = '', genre = null, page = 1, filters = {}) {
-        if (query && query.length > 1) return await this.searchAnime(query, page, 24);
-        if (genre === 'latest') return await this.getLatest(page, 48);
-        if (genre) return await this.getByGenre(genre, page, 24);
-        return await this.getCatalog(page, 24);
+        if (query && query.length > 1) return await this.searchAnime(query, page, 12);
+        if (genre === 'latest') return await this.getLatest(page, 12);
+        if (genre) return await this.getByGenre(genre, page, 12);
+        return await this.getCatalog(page, 12);
     },
 
-    async _getLatestReleases(limit = 48) { return await this.getLatest(1, limit); },
+    async _getLatestReleases(limit = 12) { return await this.getLatest(1, limit); },
     async getRandomReleases(limit = 1) { return await this.getRandom(limit); },
-    async searchTitles(query, page = 1) { return await this.searchAnime(query, page, 24); },
+    async searchTitles(query, page = 1) { return await this.searchAnime(query, page, 12); },
     async getShikimoriTitle() { return null; },
 
     // ============================================
@@ -383,7 +387,10 @@ const API = {
 
     _convertAnime(a) {
         let title = a.russian || a.name || 'Без названия';
-        let poster = a.poster?.originalUrl || a.poster?.mainUrl || '';
+        let poster = '';
+        if (a.poster) {
+            poster = a.poster.originalUrl || a.poster.mainUrl || '';
+        }
         
         const genres = (a.genres || [])
             .filter(g => g.kind === 'anime' || !g.kind)
@@ -444,9 +451,6 @@ const API = {
         base.licenseNameRu = a.licenseNameRu || '';
         base.synonyms = a.synonyms || [];
         base.studios = (a.studios || []).map(s => s.name);
-        base.screenshots = (a.screenshots || []).map(s => s.x332Url || s.originalUrl);
-        base.videos = a.videos || [];
-        base.externalLinks = a.externalLinks || [];
         base.related = a.related || [];
         base.rating = a.rating || '';
         base.url = a.url || `https://shikimori.one/animes/${a.id}`;
