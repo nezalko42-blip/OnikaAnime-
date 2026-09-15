@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + ПАГИНАЦИЯ
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + ПАГИНАЦИЯ (12 на стр.)
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -20,7 +20,8 @@ let heroSliderData = [];
 let heroCurrentSlide = 0;
 let heroAutoSlideTimer = null;
 
-const CATALOG_LIMIT = 24; // ← фиксированное количество на страницу
+// ✅ ФИКСИРОВАННОЕ КОЛИЧЕСТВО НА СТРАНИЦУ
+const CATALOG_LIMIT = 12;
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -56,17 +57,7 @@ function navigate(pageName) {
     if (pageName === 'home') {
         loadRecommendationsForHero();
         loadCatalog();
-        loadFilterOptions();
         resetCatalogFiltersSilent();
-        
-        const panel = document.getElementById('filterPanel');
-        const icon = document.getElementById('filterToggleIcon');
-        const text = document.getElementById('filterToggleText');
-        if (panel) {
-            panel.style.display = 'none';
-            if (icon) icon.textContent = '🔽';
-            if (text) text.textContent = 'Показать фильтры';
-        }
     }
     if (pageName === 'favorites') renderFavorites();
     if (pageName === 'profile') renderProfile();
@@ -292,7 +283,7 @@ function goToHeroSlide(index) {
 }
 
 // ============================================
-// 2. КАТАЛОГ С ПАГИНАЦИЕЙ
+// 2. КАТАЛОГ (12 НА СТРАНИЦУ + ПАГИНАЦИЯ)
 // ============================================
 async function loadCatalog(targetPage = null) {
     if (isLoading) return;
@@ -308,7 +299,7 @@ async function loadCatalog(targetPage = null) {
     const searchInput = document.getElementById('catalogSearchInput');
     const searchValue = searchInput ? searchInput.value.trim() : '';
     
-    // Кэш только для стр. 1 без фильтров
+    // Кэш только для стр. 1 без поиска
     if (!allItems.length && !searchValue && !genre && page === 1) {
         const cachedCatalog = sessionStorage.getItem('onika_catalog_cache');
         if (cachedCatalog) {
@@ -343,8 +334,7 @@ async function loadCatalog(targetPage = null) {
         } else if (genre) {
             result = await API.getByGenre(genre, page, CATALOG_LIMIT);
         } else {
-            const sortValue = document.getElementById('filterSorting')?.value || 'popularity';
-            result = await API.getCatalog(page, CATALOG_LIMIT, sortValue);
+            result = await API.getCatalog(page, CATALOG_LIMIT, 'popularity');
         }
         
         if (result && result.items && result.items.length > 0) {
@@ -377,7 +367,6 @@ async function loadCatalog(targetPage = null) {
             
             isAllLoaded = result.items.length < CATALOG_LIMIT;
         } else {
-            // Если пусто и мы не на 1-й странице — откат
             if (page > 1) {
                 page--;
                 isLoading = false;
@@ -425,7 +414,6 @@ function renderPagination(currentPageNum, itemsCount) {
     const hasPrev = currentPageNum > 1;
     const hasNext = itemsCount >= CATALOG_LIMIT;
     
-    // Скрываем если листать нечего
     if (!hasPrev && !hasNext) {
         pagination.style.display = 'none';
         return;
@@ -436,7 +424,6 @@ function renderPagination(currentPageNum, itemsCount) {
     if (prevBtn) prevBtn.disabled = !hasPrev;
     if (nextBtn) nextBtn.disabled = !hasNext;
     
-    // Номера страниц
     let pagesHtml = '';
     const startPage = Math.max(1, currentPageNum - 3);
     const endPage = currentPageNum + 3;
@@ -478,7 +465,6 @@ function goToPage(pageNum) {
     isAllLoaded = false;
     loadCatalog(pageNum);
     
-    // Скролл к началу каталога
     const catalogSection = document.querySelector('.catalog-section');
     if (catalogSection) {
         const offset = catalogSection.offsetTop - 80;
@@ -495,58 +481,8 @@ function goToNextPage() {
 }
 
 // ============================================
-// ФИЛЬТРЫ
+// ПОИСК / СБРОС
 // ============================================
-function getCatalogFilters() {
-    const filters = {};
-    
-    const genreChecks = document.querySelectorAll('#filterGenres input:checked');
-    if (genreChecks.length) {
-        filters.genres = Array.from(genreChecks).map(cb => cb.value);
-    }
-    
-    const sortSelect = document.getElementById('filterSorting');
-    if (sortSelect && sortSelect.value) {
-        filters.sorting = sortSelect.value;
-    }
-    
-    return filters;
-}
-
-async function loadFilterOptions() {
-    const genresContainer = document.getElementById('filterGenres');
-    if (!genresContainer) return;
-    
-    const cachedGenres = sessionStorage.getItem('onika_genres');
-    
-    if (cachedGenres && !genresContainer.innerHTML.trim()) {
-        try {
-            const genres = JSON.parse(cachedGenres);
-            genresContainer.innerHTML = genres.map(g => `
-                <label>
-                    <input type="checkbox" value="${g.id}" onchange="applyCatalogFilters()">
-                    <span>${g.icon || '📚'} ${g.name}</span>
-                </label>
-            `).join('');
-        } catch(e) {}
-    }
-    
-    try {
-        const genres = await API.getGenres();
-        if (genresContainer && genres.length && !genresContainer.innerHTML.trim()) {
-            genresContainer.innerHTML = genres.map(g => `
-                <label>
-                    <input type="checkbox" value="${g.id}" onchange="applyCatalogFilters()">
-                    <span>${g.icon || '📚'} ${g.name}</span>
-                </label>
-            `).join('');
-            sessionStorage.setItem('onika_genres', JSON.stringify(genres));
-        }
-    } catch (e) {
-        console.error('Ошибка загрузки фильтров:', e);
-    }
-}
-
 function applyCatalogFilters() {
     if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }
     searchTimeout = setTimeout(() => {
@@ -558,15 +494,12 @@ function applyCatalogFilters() {
 }
 
 function resetCatalogFiltersSilent() {
-    document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
     const searchInput = document.getElementById('catalogSearchInput');
     if (searchInput) {
         searchInput.value = '';
         const clearBtn = document.getElementById('catalogSearchClear');
         if (clearBtn) clearBtn.style.display = 'none';
     }
-    const sortSelect = document.getElementById('filterSorting');
-    if (sortSelect) sortSelect.value = 'popularity';
     
     if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }
     
@@ -784,7 +717,7 @@ async function randomAnimeByGenre(genreId) {
 }
 
 // ============================================
-// 6. АВТОДОПОЛНЕНИЕ
+// 5. АВТОДОПОЛНЕНИЕ
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('catalogSearchInput');
@@ -855,7 +788,7 @@ function selectSearchSuggestion(id) {
 }
 
 // ============================================
-// 7. ОТКРЫТЬ ДЕТАЛИ
+// 6. ОТКРЫТЬ ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
     if (!id) {
@@ -887,7 +820,7 @@ async function openDetail(id) {
 }
 
 // ============================================
-// 8. ПОКАЗАТЬ ДЕТАЛИ
+// 7. ПОКАЗАТЬ ДЕТАЛИ
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
@@ -940,7 +873,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 9. KODI
+// 8. KODI МОДАЛЬНОЕ ОКНО
 // ============================================
 function openKodiModal() {
     let modal = document.getElementById('kodiModal');
@@ -989,7 +922,7 @@ function openKodiModal() {
 }
 
 // ============================================
-// 10. ИСТОЧНИКИ
+// 9. ПРОСМОТР ИСТОЧНИКОВ
 // ============================================
 function getCurrentAnimeTitle() {
     const titleEl = document.getElementById('detailTitle');
@@ -1191,7 +1124,7 @@ function closeWatchEmbed() {
 }
 
 // ============================================
-// 11. КОММЕНТАРИИ
+// 10. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1275,7 +1208,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 12. ИЗБРАННОЕ
+// 11. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1346,7 +1279,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 13. ДОСТИЖЕНИЯ
+// 12. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1433,7 +1366,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 14. ПРОФИЛЬ
+// 13. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1717,7 +1650,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 15. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 14. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1810,7 +1743,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 16. АВАТАР
+// 15. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) { showToast('Выберите файл!', 'error'); return; }
@@ -1838,7 +1771,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 17. TOAST
+// 16. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1864,7 +1797,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 18. МОДАЛЬНЫЕ ОКНА
+// 17. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1917,7 +1850,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 19. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 18. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1999,7 +1932,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 20. ВОССТАНОВЛЕНИЕ
+// 19. ВОССТАНОВЛЕНИЕ
 // ============================================
 function restoreAllData() {
     const user = DB.get('currentUser');
@@ -2018,7 +1951,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 21. СОЦСЕТИ
+// 20. СОЦСЕТИ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2035,7 +1968,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 22. МОИ КОММЕНТАРИИ
+// 21. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2072,10 +2005,10 @@ function renderMyComments() {
 }
 
 // ============================================
-// 23. ЗАПУСК
+// 22. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🌟 OnikaAnime (Shikimori + пагинация) загружается...');
+    console.log('🌟 OnikaAnime (Shikimori + 12 на стр.) загружается...');
     restoreAllData();
     updateUI();
     navigate('home');
@@ -2086,7 +2019,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 24. ЭКСПОРТ
+// 23. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2120,9 +2053,7 @@ window.formatFullTime = formatFullTime;
 window.uploadAvatar = uploadAvatar;
 window.updateSocialStats = updateSocialStats;
 window.searchAndOpen = searchAndOpen;
-window.toggleCategory = toggleCategory;
 window.clearCatalogSearch = clearCatalogSearch;
-window.toggleFilterPanel = toggleFilterPanel;
 window.setGenre = setGenre;
 window.slideHero = slideHero;
 window.goToHeroSlide = goToHeroSlide;
@@ -2142,4 +2073,4 @@ window.goToPrevPage = goToPrevPage;
 window.goToNextPage = goToNextPage;
 window.renderPagination = renderPagination;
 
-console.log('✅ OnikaAnime (Shikimori + пагинация) полностью загружен!');
+console.log('✅ OnikaAnime (Shikimori + 12 на стр.) полностью загружен!');
