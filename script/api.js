@@ -1,5 +1,5 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME — SHIKIMORI GRAPHQL
+// API МОДУЛЬ ONIKAANIME — SHIKIMORI GRAPHQL (ФИНАЛ)
 // ============================================
 
 const API = {
@@ -207,52 +207,103 @@ const API = {
     },
 
     // ============================================
-    // 6. ДЕТАЛИ — ✅ МИНИМАЛЬНЫЙ БЕЗОПАСНЫЙ ЗАПРОС
+    // 6. ДЕТАЛИ — ИСПРАВЛЕНО (по ID, потом по названию)
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
-        console.log('🔍 Запрос деталей для ID:', cleanId);
+        console.log('🔍 Детали:', id, '(ID:', cleanId + ')');
         
-        // ✅ Только базовые поля — 100% поддерживаются
-        const query = `{
-            anime(id: ${cleanId}) {
-                id
-                malId
-                name
-                russian
-                english
-                japanese
-                kind
-                rating
-                score
-                status
-                episodes
-                episodesAired
-                duration
-                description
-                url
-                season
-                airedOn { year month day date }
-                poster { originalUrl mainUrl }
-                genres { id name russian kind }
-                studios { id name }
+        // Получаем данные из кэша каталога
+        const cached = allData[id];
+        
+        // ✅ ПЕРВАЯ ПОПЫТКА: по ID (anime(id: X))
+        if (cleanId && /^\d+$/.test(cleanId)) {
+            try {
+                const query = `{
+                    anime(id: ${cleanId}) {
+                        id
+                        malId
+                        name
+                        russian
+                        english
+                        japanese
+                        kind
+                        rating
+                        score
+                        status
+                        episodes
+                        episodesAired
+                        duration
+                        description
+                        url
+                        season
+                        airedOn { year month day date }
+                        poster { originalUrl mainUrl }
+                        genres { id name russian kind }
+                        studios { id name }
+                    }
+                }`;
+                
+                const data = await this._graphql(query, false);
+                
+                if (data && data.anime && (data.anime.russian || data.anime.name)) {
+                    console.log('✅ По ID:', data.anime.russian || data.anime.name);
+                    return this._convertAnimeDetails(data.anime);
+                }
+            } catch (e) {
+                console.warn('⚠️ По ID не сработало');
             }
-        }`;
-        
-        const data = await this._graphql(query, false);
-        
-        if (!data) {
-            console.error('❌ data = null');
-            return null;
         }
         
-        if (!data.anime) {
-            console.error('❌ data.anime отсутствует:', JSON.stringify(data).slice(0, 200));
-            return null;
+        // ✅ ВТОРАЯ ПОПЫТКА: по названию из кэша
+        if (cached) {
+            const searchTitle = cached.title_russian || cached.title;
+            
+            if (searchTitle && searchTitle.length > 1) {
+                try {
+                    const searchQuery = `{
+                        animes(search: ${JSON.stringify(searchTitle)}, limit: 1) {
+                            id
+                            malId
+                            name
+                            russian
+                            english
+                            japanese
+                            kind
+                            rating
+                            score
+                            status
+                            episodes
+                            episodesAired
+                            duration
+                            description
+                            url
+                            season
+                            airedOn { year month day date }
+                            poster { originalUrl mainUrl }
+                            genres { id name russian kind }
+                            studios { id name }
+                        }
+                    }`;
+                    
+                    const data = await this._graphql(searchQuery, false);
+                    
+                    if (data && data.animes && data.animes[0] && (data.animes[0].russian || data.animes[0].name)) {
+                        console.log('✅ По названию:', data.animes[0].russian || data.animes[0].name);
+                        return this._convertAnimeDetails(data.animes[0]);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ По названию не сработало');
+                }
+            }
+            
+            // ✅ ТРЕТЬЯ ПОПЫТКА: возвращаем данные из каталога
+            console.log('⚠️ Возвращаем данные из каталога');
+            return cached;
         }
         
-        console.log('✅ Детали получены:', data.anime.russian || data.anime.name);
-        return this._convertAnimeDetails(data.anime);
+        console.error('❌ Детали не найдены');
+        return null;
     },
 
     // ============================================
@@ -323,9 +374,7 @@ const API = {
             { id: 24, name: 'Фантастика', icon: '🚀' },
             { id: 36, name: 'Повседневность', icon: '🏠' },
             { id: 37, name: 'Триллер', icon: '🔪' },
-            { id: 14, name: 'Ужасы', icon: '👻' },
-            { id: 30, name: 'Спорт', icon: '⚽' },
-            { id: 39, name: 'Детектив', icon: '🔍' }
+            { id: 14, name: 'Ужасы', icon: '👻' }
         ];
     },
 
@@ -414,7 +463,6 @@ const API = {
         const base = this._convertAnime(a);
         
         let description = a.description || '';
-        // Убираем HTML-теги
         description = description.replace(/<[^>]*>/g, '').trim();
         
         base.synopsis = description || 'Описание отсутствует';
