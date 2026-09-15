@@ -1,9 +1,10 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME — SHIKIMORI GRAPHQL
+// API МОДУЛЬ ONIKAANIME — SHIKIMORI (GraphQL + REST)
 // ============================================
 
 const API = {
     SHIKIMORI_PROXY: '/api/shikimori',
+    SHIKIMORI_REST: '/api/shikimori-rest',
     
     _cache: new Map(),
     _cacheTTL: 15 * 60 * 1000,
@@ -207,23 +208,38 @@ const API = {
     },
 
     // ============================================
-    // 6. ДЕТАЛИ — ✅ ТОЛЬКО ПО ID, БЕЗ ПОИСКА ПО НАЗВАНИЮ!
+    // 6. ДЕТАЛИ — через REST API (с описанием!)
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
         console.log('🔍 Детали для ID:', cleanId);
         
-        // ✅ ВСЕГДА по ID — это точный поиск!
         if (!cleanId || !/^\d+$/.test(cleanId)) {
             console.error('❌ Неверный ID:', cleanId);
             return null;
         }
         
+        // ✅ ОСНОВНОЙ ИСТОЧНИК: REST API — там ВСЕГДА есть описание
+        try {
+            const response = await fetch(this.SHIKIMORI_REST + '/' + cleanId);
+            
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            
+            const a = await response.json();
+            console.log('✅ REST получен:', a.russian || a.name);
+            
+            return this._convertRestAnime(a);
+        } catch (e) {
+            console.warn('⚠️ REST не сработал:', e.message);
+        }
+        
+        // ⚠️ FALLBACK: GraphQL
         try {
             const query = `{
                 anime(id: ${cleanId}) {
                     id
-                    malId
                     name
                     russian
                     english
@@ -247,20 +263,18 @@ const API = {
             
             const data = await this._graphql(query, false);
             
-            if (data && data.anime && (data.anime.russian || data.anime.name)) {
-                console.log('✅ Найдено:', data.anime.russian || data.anime.name);
+            if (data && data.anime) {
+                console.log('✅ GraphQL fallback:', data.anime.russian || data.anime.name);
                 return this._convertAnimeDetails(data.anime);
             }
-            
-            console.warn('⚠️ Не найдено по ID, используем кэш каталога');
         } catch (e) {
-            console.warn('⚠️ Ошибка запроса:', e.message);
+            console.warn('⚠️ GraphQL fallback не сработал');
         }
         
-        // Fallback: возвращаем данные из каталога (если открывали из каталога)
+        // ⚠️ КРАЙНИЙ FALLBACK: каталог
         const cached = allData[id];
         if (cached) {
-            console.log('⚠️ Fallback: данные из каталога');
+            console.log('⚠️ Fallback на каталог');
             return cached;
         }
         
@@ -439,6 +453,88 @@ const API = {
         return base;
     },
 
+    // ✅ Конвертер для REST API Shikimori
+    _convertRestAnime(a) {
+        let title = a.russian || a.name || 'Без названия';
+        
+        // Постер из REST
+        let poster = '';
+        if (a.image) {
+            if (a.image.original) {
+                poster = a.image.original.startsWith('http') 
+                    ? a.image.original 
+                    : 'https://shikimori.one' + a.image.original;
+            } else if (a.image.preview) {
+                poster = a.image.preview.startsWith('http')
+                    ? a.image.preview
+                    : 'https://shikimori.one' + a.image.preview;
+            }
+        }
+        
+        // Жанры
+        const genres = (a.genres || [])
+            .map(g => g.russian || g.name)
+            .filter(Boolean);
+        
+        // Возраст
+        let ageRating = '0+';
+        if (a.rating) {
+            const ageMap = {
+                'g': '0+', 'pg': '6+', 'pg_13': '12+',
+                'r': '16+', 'r_plus': '17+', 'rx': '18+'
+            };
+            ageRating = ageMap[a.rating] || '0+';
+        }
+        
+        // Статус
+        let status = 'Неизвестно';
+        if (a.status) {
+            const statusMap = {
+                'anons': 'Анонс', 'ongoing': 'Онгоинг', 'released': 'Завершено'
+            };
+            status = statusMap[a.status] || a.status;
+        }
+        
+        // Год
+        let year = '--';
+        if (a.aired_on) {
+            year = a.aired_on.split('-')[0];
+        }
+        
+        // Описание — уже с сервера
+        let description = a.description || '';
+        description = description.replace(/<[^>]*>/g, '').trim();
+        
+        return {
+            mal_id: 'shikimori_' + a.id,
+            id: 'shikimori_' + a.id,
+            rawId: a.id,
+            title: title,
+            title_russian: a.russian || '',
+            title_english: a.english || '',
+            title_japanese: a.japanese || '',
+            year: year,
+            episodes: a.episodes || a.episodes_aired || '?',
+            episodes_aired: a.episodes_aired || 0,
+            images: { jpg: { image_url: poster } },
+            synopsis: description || 'Описание отсутствует',
+            description: description,
+            genres: genres,
+            score: a.score || 0,
+            age_rating: ageRating,
+            status: status,
+            kind: a.kind || '',
+            duration: a.duration || 0,
+            rating: a.rating || '',
+            studios: (a.studios || []).map(s => s.name),
+            url: a.url ? 'https://shikimori.one' + a.url : `https://shikimori.one/animes/${a.id}`,
+            aired_on: a.aired_on || '',
+            released_on: a.released_on || '',
+            source: 'Shikimori REST',
+            _raw: a
+        };
+    },
+
     clearCache() {
         this._cache.clear();
         console.log('🗑️ Кэш очищен');
@@ -446,4 +542,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (Shikimori) загружен');
+console.log('✅ API модуль (Shikimori GraphQL + REST) загружен');
