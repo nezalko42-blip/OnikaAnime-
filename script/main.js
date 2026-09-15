@@ -581,16 +581,19 @@ function setGenre(genreId, btn) {
 }
 
 // ============================================
-// 4. СЛУЧАЙНОЕ АНИМЕ
+// 4. СЛУЧАЙНОЕ АНИМЕ — НОВЫЙ ДИЗАЙН
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
+    const triggerBtn = document.querySelector('.random-trigger-btn');
     if (!resultContainer) return;
+    
+    if (triggerBtn) triggerBtn.classList.add('loading');
     
     resultContainer.innerHTML = `
         <div class="random-loading">
-            <div class="random-spinner"></div>
-            <span style="color:var(--text-muted);font-size:14px;margin-top:8px;">🌀 Ищем идеальное аниме...</span>
+            <div class="random-spinner-new"></div>
+            <span class="random-loading-text">🌀 Подбираем идеальное аниме...</span>
         </div>
     `;
     
@@ -598,65 +601,77 @@ async function randomAnime() {
         const items = await API.getRandom(1);
         if (!items || !items.length) {
             resultContainer.innerHTML = `
-                <div class="random-error">
-                    <span style="font-size:48px;">😅</span>
-                    <p style="color:var(--text-secondary);">Не удалось найти аниме</p>
-                    <button onclick="randomAnime()" class="random-retry-btn">🔄 Попробовать снова</button>
+                <div class="random-error-new">
+                    <span class="error-icon">😅</span>
+                    <p>Не удалось найти аниме. Попробуйте ещё раз!</p>
                 </div>
             `;
+            if (triggerBtn) triggerBtn.classList.remove('loading');
             return;
         }
         
         const anime = items[0];
+        
         setTimeout(() => {
-            resultContainer.innerHTML = renderRandomResult(anime);
-            const card = resultContainer.querySelector('.random-result-card');
-            if (card) card.classList.add('show');
-        }, 300);
+            resultContainer.innerHTML = renderRandomCard(anime);
+            if (triggerBtn) triggerBtn.classList.remove('loading');
+        }, 400);
+        
     } catch (e) {
-        console.error('Ошибка:', e);
+        console.error('Ошибка получения случайного аниме:', e);
         resultContainer.innerHTML = `
-            <div class="random-error">
-                <span style="font-size:48px;">⚠️</span>
-                <p>Ошибка загрузки</p>
-                <button onclick="randomAnime()" class="random-retry-btn">🔄 Попробовать снова</button>
+            <div class="random-error-new">
+                <span class="error-icon">⚠️</span>
+                <p>Ошибка загрузки. Попробуйте позже.</p>
             </div>
         `;
+        if (triggerBtn) triggerBtn.classList.remove('loading');
     }
 }
 
-function renderRandomResult(anime) {
+// ============================================
+// 5. КРАСИВАЯ КАРТОЧКА АНИМЕ (НОВАЯ)
+// ============================================
+function renderRandomCard(anime) {
     const img = anime.images?.jpg?.image_url || '';
     const title = anime.title || 'Без названия';
-    const year = anime.year || '--';
+    const year = anime.year || '';
     const episodes = anime.episodes || '?';
     const age = anime.age_rating || '0+';
-    const genres = (anime.genres || []).slice(0, 4).join(' • ');
-    const synopsis = anime.synopsis || 'Описание отсутствует';
     const id = anime.id;
-    const status = anime.status || 'Неизвестно';
     const ageColor = getAgeColor(age);
     
     return `
-        <div class="random-result-card" onclick="openDetail('${id}')">
-            <div class="random-result-poster">
-                ${img ? `<img src="${img}" alt="${title}">` : '<div class="random-no-poster">🎬</div>'}
-                <div class="random-result-badge" style="background:${ageColor};">${age}</div>
+        <div class="random-anime-card" onclick="openDetail('${id}')">
+            <div class="random-anime-poster">
+                ${img 
+                    ? `<img src="${img}" alt="${title}" loading="lazy">` 
+                    : '<div class="random-anime-no-poster">🎬</div>'
+                }
+                <div class="random-anime-age" style="background:${ageColor}aa;">${age}</div>
             </div>
-            <div class="random-result-content">
-                <div class="random-result-header">
-                    <h3 class="random-result-title">${title}</h3>
-                    <span class="random-result-year">${year}</span>
+            
+            <div class="random-anime-info">
+                <h3 class="random-anime-title">${title}</h3>
+                
+                ${year && year !== '--' ? `<span class="random-anime-year">📅 ${year}</span>` : ''}
+                
+                <div class="random-anime-meta">
+                    <div class="random-anime-meta-item">
+                        <span class="emoji">📺</span>
+                        <span>${episodes} ${episodes === '?' ? 'эпизод' : 'эп.'}</span>
+                    </div>
                 </div>
-                <div class="random-result-meta">
-                    <span>📺 ${episodes} эп.</span>
-                    <span>${status === 'Онгоинг' ? '🔄 Онгоинг' : '✅ Завершено'}</span>
-                </div>
-                ${genres ? `<div class="random-result-genres">${genres}</div>` : ''}
-                <div class="random-result-synopsis">${synopsis.length > 120 ? synopsis.slice(0, 120) + '...' : synopsis}</div>
-                <div class="random-result-actions">
-                    <button class="random-result-btn primary" onclick="event.stopPropagation(); openDetail('${id}')">🎬 Смотреть</button>
-                    <button class="random-result-btn secondary" onclick="event.stopPropagation(); randomAnime()">🎲 Другое</button>
+                
+                <div class="random-anime-actions">
+                    <button class="random-action-btn watch" onclick="event.stopPropagation(); openDetail('${id}')">
+                        <span class="btn-icon">▶️</span>
+                        <span>Смотреть</span>
+                    </button>
+                    <button class="random-action-btn retry" onclick="event.stopPropagation(); randomAnime()">
+                        <span class="btn-icon">🔄</span>
+                        <span>Другое</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -668,45 +683,8 @@ function getAgeColor(age) {
     return colors[age] || '#6c5ce7';
 }
 
-async function randomAnimeByGenre(genreId) {
-    const resultContainer = document.getElementById('randomResult');
-    if (!resultContainer) return;
-    
-    resultContainer.innerHTML = `
-        <div class="random-loading">
-            <div class="random-spinner"></div>
-            <span style="color:var(--text-muted);font-size:14px;margin-top:8px;">🔍 Ищем в этом жанре...</span>
-        </div>
-    `;
-    
-    try {
-        const result = await API.getByGenre(genreId, 1, 50);
-        if (!result || !result.items || !result.items.length) {
-            resultContainer.innerHTML = `
-                <div class="random-error">
-                    <span style="font-size:48px;">😅</span>
-                    <p>В этом жанре пока ничего нет</p>
-                    <button onclick="randomAnime()" class="random-retry-btn">🔄 Попробовать другое</button>
-                </div>
-            `;
-            return;
-        }
-        
-        const randomIndex = Math.floor(Math.random() * result.items.length);
-        const anime = result.items[randomIndex];
-        
-        setTimeout(() => {
-            resultContainer.innerHTML = renderRandomResult(anime);
-            const card = resultContainer.querySelector('.random-result-card');
-            if (card) card.classList.add('show');
-        }, 300);
-    } catch (e) {
-        console.error('Ошибка:', e);
-    }
-}
-
 // ============================================
-// 5. АВТОДОПОЛНЕНИЕ
+// 6. АВТОДОПОЛНЕНИЕ
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('catalogSearchInput');
@@ -777,7 +755,7 @@ function selectSearchSuggestion(id) {
 }
 
 // ============================================
-// 6. ОТКРЫТЬ ДЕТАЛИ — ✅ ИСПРАВЛЕНО С ОБРАБОТКОЙ ОШИБОК
+// 7. ОТКРЫТЬ ДЕТАЛИ
 // ============================================
 async function openDetail(id) {
     console.log('📖 Открываем детали:', id);
@@ -793,7 +771,6 @@ async function openDetail(id) {
     const titleEl = document.getElementById('detailTitle');
     if (titleEl) titleEl.textContent = 'Загрузка...';
     
-    // Показываем спиннер в postere
     const posterEl = document.getElementById('detailPoster');
     if (posterEl) {
         posterEl.style.display = 'none';
@@ -817,7 +794,6 @@ async function openDetail(id) {
         console.error('❌ Ошибка:', e);
         showToast('❌ Ошибка загрузки', 'error');
         
-        // Если есть в кэше — показываем
         if (allData[id]) {
             showDetail(allData[id]);
         } else {
@@ -829,7 +805,7 @@ async function openDetail(id) {
 }
 
 // ============================================
-// 7. ПОКАЗАТЬ ДЕТАЛИ — ✅ С ЗАЩИТОЙ ОТ ОШИБОК
+// 8. ПОКАЗАТЬ ДЕТАЛИ
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
@@ -893,7 +869,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 8. KODI МОДАЛЬНОЕ ОКНО
+// 9. KODI МОДАЛЬНОЕ ОКНО
 // ============================================
 function openKodiModal() {
     let modal = document.getElementById('kodiModal');
@@ -942,7 +918,7 @@ function openKodiModal() {
 }
 
 // ============================================
-// 9. ПРОСМОТР ИСТОЧНИКОВ
+// 10. ПРОСМОТР ИСТОЧНИКОВ
 // ============================================
 function getCurrentAnimeTitle() {
     const titleEl = document.getElementById('detailTitle');
@@ -1144,7 +1120,7 @@ function closeWatchEmbed() {
 }
 
 // ============================================
-// 10. КОММЕНТАРИИ
+// 11. КОММЕНТАРИИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1228,7 +1204,7 @@ function deleteComment(id) {
 }
 
 // ============================================
-// 11. ИЗБРАННОЕ
+// 12. ИЗБРАННОЕ
 // ============================================
 function toggleFav(name) {
     const user = DB.get('currentUser');
@@ -1299,7 +1275,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 12. ДОСТИЖЕНИЯ
+// 13. ДОСТИЖЕНИЯ
 // ============================================
 function renderAchievements() {
     const user = DB.get('currentUser');
@@ -1386,7 +1362,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 13. ПРОФИЛЬ
+// 14. ПРОФИЛЬ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -1670,7 +1646,7 @@ function renderProfileAchievements(user) {
 }
 
 // ============================================
-// 14. ТОП ПОЛЬЗОВАТЕЛЕЙ
+// 15. ТОП ПОЛЬЗОВАТЕЛЕЙ
 // ============================================
 function renderTopUsers() {
     const container = document.getElementById('topUsers');
@@ -1763,7 +1739,7 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 15. АВАТАР
+// 16. АВАТАР
 // ============================================
 function uploadAvatar(input) {
     if (!input || !input.files || input.files.length === 0) { showToast('Выберите файл!', 'error'); return; }
@@ -1791,7 +1767,7 @@ function uploadAvatar(input) {
 }
 
 // ============================================
-// 16. TOAST
+// 17. TOAST
 // ============================================
 function showToast(message, type) {
     const old = document.querySelector('.toast-message');
@@ -1817,7 +1793,7 @@ function showToast(message, type) {
 }
 
 // ============================================
-// 17. МОДАЛЬНЫЕ ОКНА
+// 18. МОДАЛЬНЫЕ ОКНА
 // ============================================
 function showConfirmModal(title, text, callback, icon) {
     const modal = document.getElementById('confirmModal');
@@ -1870,7 +1846,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============================================
-// 18. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+// 19. РЕДАКТИРОВАНИЕ ПРОФИЛЯ
 // ============================================
 function editProfile(type) {
     const user = DB.get('currentUser');
@@ -1952,7 +1928,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 19. ВОССТАНОВЛЕНИЕ
+// 20. ВОССТАНОВЛЕНИЕ
 // ============================================
 function restoreAllData() {
     const user = DB.get('currentUser');
@@ -1971,7 +1947,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 20. СОЦСЕТИ
+// 21. СОЦСЕТИ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -1988,7 +1964,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 21. МОИ КОММЕНТАРИИ
+// 22. МОИ КОММЕНТАРИИ
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2025,7 +2001,7 @@ function renderMyComments() {
 }
 
 // ============================================
-// 22. ЗАПУСК
+// 23. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🌟 OnikaAnime (Shikimori + 12 на стр.) загружается...');
@@ -2039,7 +2015,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 23. ЭКСПОРТ
+// 24. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2061,6 +2037,7 @@ window.renderMyComments = renderMyComments;
 window.loadCatalog = loadCatalog;
 window.loadRecommendations = loadRecommendations;
 window.randomAnime = randomAnime;
+window.renderRandomCard = renderRandomCard;
 window.applyCatalogFilters = applyCatalogFilters;
 window.resetCatalogFilters = resetCatalogFilters;
 window.scrollToTop = scrollToTop;
@@ -2077,7 +2054,6 @@ window.clearCatalogSearch = clearCatalogSearch;
 window.setGenre = setGenre;
 window.slideHero = slideHero;
 window.goToHeroSlide = goToHeroSlide;
-window.randomAnimeByGenre = randomAnimeByGenre;
 window.changeBanner = changeBanner;
 window.addActivity = addActivity;
 window.saveContinueWatching = saveContinueWatching;
@@ -2087,6 +2063,7 @@ window.watchOnDeep = watchOnDeep;
 window.playSourceEpisode = playSourceEpisode;
 window.closeWatchEmbed = closeWatchEmbed;
 
+// ===== ПАГИНАЦИЯ =====
 window.goToPage = goToPage;
 window.goToPrevPage = goToPrevPage;
 window.goToNextPage = goToNextPage;
