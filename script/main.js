@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + 3D КАРУСЕЛЬ + АНИМИРОВАННЫЙ КАТАЛОГ
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0
 // ============================================
 
 const allData = {};
@@ -171,7 +171,6 @@ window.addEventListener('beforeunload', function() {
 // ============================================
 async function loadRecommendationsForHero() {
     try {
-        // ✅ Убран кэш — каждый раз свежие рекомендации
         const recs = await API.getRecommended(7);
         
         if (recs && recs.length > 0) {
@@ -269,7 +268,6 @@ function slideHero(direction) {
     if (!cards.length) return;
     
     heroCurrentSlide = (heroCurrentSlide + direction + cards.length) % cards.length;
-    
     updateHeroCards();
     
     if (heroAutoSlideTimer) {
@@ -292,7 +290,7 @@ function goToHeroSlide(index) {
 }
 
 // ============================================
-// 2. СКЕЛЕТОНЫ ЗАГРУЗКИ
+// 2. СКЕЛЕТОНЫ
 // ============================================
 function renderSkeletons(count = 12) {
     let html = '';
@@ -309,7 +307,7 @@ function renderSkeletons(count = 12) {
 }
 
 // ============================================
-// 3. КАТАЛОГ (12 НА СТРАНИЦУ + АНИМАЦИИ)
+// 3. КАТАЛОГ
 // ============================================
 async function loadCatalog(targetPage = null) {
     if (isLoading) return;
@@ -325,14 +323,12 @@ async function loadCatalog(targetPage = null) {
     const searchInput = document.getElementById('catalogSearchInput');
     const searchValue = searchInput ? searchInput.value.trim() : '';
     
-    // ✅ Плавное исчезновение старого контента
     const hasOldContent = grid.querySelector('.card');
     if (hasOldContent) {
         grid.classList.add('fade-out');
         await new Promise(r => setTimeout(r, 200));
     }
     
-    // ✅ Скелетоны при первой загрузке
     if (!allItems.length) {
         grid.innerHTML = renderSkeletons(CATALOG_LIMIT);
     }
@@ -358,7 +354,6 @@ async function loadCatalog(targetPage = null) {
             totalCount = result.totalCount || 0;
             allItems.forEach(item => { allData[item.mal_id] = item; });
             
-            // ✅ Плавное появление новых карточек
             grid.classList.add('fade-in');
             renderCatalog(allItems);
             setTimeout(() => grid.classList.remove('fade-in'), 400);
@@ -531,7 +526,7 @@ function resetCatalogFilters() {
 }
 
 // ============================================
-// ОТРИСОВКА КАТАЛОГА (С КАСКАДНОЙ АНИМАЦИЕЙ)
+// ОТРИСОВКА КАТАЛОГА
 // ============================================
 function renderCatalog(list) {
     const grid = document.getElementById('grid');
@@ -792,9 +787,7 @@ async function openDetail(id) {
     if (titleEl) titleEl.textContent = 'Загрузка...';
     
     const posterEl = document.getElementById('detailPoster');
-    if (posterEl) {
-        posterEl.style.display = 'none';
-    }
+    if (posterEl) posterEl.style.display = 'none';
     
     try {
         const data = await API.getAnimeDetails(id);
@@ -829,8 +822,6 @@ async function openDetail(id) {
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
-    
-    console.log('🎬 showDetail:', anime.title);
     
     const titleEl = document.getElementById('detailTitle');
     const engEl = document.getElementById('detailEng');
@@ -1247,39 +1238,482 @@ function toggleFav(name) {
 
 function renderFavorites() {
     const user = DB.get('currentUser');
-    const grid = document.getElementById('favGrid');
-    if (!grid) return;
+    const container = document.getElementById('favGrouped');
+    if (!container) return;
+    
     if (!user) {
-        grid.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
-        return;
-    }
-    const favs = DB.getUserData(user.name, 'favorites', []);
-    document.getElementById('favCount').textContent = favs.length + ' аниме';
-    if (favs.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><span class="empty-icon">💔</span><p>Пусто</p></div>';
-        return;
-    }
-    let html = '';
-    favs.forEach((name, index) => {
-        let img = '';
-        const colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
-        const color = colors[index % colors.length];
-        for (const id in allData) {
-            if (allData[id] && allData[id].title === name) {
-                img = allData[id].images?.jpg?.image_url || '';
-                break;
-            }
-        }
-        html += `
-            <div class="card" onclick="searchAndOpen('${name}')" style="--card-index:${index};">
-                <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:40px;' : ''}">
-                    ${img ? '<img src="' + img + '" loading="lazy">' : '❤️'}
+        container.innerHTML = `
+            <div class="fav-grid">
+                <div class="fav-empty">
+                    <div class="fav-empty-icon">🔐</div>
+                    <h3 class="fav-empty-title">Войдите в аккаунт</h3>
+                    <p class="fav-empty-desc">Чтобы сохранять любимые аниме в избранное</p>
+                    <button class="fav-empty-btn" onclick="showLoginModal()">🚀 Войти</button>
                 </div>
-                <div class="card-body"><div class="title">${name}</div></div>
+            </div>
+        `;
+        updateFavStats([]);
+        return;
+    }
+    
+    const favs = DB.getUserData(user.name, 'favorites', []);
+    
+    if (favs.length === 0) {
+        container.innerHTML = `
+            <div class="fav-grid">
+                <div class="fav-empty">
+                    <div class="fav-empty-icon">💔</div>
+                    <h3 class="fav-empty-title">Пока пусто</h3>
+                    <p class="fav-empty-desc">Добавляй аниме в избранное, нажимая на сердечко</p>
+                    <button class="fav-empty-btn" onclick="navigate('home')">🎬 Найти аниме</button>
+                </div>
+            </div>
+        `;
+        updateFavStats([]);
+        return;
+    }
+    
+    updateFavStats(favs);
+    applyFavFilters();
+}
+
+// ============================================
+// ФИЛЬТРЫ + СОРТИРОВКА
+// ============================================
+function applyFavFilters() {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    
+    const container = document.getElementById('favGrouped');
+    if (!container) return;
+    
+    let favs = DB.getUserData(user.name, 'favorites', []);
+    
+    const searchValue = document.getElementById('favSearchInput')?.value?.trim()?.toLowerCase() || '';
+    if (searchValue) {
+        favs = favs.filter(name => name.toLowerCase().includes(searchValue));
+    }
+    
+    const sortValue = document.getElementById('favSortSelect')?.value || 'added_desc';
+    favs = sortFavorites(favs, sortValue);
+    
+    const grouped = groupFavoritesByStatus(favs);
+    
+    const isListView = document.getElementById('favViewBtn')?.classList.contains('active');
+    
+    let html = '';
+    
+    const sectionConfig = [
+        { key: 'watching', icon: '▶️', title: 'Смотрю' },
+        { key: 'planned', icon: '📅', title: 'В планах' },
+        { key: 'completed', icon: '✅', title: 'Просмотрено' },
+        { key: 'other', icon: '📌', title: 'Другое' }
+    ];
+    
+    sectionConfig.forEach(cfg => {
+        const sectionItems = grouped[cfg.key] || [];
+        if (sectionItems.length === 0) return;
+        
+        html += `
+            <div class="fav-section">
+                <div class="fav-section-header">
+                    <span class="fav-section-icon">${cfg.icon}</span>
+                    <h3 class="fav-section-title">${cfg.title}</h3>
+                    <span class="fav-section-count">${sectionItems.length}</span>
+                </div>
+                <div class="fav-grid${isListView ? ' list-view' : ''}">
+                    ${sectionItems.map((name, i) => renderFavCard(name, i)).join('')}
+                </div>
             </div>
         `;
     });
-    grid.innerHTML = html;
+    
+    if (!html) {
+        html = `
+            <div class="fav-grid">
+                <div class="fav-empty">
+                    <div class="fav-empty-icon">🔍</div>
+                    <h3 class="fav-empty-title">Ничего не найдено</h3>
+                    <p class="fav-empty-desc">Попробуйте изменить параметры поиска</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+    updateMassCount();
+}
+
+function sortFavorites(favs, sortValue) {
+    const [field, order] = sortValue.split('_');
+    const dir = order === 'desc' ? -1 : 1;
+    
+    return [...favs].sort((a, b) => {
+        const itemA = findAnimeByName(a);
+        const itemB = findAnimeByName(b);
+        
+        let valA, valB;
+        
+        switch (field) {
+            case 'title':
+                valA = a.toLowerCase();
+                valB = b.toLowerCase();
+                break;
+            case 'score':
+                valA = itemA?.score || 0;
+                valB = itemB?.score || 0;
+                break;
+            case 'episodes':
+                valA = parseInt(itemA?.episodes) || 0;
+                valB = parseInt(itemB?.episodes) || 0;
+                break;
+            case 'added':
+            default:
+                const idxA = favs.indexOf(a);
+                const idxB = favs.indexOf(b);
+                return (idxA - idxB) * dir;
+        }
+        
+        if (valA < valB) return -1 * dir;
+        if (valA > valB) return 1 * dir;
+        return 0;
+    });
+}
+
+function groupFavoritesByStatus(favs) {
+    const groups = {
+        watching: [],
+        planned: [],
+        completed: [],
+        other: []
+    };
+    
+    favs.forEach(name => {
+        const item = findAnimeByName(name);
+        const status = item?.status || '';
+        
+        if (status.includes('Онгоинг') || status.includes('ongoing')) {
+            groups.watching.push(name);
+        } else if (status.includes('Завершено') || status.includes('released')) {
+            groups.completed.push(name);
+        } else if (status.includes('Анонс') || status.includes('anons')) {
+            groups.planned.push(name);
+        } else {
+            groups.other.push(name);
+        }
+    });
+    
+    return groups;
+}
+
+function findAnimeByName(name) {
+    for (const id in allData) {
+        const item = allData[id];
+        if (item && item.title === name) {
+            return item;
+        }
+    }
+    return null;
+}
+
+function renderFavCard(name, index) {
+    const item = findAnimeByName(name);
+    
+    const img = item?.images?.jpg?.image_url || '';
+    const age = item?.age_rating || '0+';
+    const score = item?.score || 0;
+    
+    const posterContent = img 
+        ? `<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none';">`
+        : '<div style="width:100%;height:100%;background:linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);display:flex;align-items:center;justify-content:center;font-size:48px;">🎬</div>';
+    
+    const scoreHtml = score > 0 ? `<div class="fav-card-score">⭐ ${score.toFixed(1)}</div>` : '';
+    
+    return `
+        <div class="fav-card" 
+             data-name="${name.replace(/"/g, '&quot;')}"
+             onclick="onFavCardClick(event, '${name.replace(/'/g, "\\'")}')" 
+             style="animation-delay: ${index * 0.04}s;">
+            <div class="fav-card-img">
+                ${posterContent}
+            </div>
+            <div class="fav-card-age">${age}</div>
+            ${scoreHtml}
+            <div class="fav-card-checkbox"></div>
+            <button class="fav-card-remove" onclick="event.stopPropagation(); removeFromFav('${name.replace(/'/g, "\\'")}')" title="Удалить">✕</button>
+            <div class="fav-card-heart">❤️</div>
+            <div class="fav-card-info">
+                <h3 class="fav-card-title">${name}</h3>
+            </div>
+        </div>
+    `;
+}
+
+function onFavCardClick(event, name) {
+    const card = event.currentTarget;
+    
+    if (card.classList.contains('mass-mode')) {
+        card.classList.toggle('selected');
+        updateMassCount();
+        return;
+    }
+    
+    openDetailFromFav(name);
+}
+
+function removeFromFav(name) {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    
+    const favs = DB.getUserData(user.name, 'favorites', []);
+    const idx = favs.indexOf(name);
+    if (idx > -1) {
+        favs.splice(idx, 1);
+        DB.setUserData(user.name, 'favorites', favs);
+        DB.save();
+        
+        const cards = document.querySelectorAll('.fav-card');
+        
+        cards.forEach(card => {
+            const cardName = card.getAttribute('data-name');
+            if (cardName === name) {
+                card.style.transition = 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                card.style.transform = 'scale(0.5) rotate(-15deg) translateY(-50px)';
+                card.style.opacity = '0';
+                
+                setTimeout(() => {
+                    card.remove();
+                    updateFavStats(favs);
+                    
+                    const remaining = document.querySelectorAll('.fav-card').length;
+                    if (remaining === 0) {
+                        renderFavorites();
+                    } else {
+                        document.querySelectorAll('.fav-section').forEach(section => {
+                            const sectionCards = section.querySelectorAll('.fav-card');
+                            if (sectionCards.length === 0) {
+                                section.style.transition = 'all 0.4s ease';
+                                section.style.opacity = '0';
+                                setTimeout(() => section.remove(), 400);
+                            } else {
+                                const count = section.querySelector('.fav-section-count');
+                                if (count) count.textContent = sectionCards.length;
+                            }
+                        });
+                    }
+                }, 500);
+            }
+        });
+        
+        showToast('Удалено из избранного 💔', 'info');
+    }
+}
+
+function openDetailFromFav(name) {
+    if (!name) return;
+    
+    const item = findAnimeByName(name);
+    if (item) {
+        openDetail(item.mal_id || item.id);
+    } else {
+        searchAndOpen(name);
+    }
+}
+
+function updateFavStats(favs) {
+    document.getElementById('favStatTotal').textContent = favs.length;
+    
+    if (favs.length === 0) {
+        document.getElementById('favStatGenres').textContent = '0';
+        document.getElementById('favStatEpisodes').textContent = '0';
+        document.getElementById('favStatScore').textContent = '—';
+        return;
+    }
+    
+    const genres = new Set();
+    let totalEpisodes = 0;
+    let totalScore = 0;
+    let scoreCount = 0;
+    
+    favs.forEach(name => {
+        const item = findAnimeByName(name);
+        if (item) {
+            (item.genres || []).forEach(g => genres.add(g));
+            const eps = parseInt(item.episodes) || 0;
+            totalEpisodes += eps;
+            if (item.score > 0) {
+                totalScore += item.score;
+                scoreCount++;
+            }
+        }
+    });
+    
+    document.getElementById('favStatGenres').textContent = genres.size;
+    document.getElementById('favStatEpisodes').textContent = totalEpisodes;
+    document.getElementById('favStatScore').textContent = scoreCount > 0 
+        ? (totalScore / scoreCount).toFixed(1) 
+        : '—';
+}
+
+function filterFavorites() {
+    const searchInput = document.getElementById('favSearchInput');
+    const clearBtn = document.getElementById('favSearchClear');
+    
+    if (searchInput && clearBtn) {
+        clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none';
+    }
+    
+    applyFavFilters();
+}
+
+function clearFavSearch() {
+    const input = document.getElementById('favSearchInput');
+    const clearBtn = document.getElementById('favSearchClear');
+    if (input) {
+        input.value = '';
+        input.focus();
+        if (clearBtn) clearBtn.style.display = 'none';
+        applyFavFilters();
+    }
+}
+
+function toggleFavView() {
+    const btn = document.getElementById('favViewBtn');
+    if (!btn) return;
+    
+    btn.classList.toggle('active');
+    
+    if (btn.classList.contains('active')) {
+        btn.textContent = '🔲 Сетка';
+    } else {
+        btn.textContent = '📋 Список';
+    }
+    
+    applyFavFilters();
+}
+
+function randomFromFav() {
+    const user = DB.get('currentUser');
+    if (!user) { showToast('Войдите в аккаунт!', 'error'); return; }
+    
+    const favs = DB.getUserData(user.name, 'favorites', []);
+    if (favs.length === 0) {
+        showToast('Избранное пусто!', 'warning');
+        return;
+    }
+    
+    const randomName = favs[Math.floor(Math.random() * favs.length)];
+    const item = findAnimeByName(randomName);
+    
+    if (item) {
+        showToast(`🎲 Выбрано: ${randomName}`, 'success');
+        openDetail(item.mal_id || item.id);
+    } else {
+        searchAndOpen(randomName);
+    }
+}
+
+function toggleMassMode() {
+    const panel = document.getElementById('favMassPanel');
+    const btn = document.getElementById('favMassBtn');
+    const cards = document.querySelectorAll('.fav-card');
+    
+    if (!panel || !btn) return;
+    
+    const isActive = panel.style.display !== 'none';
+    
+    if (isActive) {
+        panel.style.display = 'none';
+        btn.classList.remove('active');
+        btn.innerHTML = '☑️ Выбрать';
+        cards.forEach(c => c.classList.remove('mass-mode', 'selected'));
+    } else {
+        panel.style.display = 'flex';
+        btn.classList.add('active');
+        btn.innerHTML = '✕ Отмена';
+        cards.forEach(c => c.classList.add('mass-mode'));
+    }
+    
+    updateMassCount();
+}
+
+function updateMassCount() {
+    const count = document.querySelectorAll('.fav-card.selected').length;
+    const countEl = document.getElementById('favMassCount');
+    if (countEl) countEl.textContent = count;
+}
+
+function selectAllFav() {
+    const cards = document.querySelectorAll('.fav-card.mass-mode');
+    cards.forEach(c => c.classList.add('selected'));
+    updateMassCount();
+}
+
+function deselectAllFav() {
+    const cards = document.querySelectorAll('.fav-card.selected');
+    cards.forEach(c => c.classList.remove('selected'));
+    updateMassCount();
+}
+
+function deleteSelectedFav() {
+    const user = DB.get('currentUser');
+    if (!user) return;
+    
+    const selected = document.querySelectorAll('.fav-card.selected');
+    if (selected.length === 0) {
+        showToast('Ничего не выбрано', 'warning');
+        return;
+    }
+    
+    showConfirmModal(
+        '🗑 Удалить выбранные?', 
+        `Удалить ${selected.length} аниме из избранного?`, 
+        function() {
+            const favs = DB.getUserData(user.name, 'favorites', []);
+            
+            const namesToRemove = [];
+            selected.forEach(card => {
+                const name = card.getAttribute('data-name');
+                if (name) namesToRemove.push(name);
+            });
+            
+            const newFavs = favs.filter(name => !namesToRemove.includes(name));
+            DB.setUserData(user.name, 'favorites', newFavs);
+            DB.save();
+            
+            selected.forEach((card, i) => {
+                setTimeout(() => {
+                    card.style.transition = 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                    card.style.transform = 'scale(0.5) rotate(-15deg) translateY(-50px)';
+                    card.style.opacity = '0';
+                    setTimeout(() => card.remove(), 400);
+                }, i * 30);
+            });
+            
+            setTimeout(() => {
+                updateFavStats(newFavs);
+                updateMassCount();
+                
+                const remaining = document.querySelectorAll('.fav-card').length;
+                if (remaining === 0) {
+                    renderFavorites();
+                    toggleMassMode();
+                } else {
+                    document.querySelectorAll('.fav-section').forEach(section => {
+                        const sectionCards = section.querySelectorAll('.fav-card');
+                        if (sectionCards.length === 0) {
+                            section.remove();
+                        } else {
+                            const count = section.querySelector('.fav-section-count');
+                            if (count) count.textContent = sectionCards.length;
+                        }
+                    });
+                }
+            }, 600);
+            
+            showToast(`🗑 Удалено ${namesToRemove.length} аниме`, 'success');
+        }
+    );
 }
 
 function searchAndOpen(name) {
@@ -2024,7 +2458,7 @@ function renderMyComments() {
 // 23. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🌟 OnikaAnime (Shikimori + 3D карусель + анимированный каталог) загружается...');
+    console.log('🌟 OnikaAnime (Shikimori + 3D карусель + Избранное v2.0) загружается...');
     restoreAllData();
     updateUI();
     navigate('home');
@@ -2090,5 +2524,18 @@ window.goToPage = goToPage;
 window.goToPrevPage = goToPrevPage;
 window.goToNextPage = goToNextPage;
 window.renderPagination = renderPagination;
+
+// ===== ИЗБРАННОЕ v2.0 =====
+window.filterFavorites = filterFavorites;
+window.clearFavSearch = clearFavSearch;
+window.toggleFavView = toggleFavView;
+window.randomFromFav = randomFromFav;
+window.toggleMassMode = toggleMassMode;
+window.selectAllFav = selectAllFav;
+window.deselectAllFav = deselectAllFav;
+window.deleteSelectedFav = deleteSelectedFav;
+window.onFavCardClick = onFavCardClick;
+window.removeFromFav = removeFromFav;
+window.openDetailFromFav = openDetailFromFav;
 
 console.log('✅ OnikaAnime полностью загружен!');
