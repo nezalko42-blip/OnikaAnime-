@@ -167,28 +167,18 @@ window.addEventListener('beforeunload', function() {
 });
 
 // ============================================
-// 1. КАРУСЕЛЬ РЕКОМЕНДАЦИЙ (3D)
+// 1. КАРУСЕЛЬ РЕКОМЕНДАЦИЙ (3D) — БЕЗ КЭША
 // ============================================
 async function loadRecommendationsForHero() {
     try {
-        const cachedRecs = sessionStorage.getItem('onika_hero_recs');
-        if (cachedRecs && heroSliderData.length === 0) {
-            try {
-                const parsed = JSON.parse(cachedRecs);
-                if (parsed && parsed.length > 0) {
-                    heroSliderData = parsed;
-                    renderHeroSlider(parsed);
-                    startHeroAutoSlide();
-                }
-            } catch(e) {}
-        }
-        
+        // ✅ Убран кэш — каждый раз свежие рекомендации
         const recs = await API.getRecommended(7);
+        
         if (recs && recs.length > 0) {
             heroSliderData = recs;
             renderHeroSlider(recs);
             startHeroAutoSlide();
-            sessionStorage.setItem('onika_hero_recs', JSON.stringify(recs.slice(0, 7)));
+            console.log('🎲 Загружено', recs.length, 'рекомендаций');
         }
     } catch (e) {
         console.error('Ошибка загрузки рекомендаций:', e);
