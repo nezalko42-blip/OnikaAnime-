@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME — СЕРВЕР (ГИБРИД)
+// ONIKAANIME — СЕРВЕР (SHIKIMORI PROXY)
 // ============================================
 
 require('dotenv').config();
@@ -45,12 +45,14 @@ app.post('/api/shikimori', async (req, res) => {
             return res.status(400).json({ error: 'Query обязателен' });
         }
 
-        const response = await fetch('https://shikimori.io/api/graphql', {
+        console.log('📡 Shikimori запрос:', query.slice(0, 80).replace(/\n/g, ' '));
+
+        const response = await fetch('https://shikimori.one/api/graphql', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'User-Agent': 'OnikaAnime/1.0'
+                'User-Agent': 'OnikaAnime/1.0 (https://onikaanime.relaxdev.ru)'
             },
             body: JSON.stringify({ query })
         });
@@ -64,6 +66,7 @@ app.post('/api/shikimori', async (req, res) => {
         }
 
         const data = await response.json();
+        console.log('✅ Shikimori ответ получен');
         res.json(data);
     } catch (err) {
         console.error('❌ Shikimori прокси ошибка:', err);
@@ -170,16 +173,14 @@ async function initDatabase() {
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_anime ON comments(anime)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_sources_title ON anime_sources(anime_title)`);
-        await pool.query(`CREATE INDEX IF NOT EXISTS idx_sources_anime_id ON anime_sources(anime_id)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_sources_source ON anime_sources(source)`);
 
-        console.log('✅ Все таблицы и индексы созданы!');
+        console.log('✅ Все таблицы созданы!');
     } catch (err) {
         console.error('❌ Ошибка создания таблиц:', err.message);
     }
 }
 
-// ===== ВАЛИДАЦИЯ =====
 const schemas = {
     register: Joi.object({
         email: Joi.string().email().required(),
@@ -226,31 +227,6 @@ app.get('/api/sources/:animeTitle', async (req, res, next) => {
         });
         
         res.json({ success: true, sources: grouped, animeTitle });
-    } catch (err) {
-        next(err);
-    }
-});
-
-app.get('/api/sources/by-id/:animeId', async (req, res, next) => {
-    try {
-        const animeId = req.params.animeId;
-        const result = await pool.query(
-            'SELECT * FROM anime_sources WHERE anime_id = $1 ORDER BY source, episode',
-            [animeId]
-        );
-        
-        const grouped = {};
-        result.rows.forEach(row => {
-            if (!grouped[row.source]) grouped[row.source] = [];
-            grouped[row.source].push({
-                id: row.id,
-                url: row.url,
-                episode: row.episode,
-                quality: row.quality
-            });
-        });
-        
-        res.json({ success: true, sources: grouped });
     } catch (err) {
         next(err);
     }
@@ -308,27 +284,6 @@ app.delete('/api/sources/:id', async (req, res, next) => {
     }
 });
 
-app.put('/api/sources/:id', async (req, res, next) => {
-    try {
-        const id = parseInt(req.params.id);
-        const { url, episode, quality, admin_key } = req.body;
-        
-        const ADMIN_KEY = process.env.ADMIN_KEY || 'onika_admin_secret_2026';
-        if (admin_key !== ADMIN_KEY) {
-            return res.status(403).json({ error: 'Неверный админ-ключ' });
-        }
-        
-        await pool.query(
-            'UPDATE anime_sources SET url = $1, episode = $2, quality = $3 WHERE id = $4',
-            [url, episode, quality, id]
-        );
-        
-        res.json({ success: true });
-    } catch (err) {
-        next(err);
-    }
-});
-
 app.get('/api/sources-list', async (req, res, next) => {
     try {
         const result = await pool.query(`
@@ -343,24 +298,6 @@ app.get('/api/sources-list', async (req, res, next) => {
         `);
         
         res.json({ success: true, list: result.rows });
-    } catch (err) {
-        next(err);
-    }
-});
-
-app.get('/api/sources-search/:query', async (req, res, next) => {
-    try {
-        const query = '%' + decodeURIComponent(req.params.query).toLowerCase() + '%';
-        
-        const result = await pool.query(`
-            SELECT DISTINCT anime_title, anime_id 
-            FROM anime_sources 
-            WHERE LOWER(anime_title) LIKE $1
-            ORDER BY anime_title
-            LIMIT 20
-        `, [query]);
-        
-        res.json({ success: true, results: result.rows });
     } catch (err) {
         next(err);
     }
@@ -605,22 +542,15 @@ app.post('/api/delete-account', async (req, res, next) => {
 });
 
 // ============================================
-// ОБРАБОТЧИК ОШИБОК
+// ОБРАБОТЧИК ОШИБОК + ЗАПУСК
 // ============================================
 app.use((err, req, res, next) => {
     console.error('❌ Ошибка:', err.message);
-    
     if (err.isJoi) return res.status(400).json({ error: err.details[0].message });
     if (err.code === '23505') return res.status(400).json({ error: 'Уже существует' });
-    
-    res.status(500).json({ 
-        error: process.env.NODE_ENV === 'production' ? 'Внутренняя ошибка' : err.message 
-    });
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Внутренняя ошибка' : err.message });
 });
 
-// ============================================
-// ЗАПУСК
-// ============================================
 initDatabase().then(() => {
     app.listen(PORT, () => {
         console.log('🚀 OnikaAnime сервер запущен!');
