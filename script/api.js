@@ -219,7 +219,7 @@ const API = {
             return null;
         }
         
-        // ✅ ОСНОВНОЙ ИСТОЧНИК: REST API — там ВСЕГДА есть описание
+        // ✅ ОСНОВНОЙ ИСТОЧНИК: REST API
         try {
             const response = await fetch(this.SHIKIMORI_REST + '/' + cleanId);
             
@@ -283,30 +283,70 @@ const API = {
     },
 
     // ============================================
-    // 7. РЕКОМЕНДАЦИИ
+    // 7. РЕКОМЕНДАЦИИ — СЛУЧАЙНЫЕ ИЗ ТОПА (ИСПРАВЛЕНО!)
     // ============================================
-    async getRecommended(limit = 6) {
-        const query = `{
-            animes(page: 1, limit: ${limit}, order: ranked) {
-                id
-                name
-                russian
-                english
-                kind
-                score
-                status
-                episodes
-                rating
-                year: airedOn { year }
-                poster { originalUrl mainUrl }
-                genres { id name russian kind }
+    async getRecommended(limit = 7) {
+        // ✅ Запрашиваем в 5 раз больше, чтобы было из чего выбирать
+        const fetchLimit = Math.max(limit * 5, 35);
+        
+        // ✅ Параллельно запрашиваем топ по рейтингу И по популярности
+        const [topData, popularData] = await Promise.all([
+            this._graphql(`{
+                animes(page: 1, limit: ${fetchLimit}, order: ranked) {
+                    id
+                    name
+                    russian
+                    english
+                    kind
+                    score
+                    status
+                    episodes
+                    rating
+                    year: airedOn { year }
+                    poster { originalUrl mainUrl }
+                    genres { id name russian kind }
+                }
+            }`, false),
+            this._graphql(`{
+                animes(page: 1, limit: ${fetchLimit}, order: popularity) {
+                    id
+                    name
+                    russian
+                    english
+                    kind
+                    score
+                    status
+                    episodes
+                    rating
+                    year: airedOn { year }
+                    poster { originalUrl mainUrl }
+                    genres { id name russian kind }
+                }
+            }`, false)
+        ]);
+        
+        const top = (topData?.animes || []).map(a => this._convertAnime(a));
+        const popular = (popularData?.animes || []).map(a => this._convertAnime(a));
+        
+        // ✅ Объединяем и убираем дубликаты
+        const combined = [...top, ...popular];
+        const unique = [];
+        const seen = new Set();
+        
+        for (const item of combined) {
+            if (!seen.has(item.id) && item.title && item.title !== 'Без названия') {
+                seen.add(item.id);
+                unique.push(item);
             }
-        }`;
+        }
         
-        const data = await this._graphql(query, true, `recommended_${limit}`);
-        if (!data || !data.animes) return [];
+        // ✅ Перемешиваем и берём случайные
+        const shuffled = unique.sort(() => Math.random() - 0.5);
+        const result = shuffled.slice(0, limit);
         
-        return data.animes.map(a => this._convertAnime(a));
+        console.log(`🎲 Рекомендации: ${result.length} из ${unique.length} уникальных`);
+        
+        return result;
     },
 
     // ============================================
@@ -457,7 +497,6 @@ const API = {
     _convertRestAnime(a) {
         let title = a.russian || a.name || 'Без названия';
         
-        // Постер из REST
         let poster = '';
         if (a.image) {
             if (a.image.original) {
@@ -471,12 +510,10 @@ const API = {
             }
         }
         
-        // Жанры
         const genres = (a.genres || [])
             .map(g => g.russian || g.name)
             .filter(Boolean);
         
-        // Возраст
         let ageRating = '0+';
         if (a.rating) {
             const ageMap = {
@@ -486,7 +523,6 @@ const API = {
             ageRating = ageMap[a.rating] || '0+';
         }
         
-        // Статус
         let status = 'Неизвестно';
         if (a.status) {
             const statusMap = {
@@ -495,13 +531,11 @@ const API = {
             status = statusMap[a.status] || a.status;
         }
         
-        // Год
         let year = '--';
         if (a.aired_on) {
             year = a.aired_on.split('-')[0];
         }
         
-        // Описание — уже с сервера
         let description = a.description || '';
         description = description.replace(/<[^>]*>/g, '').trim();
         
