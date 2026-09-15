@@ -6209,3 +6209,326 @@ svg use {
         font-size: 13px;
     }
 }
+
+/* ============================================
+   КАТАЛОГ — КАРТОЧКИ С ГЛУБИНОЙ + АНИМАЦИИ
+   ============================================ */
+
+/* ===== КАСКАДНОЕ ПОЯВЛЕНИЕ ===== */
+.grid .card {
+    animation: cardFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    will-change: transform, opacity;
+}
+
+@keyframes cardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Задержки для каскада */
+.grid .card:nth-child(1) { animation-delay: 0.02s; }
+.grid .card:nth-child(2) { animation-delay: 0.06s; }
+.grid .card:nth-child(3) { animation-delay: 0.10s; }
+.grid .card:nth-child(4) { animation-delay: 0.14s; }
+.grid .card:nth-child(5) { animation-delay: 0.18s; }
+.grid .card:nth-child(6) { animation-delay: 0.22s; }
+.grid .card:nth-child(7) { animation-delay: 0.26s; }
+.grid .card:nth-child(8) { animation-delay: 0.30s; }
+.grid .card:nth-child(9) { animation-delay: 0.34s; }
+.grid .card:nth-child(10) { animation-delay: 0.38s; }
+.grid .card:nth-child(11) { animation-delay: 0.42s; }
+.grid .card:nth-child(12) { animation-delay: 0.46s; }
+
+/* ===== HOVER — 3D ПОДЪЁМ ===== */
+.grid .card {
+    position: relative;
+    transition: 
+        transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        box-shadow 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        border-color 0.3s ease;
+    transform-style: preserve-3d;
+    cursor: pointer;
+    border: 1px solid rgba(0, 245, 255, 0.03);
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.grid .card:hover {
+    transform: translateY(-8px) scale(1.03);
+    border-color: rgba(0, 245, 255, 0.15);
+    box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.5),
+        0 0 60px rgba(108, 92, 231, 0.15),
+        0 0 30px rgba(0, 245, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    z-index: 10;
+}
+
+/* Неоновая подсветка вокруг */
+.grid .card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink), var(--neon-cyan));
+    background-size: 300% 300%;
+    border-radius: var(--radius-sm);
+    z-index: -1;
+    opacity: 0;
+    filter: blur(15px);
+    animation: gradientShift 4s ease infinite;
+    transition: opacity 0.4s ease;
+}
+
+.grid .card:hover::before {
+    opacity: 0.5;
+}
+
+/* ===== ZOOM ПОСТЕРА ===== */
+.grid .card .card-img {
+    overflow: hidden;
+    position: relative;
+}
+
+.grid .card .card-img img {
+    transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform: scale(1);
+    will-change: transform;
+}
+
+.grid .card:hover .card-img img {
+    transform: scale(1.12);
+}
+
+/* Градиент поверх постера при hover */
+.grid .card .card-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        transparent 50%,
+        rgba(10, 10, 20, 0.4) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.grid .card:hover .card-img::after {
+    opacity: 1;
+}
+
+/* ===== ЭФФЕКТ СВЕТА ПРОХОДЯЩЕГО ===== */
+.grid .card .card-img::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.15),
+        transparent
+    );
+    transition: left 0.7s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.grid .card:hover .card-img::before {
+    left: 100%;
+}
+
+/* ===== ПЛАВНЫЙ ПЕРЕХОД ЗАГОЛОВКА ===== */
+.grid .card .title {
+    transition: color 0.3s ease;
+}
+
+.grid .card:hover .title {
+    color: var(--neon-cyan);
+}
+
+/* ===== ПУЛЬСАЦИЯ БЕЙДЖА ВОЗРАСТА ===== */
+.grid .card .card-age {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.grid .card:hover .card-age {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(0, 245, 255, 0.2);
+}
+
+/* ===== СКЕЛЕТОНЫ ЗАГРУЗКИ ===== */
+.skeleton-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid rgba(0, 245, 255, 0.02);
+    animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.02) 0%,
+        rgba(0, 245, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0.02) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-title {
+    height: 12px;
+    margin: 10px 8px 6px;
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(0, 245, 255, 0.06) 50%,
+        rgba(255, 255, 255, 0.03) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+    animation-delay: 0.1s;
+}
+
+.skeleton-info {
+    height: 10px;
+    width: 60%;
+    margin: 0 8px 10px;
+    border-radius: 5px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(0, 245, 255, 0.06) 50%,
+        rgba(255, 255, 255, 0.03) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+    animation-delay: 0.2s;
+}
+
+@keyframes skeletonShimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes skeletonPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+/* ===== ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ СТРАНИЦ ===== */
+.grid {
+    transition: opacity 0.3s ease;
+}
+
+.grid.fade-out {
+    opacity: 0;
+}
+
+.grid.fade-in {
+    animation: gridFadeIn 0.4s ease;
+}
+
+@keyframes gridFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== ПЛАВНОЕ ПОЯВЛЕНИЕ СТАТИСТИКИ ===== */
+.catalog-stats {
+    transition: opacity 0.3s ease;
+}
+
+.catalog-stats span {
+    display: inline-block;
+    animation: statsFadeIn 0.4s ease;
+}
+
+@keyframes statsFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== ПАГИНАЦИЯ — HOVER ЭФФЕКТ ===== */
+.pagination-page {
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.pagination-page:hover:not(.active) {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 245, 255, 0.15);
+}
+
+.pagination-page:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+/* ===== АДАПТИВ ===== */
+@media (max-width: 768px) {
+    .grid .card:hover {
+        transform: translateY(-5px) scale(1.02);
+    }
+    
+    .grid .card:hover .card-img img {
+        transform: scale(1.06);
+    }
+    
+    /* Уменьшаем задержки на мобильных */
+    .grid .card:nth-child(n) {
+        animation-delay: calc((var(--card-index, 0)) * 0.03s);
+    }
+}
+
+@media (max-width: 480px) {
+    .grid .card:hover {
+        transform: translateY(-3px) scale(1.01);
+    }
+    
+    .grid .card:hover .card-img img {
+        transform: scale(1.04);
+    }
+}
+
+/* ===== УМЕНЬШЕННАЯ АНИМАЦИЯ ДЛЯ ОСОБЫХ НАСТРОЕК ===== */
+@media (prefers-reduced-motion: reduce) {
+    .grid .card,
+    .grid .card .card-img img,
+    .skeleton-poster,
+    .skeleton-title,
+    .skeleton-info {
+        animation: none !important;
+        transition: none !important;
+    }
+}
