@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + ПАГИНАЦИЯ
 // ============================================
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
@@ -10,19 +10,17 @@ let page = 1;
 let genre = '';
 let query = '';
 let totalCount = 0;
-let loadedCount = 0;
 let allItems = [];
 let onlineTimer = null;
 let startTime = Date.now();
 let isLoading = false;
-let activeFilters = {};
 let isAllLoaded = false;
-let searchQuery = '';
-let filterPanelVisible = false;
 let searchTimeout = null;
 let heroSliderData = [];
 let heroCurrentSlide = 0;
 let heroAutoSlideTimer = null;
+
+const CATALOG_LIMIT = 24; // ← фиксированное количество на страницу
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -294,21 +292,24 @@ function goToHeroSlide(index) {
 }
 
 // ============================================
-// 2. КАТАЛОГ
+// 2. КАТАЛОГ С ПАГИНАЦИЕЙ
 // ============================================
-async function loadCatalog() {
+async function loadCatalog(targetPage = null) {
     if (isLoading) return;
     isLoading = true;
     
+    if (targetPage !== null) page = targetPage;
+    
     const grid = document.getElementById('grid');
-    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const pagination = document.getElementById('pagination');
     const stats = document.getElementById('totalCount');
     if (!grid) return;
     
     const searchInput = document.getElementById('catalogSearchInput');
     const searchValue = searchInput ? searchInput.value.trim() : '';
     
-    if (!allItems.length && !searchValue && !genre) {
+    // Кэш только для стр. 1 без фильтров
+    if (!allItems.length && !searchValue && !genre && page === 1) {
         const cachedCatalog = sessionStorage.getItem('onika_catalog_cache');
         if (cachedCatalog) {
             try {
@@ -317,7 +318,6 @@ async function loadCatalog() {
                     allItems = parsed.items;
                     allItems.forEach(item => allItems[item.mal_id] = item);
                     renderCatalog(allItems);
-                    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
                 }
             } catch(e) {}
         }
@@ -331,55 +331,59 @@ async function loadCatalog() {
             </div>
         `;
     }
-    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+    if (pagination) pagination.style.display = 'none';
     
     try {
-        const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
-        
         let result;
         if (searchValue && searchValue.length > 0) {
-            console.log(`🔍 Поиск: "${searchValue}"`);
-            result = await API.searchAnime(searchValue, 1, limit);
+            console.log(`🔍 Поиск: "${searchValue}", стр. ${page}`);
+            result = await API.searchAnime(searchValue, page, CATALOG_LIMIT);
         } else if (genre === 'latest') {
-            result = await API.getLatest(1, limit);
+            result = await API.getLatest(page, CATALOG_LIMIT);
         } else if (genre) {
-            result = await API.getByGenre(genre, 1, limit);
+            result = await API.getByGenre(genre, page, CATALOG_LIMIT);
         } else {
-            result = await API.getCatalog(1, limit);
+            const sortValue = document.getElementById('filterSorting')?.value || 'popularity';
+            result = await API.getCatalog(page, CATALOG_LIMIT, sortValue);
         }
         
         if (result && result.items && result.items.length > 0) {
             allItems = result.items;
-            totalCount = result.totalCount || result.items.length;
+            totalCount = result.totalCount || 0;
             allItems.forEach(item => { allData[item.mal_id] = item; });
             
             renderCatalog(allItems);
             
-            if (!searchValue && !genre) {
+            // Кэш для стр. 1
+            if (!searchValue && !genre && page === 1) {
                 try {
                     sessionStorage.setItem('onika_catalog_cache', JSON.stringify({
-                        items: allItems.slice(0, 24),
+                        items: allItems.slice(0, CATALOG_LIMIT),
                         time: Date.now()
                     }));
                 } catch(e) {}
             }
             
+            // Статистика
             if (stats) {
                 const searchText = searchValue ? `по запросу "${searchValue}"` : '';
-                stats.textContent = searchText ? `${searchText} (${allItems.length})` : '';
+                stats.textContent = searchText 
+                    ? `${searchText} — стр. ${page}` 
+                    : `📄 Страница ${page}`;
             }
             
-            if (loadMoreBtn) {
-                if (allItems.length < totalCount && totalCount > limit && limit > 0) {
-                    loadMoreBtn.style.display = 'block';
-                    loadMoreBtn.textContent = `📥 Загрузить ещё (${allItems.length}/${totalCount})`;
-                } else {
-                    loadMoreBtn.style.display = 'none';
-                }
-            }
+            // ✅ Пагинация
+            renderPagination(page, result.items.length);
             
-            isAllLoaded = allItems.length >= totalCount || limit === 0;
+            isAllLoaded = result.items.length < CATALOG_LIMIT;
         } else {
+            // Если пусто и мы не на 1-й странице — откат
+            if (page > 1) {
+                page--;
+                isLoading = false;
+                return loadCatalog();
+            }
+            
             const searchText = searchValue ? ` "${searchValue}"` : '';
             grid.innerHTML = `
                 <div style="text-align:center;padding:60px 20px;color:var(--text-muted);grid-column:1/-1;">
@@ -388,7 +392,7 @@ async function loadCatalog() {
                 </div>
             `;
             if (stats) stats.textContent = '';
-            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+            if (pagination) pagination.style.display = 'none';
             allItems = [];
             totalCount = 0;
         }
@@ -409,77 +413,85 @@ async function loadCatalog() {
 }
 
 // ============================================
-// ЗАГРУЗКА ДОПОЛНИТЕЛЬНЫХ
+// ПАГИНАЦИЯ
 // ============================================
-async function loadMoreCatalog() {
-    if (isLoading || isAllLoaded) return;
-    isLoading = true;
+function renderPagination(currentPageNum, itemsCount) {
+    const pagination = document.getElementById('pagination');
+    const pagesContainer = document.getElementById('paginationPages');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    if (!pagination || !pagesContainer) return;
     
-    const loadMoreBtn = document.getElementById('loadMoreBtn');
-    const stats = document.getElementById('totalCount');
+    const hasPrev = currentPageNum > 1;
+    const hasNext = itemsCount >= CATALOG_LIMIT;
     
-    if (loadMoreBtn) {
-        loadMoreBtn.textContent = '⏳ Загрузка...';
-        loadMoreBtn.disabled = true;
+    // Скрываем если листать нечего
+    if (!hasPrev && !hasNext) {
+        pagination.style.display = 'none';
+        return;
     }
     
-    try {
-        const currentCount = allItems.length;
-        const limit = parseInt(document.getElementById('filterLimit')?.value || 24);
-        const nextPage = Math.floor(currentCount / Math.max(limit, 24)) + 1;
-        
-        const searchInput = document.getElementById('catalogSearchInput');
-        const searchValue = searchInput ? searchInput.value.trim() : '';
-        
-        let result;
-        if (searchValue && searchValue.length > 0) {
-            result = await API.searchAnime(searchValue, nextPage, limit);
-        } else if (genre === 'latest') {
-            result = await API.getLatest(nextPage, limit);
-            isAllLoaded = true;
-        } else if (genre) {
-            result = await API.getByGenre(genre, nextPage, limit);
-        } else {
-            result = await API.getCatalog(nextPage, limit);
+    pagination.style.display = 'flex';
+    
+    if (prevBtn) prevBtn.disabled = !hasPrev;
+    if (nextBtn) nextBtn.disabled = !hasNext;
+    
+    // Номера страниц
+    let pagesHtml = '';
+    const startPage = Math.max(1, currentPageNum - 3);
+    const endPage = currentPageNum + 3;
+    
+    if (startPage > 1) {
+        pagesHtml += `<button class="pagination-page" onclick="goToPage(1)">1</button>`;
+        if (startPage > 2) {
+            pagesHtml += `<span class="pagination-dots">...</span>`;
         }
-        
-        if (result && result.items && result.items.length > 0) {
-            const newItems = result.items;
-            newItems.forEach(item => {
-                if (!allData[item.mal_id]) allData[item.mal_id] = item;
-            });
-            
-            allItems = [...allItems, ...newItems];
-            totalCount = result.totalCount || totalCount;
-            
-            renderCatalog(allItems);
-            
-            if (stats) {
-                const searchText = searchValue ? `по запросу "${searchValue}"` : '';
-                stats.textContent = searchText ? `${searchText} (${allItems.length})` : '';
-            }
-            
-            isAllLoaded = allItems.length >= totalCount || newItems.length < Math.max(limit, 24);
-            
-            if (loadMoreBtn) {
-                if (!isAllLoaded) {
-                    loadMoreBtn.textContent = `📥 Загрузить ещё (${allItems.length}/${totalCount})`;
-                    loadMoreBtn.disabled = false;
-                } else {
-                    loadMoreBtn.style.display = 'none';
-                }
-            }
-        } else {
-            isAllLoaded = true;
-            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-        }
-    } catch (error) {
-        console.error('❌ Ошибка загрузки:', error);
-        showToast('⚠️ Ошибка загрузки', 'error');
-    } finally {
-        isLoading = false;
-        if (loadMoreBtn) loadMoreBtn.disabled = false;
     }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        if (i < 1) continue;
+        if (!hasNext && i > currentPageNum) break;
+        
+        const activeClass = i === currentPageNum ? ' active' : '';
+        pagesHtml += `<button class="pagination-page${activeClass}" onclick="goToPage(${i})">${i}</button>`;
+    }
+    
+    if (hasNext) {
+        const nextPageNum = endPage + 1;
+        if (nextPageNum > endPage + 1) {
+            pagesHtml += `<span class="pagination-dots">...</span>`;
+        }
+        pagesHtml += `<button class="pagination-page" onclick="goToPage(${nextPageNum})">${nextPageNum}</button>`;
+    }
+    
+    pagesContainer.innerHTML = pagesHtml;
+}
+
+// ============================================
+// ПЕРЕХОД НА СТРАНИЦУ
+// ============================================
+function goToPage(pageNum) {
+    if (pageNum < 1 || pageNum === page) return;
+    
+    page = pageNum;
+    allItems = [];
+    isAllLoaded = false;
+    loadCatalog(pageNum);
+    
+    // Скролл к началу каталога
+    const catalogSection = document.querySelector('.catalog-section');
+    if (catalogSection) {
+        const offset = catalogSection.offsetTop - 80;
+        window.scrollTo({ top: offset, behavior: 'smooth' });
+    }
+}
+
+function goToPrevPage() {
+    if (page > 1) goToPage(page - 1);
+}
+
+function goToNextPage() {
+    if (!isAllLoaded) goToPage(page + 1);
 }
 
 // ============================================
@@ -493,9 +505,9 @@ function getCatalogFilters() {
         filters.genres = Array.from(genreChecks).map(cb => cb.value);
     }
     
-    const ageChecks = document.querySelectorAll('#filterAgeRatings input:checked');
-    if (ageChecks.length) {
-        filters.age_ratings = Array.from(ageChecks).map(cb => cb.value);
+    const sortSelect = document.getElementById('filterSorting');
+    if (sortSelect && sortSelect.value) {
+        filters.sorting = sortSelect.value;
     }
     
     return filters;
@@ -503,11 +515,11 @@ function getCatalogFilters() {
 
 async function loadFilterOptions() {
     const genresContainer = document.getElementById('filterGenres');
-    const agesContainer = document.getElementById('filterAgeRatings');
+    if (!genresContainer) return;
     
     const cachedGenres = sessionStorage.getItem('onika_genres');
     
-    if (cachedGenres && genresContainer && !genresContainer.innerHTML.trim()) {
+    if (cachedGenres && !genresContainer.innerHTML.trim()) {
         try {
             const genres = JSON.parse(cachedGenres);
             genresContainer.innerHTML = genres.map(g => `
@@ -530,16 +542,6 @@ async function loadFilterOptions() {
             `).join('');
             sessionStorage.setItem('onika_genres', JSON.stringify(genres));
         }
-        
-        const ages = await API.getAgeRatings();
-        if (agesContainer && ages.length && !agesContainer.innerHTML.trim()) {
-            agesContainer.innerHTML = ages.map(a => `
-                <label>
-                    <input type="checkbox" value="${a.value}" onchange="applyCatalogFilters()">
-                    <span>${a.label}</span>
-                </label>
-            `).join('');
-        }
     } catch (e) {
         console.error('Ошибка загрузки фильтров:', e);
     }
@@ -551,8 +553,8 @@ function applyCatalogFilters() {
         allItems = [];
         isAllLoaded = false;
         page = 1;
-        loadCatalog();
-    }, 300);
+        loadCatalog(1);
+    }, 400);
 }
 
 function resetCatalogFiltersSilent() {
@@ -563,27 +565,15 @@ function resetCatalogFiltersSilent() {
         const clearBtn = document.getElementById('catalogSearchClear');
         if (clearBtn) clearBtn.style.display = 'none';
     }
-    const yearFrom = document.getElementById('filterYearFrom');
-    const yearTo = document.getElementById('filterYearTo');
-    if (yearFrom) yearFrom.value = '';
-    if (yearTo) yearTo.value = '';
     const sortSelect = document.getElementById('filterSorting');
-    if (sortSelect) sortSelect.value = 'CREATED_AT_DESC';
-    const limitSelect = document.getElementById('filterLimit');
-    if (limitSelect) limitSelect.value = '24';
+    if (sortSelect) sortSelect.value = 'popularity';
     
     if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }
     
     if (genre && genre !== 'latest') {
         genre = '';
-        document.querySelectorAll('.genres a').forEach(el => el.classList.remove('active'));
-        const allBtn = document.querySelector('.genres a[data-genre=""]');
-        if (allBtn) allBtn.classList.add('active');
-        const titleEl = document.getElementById('title');
-        if (titleEl) titleEl.textContent = '📚 ВСЕ АНИМЕ';
     }
     
-    searchQuery = '';
     allItems = [];
     isAllLoaded = false;
     page = 1;
@@ -592,7 +582,7 @@ function resetCatalogFiltersSilent() {
 function resetCatalogFilters() {
     resetCatalogFiltersSilent();
     sessionStorage.removeItem('onika_catalog_cache');
-    loadCatalog();
+    loadCatalog(1);
 }
 
 // ============================================
@@ -650,14 +640,13 @@ function setGenre(genreId, btn) {
     document.querySelectorAll('.genres a').forEach(el => el.classList.remove('active'));
     if (btn) btn.classList.add('active');
     
-    window.genre = genreId;
-    window.query = '';
-    window.page = 1;
+    genre = genreId;
+    page = 1;
     
     const searchInput = document.getElementById('catalogSearchInput');
     if (searchInput) searchInput.value = '';
     
-    const titleEl = document.getElementById('title');
+    const titleEl = document.getElementById('catalogTitle');
     if (titleEl) {
         if (genreId === 'latest') titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
         else if (genreId) titleEl.textContent = '🎭 ' + (btn ? btn.textContent : 'Жанр');
@@ -666,18 +655,11 @@ function setGenre(genreId, btn) {
     
     allItems = [];
     isAllLoaded = false;
-    loadCatalog();
+    loadCatalog(1);
 }
 
 // ============================================
-// 4. РЕКОМЕНДАЦИИ
-// ============================================
-async function loadRecommendations() {
-    await loadRecommendationsForHero();
-}
-
-// ============================================
-// 5. СЛУЧАЙНОЕ АНИМЕ
+// 4. СЛУЧАЙНОЕ АНИМЕ
 // ============================================
 async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
@@ -958,7 +940,7 @@ function showDetail(anime) {
 }
 
 // ============================================
-// 9. KODI МОДАЛЬНОЕ ОКНО
+// 9. KODI
 // ============================================
 function openKodiModal() {
     let modal = document.getElementById('kodiModal');
@@ -1007,7 +989,7 @@ function openKodiModal() {
 }
 
 // ============================================
-// 10. ПРОСМОТР ИСТОЧНИКОВ
+// 10. ИСТОЧНИКИ
 // ============================================
 function getCurrentAnimeTitle() {
     const titleEl = document.getElementById('detailTitle');
@@ -2017,7 +1999,7 @@ function saveEdit() {
 }
 
 // ============================================
-// 20. ВОССТАНОВЛЕНИЕ ДАННЫХ
+// 20. ВОССТАНОВЛЕНИЕ
 // ============================================
 function restoreAllData() {
     const user = DB.get('currentUser');
@@ -2036,7 +2018,7 @@ function restoreAllData() {
 }
 
 // ============================================
-// 21. СТАТИСТИКА СОЦСЕТЕЙ
+// 21. СОЦСЕТИ
 // ============================================
 function updateSocialStats() {
     const tgElement = document.getElementById('tgStats');
@@ -2093,7 +2075,7 @@ function renderMyComments() {
 // 23. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🌟 OnikaAnime (Shikimori) загружается...');
+    console.log('🌟 OnikaAnime (Shikimori + пагинация) загружается...');
     restoreAllData();
     updateUI();
     navigate('home');
@@ -2128,7 +2110,6 @@ window.loadRecommendations = loadRecommendations;
 window.randomAnime = randomAnime;
 window.applyCatalogFilters = applyCatalogFilters;
 window.resetCatalogFilters = resetCatalogFilters;
-window.loadMoreCatalog = loadMoreCatalog;
 window.scrollToTop = scrollToTop;
 window.closeModal = closeModal;
 window.showToast = showToast;
@@ -2155,4 +2136,10 @@ window.watchOnDeep = watchOnDeep;
 window.playSourceEpisode = playSourceEpisode;
 window.closeWatchEmbed = closeWatchEmbed;
 
-console.log('✅ OnikaAnime (Shikimori) полностью загружен!');
+// ===== ПАГИНАЦИЯ =====
+window.goToPage = goToPage;
+window.goToPrevPage = goToPrevPage;
+window.goToNextPage = goToNextPage;
+window.renderPagination = renderPagination;
+
+console.log('✅ OnikaAnime (Shikimori + пагинация) полностью загружен!');
