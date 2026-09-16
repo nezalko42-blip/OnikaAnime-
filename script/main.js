@@ -2306,8 +2306,6 @@ function renderProfile() {
 
     renderProfileAchievements(user.name);
     renderContinueWatching(user.name);
-    renderActivityFeed(user.name);
-    renderGenreStats(user.name);
     renderTopUsers();
 }
 
@@ -2319,14 +2317,12 @@ function animateNumber(elementId, targetValue, duration = 1200) {
     const startValue = 0;
     const startTime = performance.now();
 
-    // Останавливаем предыдущую анимацию, если она была
     if (el._animFrame) cancelAnimationFrame(el._animFrame);
 
     function update(currentTime) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // Ease-out cubic для плавного замедления
         const eased = 1 - Math.pow(1 - progress, 3);
         const currentValue = Math.round(startValue + (targetValue - startValue) * eased);
 
@@ -2343,7 +2339,7 @@ function animateNumber(elementId, targetValue, duration = 1200) {
     el._animFrame = requestAnimationFrame(update);
 }
 
-// ===== ✅ АНИМАЦИЯ ВРЕМЕНИ (0ч → 5ч) =====
+// ===== ✅ АНИМАЦИЯ ВРЕМЕНИ =====
 function animateTimeCounter(elementId, totalSeconds, duration = 1200) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -2426,73 +2422,6 @@ function renderContinueWatching(user) {
     });
 
     grid.innerHTML = html;
-}
-
-function renderActivityFeed(user) {
-    const feed = document.getElementById('activityFeed');
-    if (!feed) return;
-
-    const activities = DB.getUserData(user, 'activities', []);
-
-    if (activities.length === 0) {
-        feed.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Активность появится здесь</div>';
-        return;
-    }
-
-    const icons = { 'watch': '▶️', 'favorite': '❤️', 'comment': '💬', 'achievement': '🏆', 'login': '🌐' };
-
-    let html = '';
-    activities.slice(0, 10).forEach((act, index) => {
-        const icon = icons[act.type] || '📌';
-        const time = act.timestamp ? formatTimeAgo(act.timestamp) : 'Недавно';
-        html += `
-            <div class="activity-item" style="animation-delay: ${index * 0.05}s;">
-                <span class="activity-icon">${icon}</span>
-                <span class="activity-text">${act.text}</span>
-                <span class="activity-time">${time}</span>
-            </div>
-        `;
-    });
-
-    feed.innerHTML = html;
-}
-
-function renderGenreStats(user) {
-    const container = document.getElementById('genreStats');
-    if (!container) return;
-
-    const favs = DB.getUserData(user, 'favorites', []);
-    const genreCount = {};
-    const genreColors = {
-        'Экшен': '#e74c3c', 'Приключения': '#e67e22', 'Комедия': '#f1c40f',
-        'Драма': '#8e44ad', 'Фэнтези': '#3498db', 'Романтика': '#e84393',
-        'Фантастика': '#00b894', 'Повседневность': '#636e72'
-    };
-
-    favs.forEach(name => {
-        for (const id in allData) {
-            if (allData[id] && allData[id].title === name) {
-                const genres = allData[id].genres || [];
-                genres.forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; });
-                break;
-            }
-        }
-    });
-
-    const sorted = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
-
-    if (sorted.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Нет данных</div>';
-        return;
-    }
-
-    let html = '';
-    sorted.forEach(([genre, count], index) => {
-        const color = genreColors[genre] || '#6c5ce7';
-        html += `<span class="genre-tag" style="border-color:${color}40;background:${color}10;color:${color};animation-delay:${index * 0.06}s;">${genre}<span class="count">${count}</span></span>`;
-    });
-
-    container.innerHTML = html;
 }
 
 function formatTimeAgo(timestamp) {
