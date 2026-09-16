@@ -242,10 +242,9 @@
                     </section>
                 </div>
 
-                <!-- ===== ДЕТАЛЬНАЯ v2.0 ===== -->
+                <!-- ===== ДЕТАЛЬНАЯ v2.1 ===== -->
                 <div id="page-detail" style="display:none;">
                     
-                    <!-- Фоновое свечение от постера -->
                     <div class="detail-ambient-glow" id="detailAmbientGlow"></div>
                     
                     <span class="back-btn" onclick="goBack()">
@@ -367,6 +366,32 @@
                         <div id="watchEmbedContainer" class="watch-embed-container" style="display:none;"></div>
                     </div>
 
+                    <!-- ===== СКРИНШОТЫ ===== -->
+                    <div class="screenshots-section" id="screenshotsSection" style="display:none;">
+                        <div class="screenshots-header">
+                            <h3>📸 Кадры из аниме</h3>
+                            <p>Нажмите на кадр, чтобы увеличить</p>
+                        </div>
+                        
+                        <div class="screenshots-carousel">
+                            <button class="screenshots-nav screenshots-prev" onclick="slideScreenshots(-1)" aria-label="Назад">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                            
+                            <div class="screenshots-track" id="screenshotsTrack"></div>
+                            
+                            <button class="screenshots-nav screenshots-next" onclick="slideScreenshots(1)" aria-label="Вперёд">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="screenshots-dots" id="screenshotsDots"></div>
+                    </div>
+
                     <!-- КОММЕНТАРИИ -->
                     <div class="comments-section">
                         <h3>💬 Комментарии</h3>
@@ -381,6 +406,32 @@
                             <div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев</div>
                         </div>
                     </div>
+                </div>
+
+                <!-- ЛАЙТБОКС СКРИНШОТОВ -->
+                <div class="screenshot-lightbox" id="screenshotLightbox" onclick="if(event.target === this) closeLightbox()">
+                    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Закрыть">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    
+                    <button class="lightbox-nav lightbox-prev" onclick="event.stopPropagation(); navigateLightbox(-1)" aria-label="Предыдущий">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="lightbox-content" onclick="event.stopPropagation()">
+                        <img id="lightboxImage" src="" alt="Скриншот">
+                        <div class="lightbox-counter" id="lightboxCounter">1 / 1</div>
+                    </div>
+                    
+                    <button class="lightbox-nav lightbox-next" onclick="event.stopPropagation(); navigateLightbox(1)" aria-label="Следующий">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                            <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- ===== ИЗБРАННОЕ v2.0 ===== -->
