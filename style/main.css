@@ -9942,3 +9942,831 @@ svg use {
         transition: none !important;
     }
 }
+
+/* ============================================
+   МЕНЮ САЙТА v2.0 — ЭПИЧНАЯ ВЕРСИЯ
+   ============================================ */
+
+/* ===== САЙДБАР — ПЛАВНОЕ ОТКРЫТИЕ ===== */
+.sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 260px;
+    height: calc(100vh - 56px);
+    background: rgba(10, 10, 18, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(0, 245, 255, 0.08);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 50;
+    padding: 20px 14px;
+    transform: translateX(-100%);
+    transition: 
+        transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+        background 0.5s ease,
+        box-shadow 0.5s ease;
+    box-shadow: 
+        8px 0 40px rgba(0, 0, 0, 0),
+        inset -1px 0 0 rgba(0, 245, 255, 0);
+    will-change: transform;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 10px;
+}
+
+.sidebar.open {
+    transform: translateX(0);
+    box-shadow: 
+        8px 0 60px rgba(0, 0, 0, 0.6),
+        8px 0 100px rgba(0, 245, 255, 0.08),
+        inset -1px 0 0 rgba(0, 245, 255, 0.15);
+}
+
+/* Неоновая полоска справа от сайдбара */
+.sidebar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(180deg, 
+        transparent 0%,
+        var(--neon-cyan) 20%,
+        var(--neon-purple) 50%,
+        var(--neon-pink) 80%,
+        transparent 100%);
+    opacity: 0;
+    transition: opacity 0.6s ease 0.2s;
+    box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+    pointer-events: none;
+}
+
+.sidebar.open::after {
+    opacity: 0.6;
+}
+
+/* Плавающие частицы в сайдбаре */
+.sidebar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+        radial-gradient(circle, rgba(0, 245, 255, 0.15) 1px, transparent 1.5px),
+        radial-gradient(circle, rgba(180, 74, 255, 0.12) 1px, transparent 1.5px);
+    background-size: 60px 60px, 90px 90px;
+    background-position: 0 0, 30px 30px;
+    animation: sidebarParticles 30s linear infinite;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.8s ease 0.3s;
+}
+
+.sidebar.open::before {
+    opacity: 1;
+}
+
+@keyframes sidebarParticles {
+    0% { background-position: 0 0, 30px 30px; }
+    100% { background-position: 60px 60px, 120px 120px; }
+}
+
+/* ===== ЗАГОЛОВОК САЙДБАРА ===== */
+.sidebar-header {
+    padding: 0 4px 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 245, 255, 0.06);
+    position: relative;
+    animation: sidebarItemIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s backwards;
+}
+
+.sidebar-header h2 {
+    font-size: 16px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--neon-cyan), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: left;
+    margin: 0;
+    letter-spacing: 1px;
+    text-shadow: 0 0 30px rgba(0, 245, 255, 0.2);
+}
+
+/* Разделитель с градиентом */
+.sidebar-divider {
+    height: 1px;
+    margin: 14px 0;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(0, 245, 255, 0.3) 50%, 
+        transparent 100%);
+    position: relative;
+    animation: sidebarItemIn 0.5s ease 0.2s backwards;
+}
+
+.sidebar-divider::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 2px;
+    filter: blur(2px);
+    animation: dividerPulse 3s ease-in-out infinite;
+}
+
+@keyframes dividerPulse {
+    0%, 100% { 
+        width: 40px; 
+        opacity: 0.6; 
+        box-shadow: 0 0 10px rgba(0, 245, 255, 0.4);
+    }
+    50% { 
+        width: 80px; 
+        opacity: 1; 
+        box-shadow: 0 0 25px rgba(0, 245, 255, 0.8);
+    }
+}
+
+/* ===== НАВИГАЦИЯ ===== */
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    z-index: 2;
+}
+
+/* ===== ССЫЛКИ С КАСКАДНОЙ АНИМАЦИЕЙ ===== */
+.sidebar-nav a {
+    position: relative;
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: 
+        color 0.3s ease,
+        background 0.3s ease,
+        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateX(-30px);
+    will-change: transform, opacity;
+}
+
+/* Каскадное появление ссылок при открытии сайдбара */
+.sidebar.open .sidebar-nav a {
+    animation: sidebarLinkIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes sidebarLinkIn {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Задержки каскада */
+.sidebar.open .sidebar-nav a:nth-child(1) { animation-delay: 0.05s; }
+.sidebar.open .sidebar-nav a:nth-child(2) { animation-delay: 0.10s; }
+.sidebar.open .sidebar-nav a:nth-child(3) { animation-delay: 0.15s; }
+.sidebar.open .sidebar-nav a:nth-child(4) { animation-delay: 0.20s; }
+.sidebar.open .sidebar-nav a:nth-child(5) { animation-delay: 0.25s; }
+.sidebar.open .sidebar-nav a:nth-child(6) { animation-delay: 0.30s; }
+.sidebar.open .sidebar-nav a:nth-child(7) { animation-delay: 0.35s; }
+.sidebar.open .sidebar-nav a:nth-child(8) { animation-delay: 0.40s; }
+
+/* Блик при hover */
+.sidebar-nav a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(0, 245, 255, 0.12), 
+        transparent);
+    transition: left 0.7s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.sidebar-nav a:hover::before {
+    left: 100%;
+}
+
+/* Пульсирующая точка слева от активной ссылки */
+.sidebar-nav a::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%) scale(0);
+    width: 3px;
+    height: 0;
+    background: linear-gradient(180deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 3px;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 15px rgba(0, 245, 255, 0.6);
+}
+
+/* Hover на ссылке */
+.sidebar-nav a:hover {
+    background: rgba(0, 245, 255, 0.05);
+    color: var(--text-primary);
+    border-color: rgba(0, 245, 255, 0.15);
+    transform: translateX(6px);
+    box-shadow: 
+        0 4px 20px rgba(0, 245, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav a:hover .icon {
+    transform: scale(1.2) rotate(-10deg);
+    filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.6));
+}
+
+/* Активная ссылка */
+.sidebar-nav a.active {
+    background: linear-gradient(135deg, 
+        rgba(108, 92, 231, 0.2), 
+        rgba(0, 245, 255, 0.08));
+    color: var(--neon-cyan);
+    border-color: rgba(0, 245, 255, 0.25);
+    box-shadow: 
+        0 4px 25px rgba(0, 245, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    text-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+}
+
+.sidebar-nav a.active::after {
+    height: 60%;
+    transform: translateY(-50%) scale(1);
+}
+
+.sidebar-nav a.active .icon {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 12px rgba(0, 245, 255, 0.8));
+    animation: activeIconPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes activeIconPulse {
+    0%, 100% { 
+        transform: scale(1.15); 
+        filter: drop-shadow(0 0 12px rgba(0, 245, 255, 0.8));
+    }
+    50% { 
+        transform: scale(1.25); 
+        filter: drop-shadow(0 0 20px rgba(0, 245, 255, 1));
+    }
+}
+
+/* ===== ИКОНКИ ===== */
+.sidebar-nav a .icon {
+    font-size: 20px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    z-index: 2;
+}
+
+/* ===== БЕЙДЖ (для бейджей Избранное/Комментарии) ===== */
+.sidebar-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 800;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 12px rgba(0, 245, 255, 0.4);
+    animation: badgePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes badgePop {
+    0% { transform: scale(0) rotate(-180deg); }
+    70% { transform: scale(1.2) rotate(10deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+.sidebar-nav a:hover .sidebar-badge {
+    animation: badgeBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes badgeBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* ===== ФУТЕР САЙДБАРА ===== */
+.sidebar-footer {
+    padding: 16px 4px 8px;
+    margin-top: 16px;
+    border-top: 1px solid rgba(0, 245, 255, 0.06);
+    position: relative;
+    z-index: 2;
+    animation: sidebarItemIn 0.5s ease 0.4s backwards;
+}
+
+@keyframes sidebarItemIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* ===== КАРТОЧКА ПОЛЬЗОВАТЕЛЯ В ФУТЕРЕ ===== */
+.sidebar-user-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(0, 245, 255, 0.08);
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-user-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.1), transparent);
+    transition: left 0.7s ease;
+    pointer-events: none;
+}
+
+.sidebar-user-card:hover::before {
+    left: 100%;
+}
+
+.sidebar-user-card:hover {
+    background: rgba(0, 245, 255, 0.06);
+    border-color: var(--neon-cyan);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 25px rgba(0, 245, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    border: 2px solid rgba(0, 245, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.sidebar-user-avatar::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        var(--neon-cyan),
+        var(--neon-purple),
+        var(--neon-pink),
+        var(--neon-cyan)
+    );
+    z-index: -1;
+    animation: avatarMiniRing 3s linear infinite;
+    filter: blur(2px);
+    opacity: 0.7;
+}
+
+@keyframes avatarMiniRing {
+    to { transform: rotate(360deg); }
+}
+
+.sidebar-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sidebar-user-card:hover .sidebar-user-avatar {
+    transform: scale(1.1);
+}
+
+.sidebar-user-info-block {
+    flex: 1;
+    min-width: 0;
+}
+
+.sidebar-user-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.sidebar-user-level {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    background: rgba(0, 245, 255, 0.1);
+    padding: 1px 8px;
+    border-radius: 8px;
+    display: inline-block;
+    border: 1px solid rgba(0, 245, 255, 0.2);
+}
+
+.sidebar-user-xp {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+.sidebar-user-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 10px;
+    transition: width 1s ease;
+    box-shadow: 0 0 8px rgba(0, 245, 255, 0.5);
+}
+
+/* ===== КНОПКА "ВОЙТИ" (неавторизованные) ===== */
+.sidebar-login-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+    background-size: 200% 200%;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 
+        0 8px 30px rgba(0, 245, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    animation: loginBtnGradient 4s ease infinite;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.5px;
+}
+
+@keyframes loginBtnGradient {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.sidebar-login-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.7s ease;
+}
+
+.sidebar-login-btn:hover::before {
+    left: 100%;
+}
+
+.sidebar-login-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 
+        0 12px 40px rgba(0, 245, 255, 0.5),
+        0 0 60px rgba(108, 92, 231, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-login-btn:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+/* ===== КНОПКА "ВЫЙТИ" ===== */
+.sidebar-logout-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-logout-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 45, 120, 0.15), transparent);
+    transition: left 0.7s ease;
+}
+
+.sidebar-logout-btn:hover::before {
+    left: 100%;
+}
+
+.sidebar-logout-btn:hover {
+    color: var(--neon-pink);
+    background: rgba(255, 45, 120, 0.08);
+    border-color: rgba(255, 45, 120, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 25px rgba(255, 45, 120, 0.2),
+        0 0 30px rgba(255, 45, 120, 0.15);
+}
+
+.sidebar-logout-btn:hover .logout-icon {
+    transform: translateX(4px) rotate(-10deg);
+}
+
+.logout-icon {
+    display: inline-block;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-size: 16px;
+}
+
+/* ===== OVERLAY С BLUR ===== */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 40;
+    opacity: 0;
+    transition: 
+        opacity 0.4s ease,
+        backdrop-filter 0.4s ease;
+}
+
+.sidebar-overlay.open {
+    display: block;
+    opacity: 1;
+    animation: overlayIn 0.4s ease;
+}
+
+@keyframes overlayIn {
+    from { 
+        opacity: 0; 
+        backdrop-filter: blur(0);
+    }
+    to { 
+        opacity: 1; 
+        backdrop-filter: blur(8px);
+    }
+}
+
+/* ===== ТЕМАТИЧЕСКИЕ ЦВЕТА САЙДБАРА ===== */
+
+/* Главная — фиолетовый */
+body[data-page="home"] .sidebar.open {
+    background: linear-gradient(180deg, 
+        rgba(10, 10, 18, 0.95) 0%, 
+        rgba(45, 27, 105, 0.12) 100%),
+        rgba(10, 10, 18, 0.92);
+}
+
+/* Избранное — розовый */
+body[data-page="favorites"] .sidebar.open {
+    background: linear-gradient(180deg, 
+        rgba(10, 10, 18, 0.95) 0%, 
+        rgba(253, 121, 168, 0.12) 100%),
+        rgba(10, 10, 18, 0.92);
+}
+
+/* Мои комментарии — циан */
+body[data-page="mycomments"] .sidebar.open {
+    background: linear-gradient(180deg, 
+        rgba(10, 10, 18, 0.95) 0%, 
+        rgba(0, 245, 255, 0.1) 100%),
+        rgba(10, 10, 18, 0.92);
+}
+
+/* Достижения — золотой */
+body[data-page="achievements"] .sidebar.open {
+    background: linear-gradient(180deg, 
+        rgba(10, 10, 18, 0.95) 0%, 
+        rgba(255, 215, 0, 0.1) 100%),
+        rgba(10, 10, 18, 0.92);
+}
+
+/* Профиль — синий */
+body[data-page="profile"] .sidebar.open {
+    background: linear-gradient(180deg, 
+        rgba(10, 10, 18, 0.95) 0%, 
+        rgba(77, 138, 255, 0.12) 100%),
+        rgba(10, 10, 18, 0.92);
+}
+
+/* Настройки — серо-фиолетовый */
+body[data-page="settings"] .sidebar.open {
+    background: linear-gradient(180deg, 
+        rgba(10, 10, 18, 0.95) 0%, 
+        rgba(108, 92, 231, 0.1) 100%),
+        rgba(10, 10, 18, 0.92);
+}
+
+/* ===== АДАПТИВ ===== */
+@media (min-width: 768px) {
+    .sidebar {
+        transform: translateX(0) !important;
+        position: sticky;
+        top: 56px;
+        width: 240px;
+        animation: sidebarDesktopIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .sidebar.open {
+        transform: translateX(0) !important;
+    }
+    
+    /* Все ссылки видимы на десктопе */
+    .sidebar .sidebar-nav a {
+        opacity: 1;
+        transform: translateX(0);
+        animation: none !important;
+    }
+    
+    .menu-toggle {
+        display: none;
+    }
+    
+    .sidebar-overlay {
+        display: none !important;
+    }
+}
+
+@keyframes sidebarDesktopIn {
+    from { 
+        opacity: 0; 
+        transform: translateX(-30px);
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 767px) {
+    .sidebar {
+        width: 300px;
+        padding: 20px 16px;
+    }
+    
+    /* На мобилке убираем плавающие частицы для производительности */
+    .sidebar::before {
+        display: none;
+    }
+    
+    .sidebar-nav a {
+        padding: 14px 18px;
+        font-size: 15px;
+    }
+    
+    .sidebar-nav a .icon {
+        font-size: 22px;
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* ===== УМЕНЬШЕННАЯ АНИМАЦИЯ ===== */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .sidebar::before,
+    .sidebar::after,
+    .sidebar-nav a,
+    .sidebar-nav a::before,
+    .sidebar-nav a::after,
+    .sidebar-nav a .icon,
+    .sidebar-badge,
+    .sidebar-user-avatar,
+    .sidebar-user-avatar::before,
+    .sidebar-login-btn,
+    .sidebar-login-btn::before,
+    .sidebar-logout-btn,
+    .sidebar-logout-btn::before,
+    .sidebar-divider::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* ===== ХЕДЕР — НЕОНОВАЯ ПОЛОСКА ПРИ СКРОЛЛЕ ===== */
+.header.scrolled {
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+.header.scrolled::after {
+    opacity: 1;
+    box-shadow: 0 0 40px rgba(0, 245, 255, 0.3);
+}
+
+/* ===== КНОПКА БУРГЕРА С АНИМАЦИЕЙ ===== */
+.menu-toggle {
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.menu-toggle:hover svg {
+    transform: scale(1.15) rotate(90deg);
+}
+
+.menu-toggle svg {
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.menu-toggle:active {
+    transform: scale(0.9);
+}
+
+/* Пульсирующее свечение кнопки при первом заходе */
+.menu-toggle::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0, 245, 255, 0.3);
+    opacity: 0;
+    animation: menuPulse 3s ease-in-out infinite 2s;
+    pointer-events: none;
+}
+
+@keyframes menuPulse {
+    0%, 100% { opacity: 0; transform: scale(0.8); }
+    50% { opacity: 0.3; transform: scale(1.3); }
+}
