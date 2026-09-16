@@ -29,8 +29,7 @@ let mcSelectedIds = new Set();
 let myCommentsAll = [];
 let myCommentsFiltered = [];
 
-// ===== ФИЛЬТР И СОРТИРОВКА ДОСТИЖЕНИЙ =====
-let achCurrentFilter = 'all';
+// ===== СОРТИРОВКА ДОСТИЖЕНИЙ =====
 let achCurrentSort = 'rarity_desc';
 
 const RARITY_ORDER = { legendary: 4, epic: 3, rare: 2, common: 1 };
@@ -1776,7 +1775,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 13. ДОСТИЖЕНИЯ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
+// 13. ДОСТИЖЕНИЯ v2.0 — ЭПИЧНАЯ ВЕРСИЯ (БЕЗ ФИЛЬТРОВ)
 // ============================================
 function getUserMetrics(user) {
     const favs = DB.getUserData(user, 'favorites', []);
@@ -1849,38 +1848,29 @@ async function renderAchievements() {
     const finalEarned = DB.getAchievements(user.name);
 
     updateAchievementStats(finalEarned, ACHIEVEMENTS_LIST.length, metrics);
-    updateAchTabCounts(achievementsWithProgress, finalEarned);
     renderActiveTitle(activeTitle);
 
-    // Фильтрация
-    let filtered = [...achievementsWithProgress];
-
-    if (achCurrentFilter === 'earned') {
-        filtered = filtered.filter(a => a.isEarned);
-    } else if (achCurrentFilter === 'locked') {
-        filtered = filtered.filter(a => !a.isEarned && a.progress === 0);
-    } else if (achCurrentFilter === 'progress') {
-        filtered = filtered.filter(a => !a.isEarned && a.progress > 0 && a.progress < 100);
-    }
+    // ✅ Показываем ВСЕ достижения без фильтров
+    let allAchievements = [...achievementsWithProgress];
 
     // Сортировка
     const sortValue = document.getElementById('achSortSelect')?.value || 'rarity_desc';
     achCurrentSort = sortValue;
-    filtered = sortAchievements(filtered, sortValue);
+    allAchievements = sortAchievements(allAchievements, sortValue);
 
-    if (filtered.length === 0) {
+    if (allAchievements.length === 0) {
         grid.innerHTML = `
             <div class="ach-empty-v2">
                 <span class="ach-empty-icon-v2">🔍</span>
-                <h3 class="ach-empty-title-v2">Ничего не найдено</h3>
-                <p class="ach-empty-desc-v2">Попробуйте выбрать другой фильтр</p>
+                <h3 class="ach-empty-title-v2">Пока нет достижений</h3>
+                <p class="ach-empty-desc-v2">Смотри аниме, оставляй комментарии и добавляй в избранное!</p>
             </div>
         `;
         return;
     }
 
     let html = '';
-    filtered.forEach((ach, index) => {
+    allAchievements.forEach((ach, index) => {
         html += renderAchCardV2(ach, index, activeTitle);
     });
     grid.innerHTML = html;
@@ -2037,32 +2027,6 @@ function renderActiveTitle(activeTitle) {
             <span>Титул: ${ach.title}</span>
         </div>
     `;
-}
-
-function updateAchTabCounts(achievements, earned) {
-    const allCount = achievements.length;
-    const earnedCount = achievements.filter(a => a.isEarned).length;
-    const progressCount = achievements.filter(a => !a.isEarned && a.progress > 0 && a.progress < 100).length;
-    const lockedCount = achievements.filter(a => !a.isEarned && a.progress === 0).length;
-
-    const el1 = document.getElementById('achTabAllCount');
-    const el2 = document.getElementById('achTabEarnedCount');
-    const el3 = document.getElementById('achTabProgressCount');
-    const el4 = document.getElementById('achTabLockedCount');
-
-    if (el1) el1.textContent = allCount;
-    if (el2) el2.textContent = earnedCount;
-    if (el3) el3.textContent = progressCount;
-    if (el4) el4.textContent = lockedCount;
-}
-
-function setAchFilter(filter, btn) {
-    achCurrentFilter = filter;
-
-    document.querySelectorAll('.ach-tab').forEach(t => t.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-
-    renderAchievements();
 }
 
 function setActiveTitle(achId) {
@@ -3427,7 +3391,6 @@ window.toggleMcSelection = toggleMcSelection;
 window.onMcItemClick = onMcItemClick;
 
 // ===== ДОСТИЖЕНИЯ v2.0 =====
-window.setAchFilter = setAchFilter;
 window.openAchModal = openAchModal;
 window.closeAchUnlock = closeAchUnlock;
 window.setActiveTitle = setActiveTitle;
@@ -3437,7 +3400,6 @@ window.spawnConfetti = spawnConfetti;
 window.spawnTitleConfetti = spawnTitleConfetti;
 window.spawnBigConfetti = spawnBigConfetti;
 window.renderActiveTitle = renderActiveTitle;
-window.updateAchTabCounts = updateAchTabCounts;
 window.sortAchievements = sortAchievements;
 window.renderAchCardV2 = renderAchCardV2;
 window.showAchUnlock = showAchUnlock;
