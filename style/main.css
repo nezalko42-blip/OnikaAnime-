@@ -12279,3 +12279,532 @@ body[data-page="settings"] .sidebar.open {
         transition: none !important;
     }
 }
+
+/* ============================================
+   СЕКЦИЯ СКРИНШОТОВ АНИМЕ
+   ============================================ */
+
+.screenshots-section {
+    margin-top: 32px;
+    width: 100%;
+    animation: detailInfoIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s backwards;
+}
+
+.screenshots-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.screenshots-header h3 {
+    font-size: 22px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--neon-cyan), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+}
+
+.screenshots-header p {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* ===== КАРУСЕЛЬ ===== */
+.screenshots-carousel {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    padding: 20px 0;
+    mask-image: linear-gradient(to right, 
+        transparent 0%, 
+        black 8%, 
+        black 92%, 
+        transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, 
+        transparent 0%, 
+        black 8%, 
+        black 92%, 
+        transparent 100%);
+}
+
+.screenshots-track {
+    display: flex;
+    gap: 16px;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    padding: 0 20px;
+    will-change: transform;
+}
+
+/* ===== КАРТОЧКА СКРИНШОТА ===== */
+.screenshot-card {
+    flex-shrink: 0;
+    width: 380px;
+    aspect-ratio: 16/9;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid rgba(0, 245, 255, 0.08);
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: screenshotCardIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    will-change: transform;
+}
+
+@keyframes screenshotCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.screenshot-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Блик при hover */
+.screenshot-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.15), 
+        transparent);
+    transition: left 0.7s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.screenshot-card:hover::before {
+    left: 100%;
+}
+
+/* Затемнение снизу */
+.screenshot-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent 60%,
+        rgba(10, 10, 20, 0.7) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.screenshot-card:hover::after {
+    opacity: 1;
+}
+
+/* Увеличение при hover */
+.screenshot-card:hover {
+    transform: translateY(-8px) scale(1.05);
+    border-color: var(--neon-cyan);
+    box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.6),
+        0 0 60px rgba(0, 245, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    z-index: 10;
+}
+
+.screenshot-card:hover img {
+    transform: scale(1.1);
+}
+
+/* Иконка увеличения в центре */
+.screenshot-zoom-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    font-size: 42px;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 3;
+    filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.8));
+    pointer-events: none;
+}
+
+.screenshot-card:hover .screenshot-zoom-hint {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* ===== НАВИГАЦИЯ ===== */
+.screenshots-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 245, 255, 0.15);
+    background: rgba(10, 10, 20, 0.85);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    color: #fff;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(0, 245, 255, 0.1);
+}
+
+.screenshots-nav:hover {
+    background: rgba(0, 245, 255, 0.15);
+    border-color: var(--neon-cyan);
+    transform: translateY(-50%) scale(1.12);
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.6),
+        0 0 40px rgba(0, 245, 255, 0.4);
+}
+
+.screenshots-nav:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.screenshots-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.screenshots-nav:disabled:hover {
+    transform: translateY(-50%) scale(1);
+    background: rgba(10, 10, 20, 0.85);
+    border-color: rgba(0, 245, 255, 0.15);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.screenshots-prev {
+    left: 12px;
+}
+
+.screenshots-next {
+    right: 12px;
+}
+
+/* ===== ТОЧКИ ===== */
+.screenshots-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    padding: 0 20px;
+}
+
+.screenshot-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.screenshot-dot:hover {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.3);
+}
+
+.screenshot-dot.active {
+    width: 28px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+    box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+}
+
+/* ===== ЛАЙТБОКС ===== */
+.screenshot-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 99998;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: lightboxFadeIn 0.3s ease;
+    padding: 20px;
+}
+
+.screenshot-lightbox.show {
+    display: flex;
+}
+
+@keyframes lightboxFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.lightbox-content {
+    position: relative;
+    max-width: 92vw;
+    max-height: 88vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: lightboxZoomIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes lightboxZoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    60% {
+        transform: scale(1.03);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.lightbox-content img {
+    max-width: 92vw;
+    max-height: 88vh;
+    border-radius: 16px;
+    box-shadow: 
+        0 30px 80px rgba(0, 0, 0, 0.8),
+        0 0 100px rgba(0, 245, 255, 0.2);
+    border: 1px solid rgba(0, 245, 255, 0.15);
+    display: block;
+    transition: opacity 0.3s ease;
+}
+
+.lightbox-content img.loading {
+    opacity: 0.3;
+}
+
+.lightbox-counter {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    padding: 8px 20px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
+}
+
+.lightbox-close:hover {
+    background: rgba(255, 45, 120, 0.2);
+    border-color: var(--neon-pink);
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 0 30px rgba(255, 45, 120, 0.4);
+}
+
+.lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
+}
+
+.lightbox-nav:hover {
+    background: rgba(0, 245, 255, 0.15);
+    border-color: var(--neon-cyan);
+    transform: translateY(-50%) scale(1.12);
+    box-shadow: 0 0 40px rgba(0, 245, 255, 0.4);
+}
+
+.lightbox-nav:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.lightbox-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.lightbox-prev {
+    left: 24px;
+}
+
+.lightbox-next {
+    right: 24px;
+}
+
+/* Индикатор загрузки для лайтбокса */
+.lightbox-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border: 3px solid rgba(0, 245, 255, 0.15);
+    border-top-color: var(--neon-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    z-index: 5;
+}
+
+/* ===== АДАПТИВ ===== */
+@media (max-width: 768px) {
+    .screenshot-card {
+        width: 300px;
+    }
+    
+    .screenshots-nav {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .screenshots-prev {
+        left: 6px;
+    }
+    
+    .screenshots-next {
+        right: 6px;
+    }
+    
+    .lightbox-nav {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .lightbox-prev {
+        left: 12px;
+    }
+    
+    .lightbox-next {
+        right: 12px;
+    }
+    
+    .lightbox-close {
+        width: 40px;
+        height: 40px;
+        top: 12px;
+        right: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .screenshot-card {
+        width: 260px;
+    }
+    
+    .screenshots-track {
+        gap: 12px;
+        padding: 0 12px;
+    }
+    
+    .screenshots-header h3 {
+        font-size: 18px;
+    }
+    
+    .screenshots-header p {
+        font-size: 12px;
+    }
+    
+    .screenshots-nav {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .screenshots-nav svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .lightbox-nav {
+        width: 42px;
+        height: 42px;
+    }
+    
+    .lightbox-nav svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .lightbox-counter {
+        font-size: 12px;
+        padding: 6px 16px;
+        bottom: -40px;
+    }
+}
+
+@media (max-width: 360px) {
+    .screenshot-card {
+        width: 220px;
+    }
+    
+    .screenshots-track {
+        gap: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .screenshot-card,
+    .screenshots-nav,
+    .lightbox-content,
+    .screenshot-dot {
+        animation: none !important;
+        transition: none !important;
+    }
+}
