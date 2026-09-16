@@ -36,7 +36,7 @@ pool.connect((err, client, release) => {
 });
 
 // ============================================
-// ПРОКСИ SHIKIMORI GraphQL (каталог, поиск)
+// ПРОКСИ SHIKIMORI GraphQL
 // ============================================
 app.post('/api/shikimori', async (req, res) => {
     try {
@@ -81,7 +81,7 @@ app.post('/api/shikimori', async (req, res) => {
 });
 
 // ============================================
-// ПРОКСИ SHIKIMORI REST API (детали с описанием)
+// ПРОКСИ SHIKIMORI REST API
 // ============================================
 app.get('/api/shikimori-rest/:id', async (req, res) => {
     try {
@@ -211,6 +211,7 @@ async function initDatabase() {
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_name ON users(name)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_anime ON comments(anime)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_user_name ON comments(user_name)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_sources_title ON anime_sources(anime_title)`);
 
@@ -403,13 +404,24 @@ app.post('/api/update-name', async (req, res, next) => {
         const existing = await pool.query('SELECT id FROM users WHERE name = $1 AND id != $2', [newName, userId]);
         if (existing.rows.length > 0) return res.status(400).json({ error: 'Имя занято' });
         
+        // ✅ Получаем старое имя
+        const oldUser = await pool.query('SELECT name FROM users WHERE id = $1', [userId]);
+        const oldName = oldUser.rows[0]?.name;
+        
         await pool.query('UPDATE users SET name = $1 WHERE id = $2', [newName, userId]);
+        
+        // ✅ Обновляем имя в комментариях
+        if (oldName) {
+            await pool.query('UPDATE comments SET user_name = $1 WHERE user_name = $2', [newName, oldName]);
+            console.log(`✅ Обновлено имя в комментариях: ${oldName} → ${newName}`);
+        }
+        
         res.json({ success: true, name: newName });
     } catch (err) { next(err); }
 });
 
 // ============================================
-// ИЗБРАННОЕ, ДОСТИЖЕНИЯ, КОММЕНТАРИИ
+// ИЗБРАННОЕ, ДОСТИЖЕНИЯ
 // ============================================
 app.post('/api/favorites', async (req, res, next) => {
     try {
@@ -455,20 +467,43 @@ app.post('/api/active-title', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
-app.get('/api/comments/:anime', async (req, res, next) => {
-    try {
-        const result = await pool.query('SELECT * FROM comments WHERE anime = $1 ORDER BY created_at DESC', [req.params.anime]);
-        res.json(result.rows || []);
-    } catch (err) { next(err); }
-});
+// ============================================
+// ✅ КОММЕНТАРИИ — ВАЖНО: ПОРЯДОК РОУТОВ!
+// Специфичные роуты ДО параметрических
+// ============================================
 
+// ✅ 1. Все комментарии (ДОЛЖЕН быть ПЕРВЫМ!)
 app.get('/api/comments/all', async (req, res, next) => {
     try {
+        console.log('📤 Запрос: /api/comments/all');
         const result = await pool.query('SELECT * FROM comments ORDER BY created_at DESC');
+        console.log(`✅ Возвращено комментариев: ${result.rows.length}`);
         res.json(result.rows || []);
-    } catch (err) { next(err); }
+    } catch (err) { 
+        console.error('❌ Ошибка /api/comments/all:', err.message);
+        next(err); 
+    }
 });
 
+// ✅ 2. Комментарии конкретного пользователя
+app.get('/api/comments/user/:userName', async (req, res, next) => {
+    try {
+        const userName = decodeURIComponent(req.params.userName);
+        console.log(`📤 Запрос: /api/comments/user/${userName}`);
+        
+        const result = await pool.query(
+            'SELECT * FROM comments WHERE user_name = $1 ORDER BY created_at DESC',
+            [userName]
+        );
+        console.log(`✅ Возвращено: ${result.rows.length}`);
+        res.json(result.rows || []);
+    } catch (err) { 
+        console.error('❌ Ошибка /api/comments/user:', err.message);
+        next(err); 
+    }
+});
+
+// ✅ 3. Добавить комментарий
 app.post('/api/comments', async (req, res, next) => {
     try {
         const { error, value } = schemas.comment.validate(req.body);
@@ -477,15 +512,34 @@ app.post('/api/comments', async (req, res, next) => {
         const { anime, user_name, text } = value;
         const date = new Date().toISOString().slice(0, 16).replace('T', ' ');
         
+        console.log(`💬 Новый комментарий от ${user_name} к "${anime}"`);
+        
         const result = await pool.query(
-            'INSERT INTO comments (anime, user_name, text, date) VALUES ($1, $2, $3, $4) RETURNING id',
+            'INSERT INTO comments (anime, user_name, text, date) VALUES ($1, $2, $3, $4) RETURNING id, anime, user_name, text, date, created_at',
             [anime, user_name, text, date]
         );
         
-        res.json({ success: true, comment: { id: result.rows[0].id, anime, user_name, text, date } });
+        console.log(`✅ Комментарий добавлен, ID: ${result.rows[0].id}`);
+        res.json({ success: true, comment: result.rows[0] });
+    } catch (err) { 
+        console.error('❌ Ошибка добавления комментария:', err.message);
+        next(err); 
+    }
+});
+
+// ✅ 4. Комментарии к конкретному аниме (ПОСЛЕ /all!)
+app.get('/api/comments/:anime', async (req, res, next) => {
+    try {
+        const anime = decodeURIComponent(req.params.anime);
+        const result = await pool.query(
+            'SELECT * FROM comments WHERE anime = $1 ORDER BY created_at DESC',
+            [anime]
+        );
+        res.json(result.rows || []);
     } catch (err) { next(err); }
 });
 
+// ✅ 5. Удалить комментарий
 app.delete('/api/comments/:id', async (req, res, next) => {
     try {
         const id = parseInt(req.params.id);
@@ -499,10 +553,14 @@ app.delete('/api/comments/:id', async (req, res, next) => {
         if (comment.rows[0].user_name !== user_name) return res.status(403).json({ error: 'Нет доступа' });
         
         await pool.query('DELETE FROM comments WHERE id = $1', [id]);
+        console.log(`🗑 Комментарий #${id} удалён`);
         res.json({ success: true });
     } catch (err) { next(err); }
 });
 
+// ============================================
+// УДАЛЕНИЕ АККАУНТА
+// ============================================
 app.post('/api/delete-account', async (req, res, next) => {
     try {
         const { userId } = req.body;
