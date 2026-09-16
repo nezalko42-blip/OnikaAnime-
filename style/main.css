@@ -8029,3 +8029,1050 @@ svg use {
         transition: none !important;
     }
 }
+
+/* ============================================
+   ДОСТИЖЕНИЯ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
+   ============================================ */
+
+/* ===== ШАПКА С КОЛЬЦОМ ПРОГРЕССА ===== */
+.ach-hero {
+    position: relative;
+    background: linear-gradient(135deg, 
+        rgba(108, 92, 231, 0.15), 
+        rgba(0, 245, 255, 0.08),
+        rgba(253, 121, 168, 0.1));
+    border-radius: 24px;
+    padding: 32px 28px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    animation: achHeroIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes achHeroIn {
+    from { opacity: 0; transform: translateY(-30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ach-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(253, 121, 168, 0.25), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: achGlowPulse 8s ease-in-out infinite;
+}
+
+.ach-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -50%;
+    left: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(0, 245, 255, 0.2), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: achGlowPulse 8s ease-in-out infinite reverse;
+}
+
+@keyframes achGlowPulse {
+    0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.6; }
+    50% { transform: scale(1.2) translate(20px, -20px); opacity: 1; }
+}
+
+.ach-hero-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    flex-wrap: wrap;
+}
+
+/* ===== КОЛЬЦО ПРОГРЕССА ===== */
+.ach-progress-ring {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    flex-shrink: 0;
+}
+
+.ach-progress-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+    filter: drop-shadow(0 0 20px rgba(0, 245, 255, 0.3));
+}
+
+.ach-progress-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 8;
+}
+
+.ach-progress-ring-fill {
+    fill: none;
+    stroke: url(#achGradient);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.6));
+}
+
+.ach-progress-ring-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.ach-progress-ring-percent {
+    font-size: 32px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    filter: drop-shadow(0 0 15px rgba(0, 245, 255, 0.4));
+}
+
+.ach-progress-ring-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+/* ===== ИНФО БЛОК ===== */
+.ach-hero-info {
+    flex: 1;
+    min-width: 220px;
+}
+
+.ach-hero-title {
+    font-size: 32px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--neon-cyan), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 6px;
+    line-height: 1.1;
+}
+
+.ach-hero-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 16px;
+}
+
+/* ===== АКТИВНЫЙ ТИТУЛ ===== */
+.ach-active-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(253, 121, 168, 0.1));
+    border-radius: 50px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    animation: titleBadgePulse 3s ease-in-out infinite;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.15);
+}
+
+@keyframes titleBadgePulse {
+    0%, 100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.15); }
+    50% { box-shadow: 0 0 50px rgba(255, 215, 0, 0.3); }
+}
+
+.ach-active-title-icon {
+    font-size: 20px;
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+    animation: titleIconSpin 3s ease-in-out infinite;
+}
+
+@keyframes titleIconSpin {
+    0%, 100% { transform: rotate(-8deg) scale(1); }
+    50% { transform: rotate(8deg) scale(1.15); }
+}
+
+.ach-no-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 50px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+/* ===== МИНИ-СТАТИСТИКА ===== */
+.ach-mini-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.ach-mini-stat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.ach-mini-stat:hover {
+    background: rgba(0, 245, 255, 0.05);
+    border-color: rgba(0, 245, 255, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 245, 255, 0.1);
+}
+
+.ach-mini-stat-icon {
+    font-size: 20px;
+}
+
+.ach-mini-stat-value {
+    font-size: 18px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+}
+
+.ach-mini-stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* ===== ФИЛЬТРЫ + ТАБЫ ===== */
+.ach-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    animation: achHeroIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s backwards;
+}
+
+.ach-tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 4px;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 245, 255, 0.05);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.ach-tabs::-webkit-scrollbar { display: none; }
+
+.ach-tab {
+    flex-shrink: 0;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ach-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.ach-tab.active {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(0, 245, 255, 0.25);
+}
+
+.ach-tab-count {
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    font-weight: 700;
+}
+
+.ach-tab.active .ach-tab-count {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.ach-sort-wrapper {
+    flex-shrink: 0;
+}
+
+.ach-sort-select {
+    padding: 10px 36px 10px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 245, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    font-family: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a0a0c0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    transition: all 0.3s ease;
+    min-width: 200px;
+}
+
+.ach-sort-select:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 30px rgba(0, 245, 255, 0.1);
+}
+
+/* ===== СЕТКА ===== */
+.achievements-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+/* ===== КАРТОЧКА ДОСТИЖЕНИЯ ===== */
+.ach-card-v2 {
+    position: relative;
+    padding: 20px;
+    background: linear-gradient(145deg, rgba(20, 20, 40, 0.9), rgba(15, 15, 30, 0.95));
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation: achCardIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+    will-change: transform;
+}
+
+@keyframes achCardIn {
+    from { opacity: 0; transform: translateY(40px) scale(0.85) rotateX(-10deg); }
+    to { opacity: 1; transform: translateY(0) scale(1) rotateX(0); }
+}
+
+/* ===== РЕДКОСТЬ ===== */
+.ach-card-v2.rarity-common { --rarity-color: #a0a0a0; }
+.ach-card-v2.rarity-rare { --rarity-color: #0096ff; }
+.ach-card-v2.rarity-epic { --rarity-color: #b44aff; }
+.ach-card-v2.rarity-legendary { --rarity-color: #ffd700; }
+
+.ach-card-v2.rarity-common { border-color: rgba(160, 160, 160, 0.15); }
+.ach-card-v2.rarity-rare { 
+    border-color: rgba(0, 150, 255, 0.35);
+    background: linear-gradient(145deg, rgba(0, 100, 200, 0.08), rgba(15, 15, 30, 0.95));
+}
+.ach-card-v2.rarity-epic { 
+    border-color: rgba(180, 74, 255, 0.45);
+    background: linear-gradient(145deg, rgba(180, 74, 255, 0.1), rgba(15, 15, 30, 0.95));
+}
+.ach-card-v2.rarity-legendary { 
+    border-color: rgba(255, 215, 0, 0.5);
+    background: linear-gradient(145deg, rgba(255, 215, 0, 0.1), rgba(253, 121, 168, 0.06), rgba(15, 15, 30, 0.95));
+}
+
+/* Свечение для полученных */
+.ach-card-v2.earned::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, 
+        var(--rarity-color, var(--neon-cyan)), 
+        transparent, 
+        var(--rarity-color, var(--neon-cyan)));
+    border-radius: 18px;
+    z-index: -1;
+    opacity: 0.5;
+    filter: blur(18px);
+    animation: achRarityGlow 3s ease-in-out infinite;
+}
+
+@keyframes achRarityGlow {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.02); }
+}
+
+/* Hover эффект */
+.ach-card-v2:hover {
+    transform: translateY(-10px) scale(1.03) perspective(1000px) rotateX(2deg);
+    border-color: var(--rarity-color, var(--neon-cyan));
+    box-shadow: 
+        0 25px 60px rgba(0, 0, 0, 0.5),
+        0 0 80px var(--rarity-color, rgba(0, 245, 255, 0.3));
+    z-index: 10;
+}
+
+/* Блик */
+.ach-card-v2 .ach-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    transition: left 0.8s ease;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.ach-card-v2:hover .ach-shine {
+    left: 100%;
+}
+
+/* Закрытые */
+.ach-card-v2.locked {
+    opacity: 0.7;
+    filter: grayscale(0.4);
+}
+
+.ach-card-v2.locked:hover {
+    opacity: 0.95;
+    filter: grayscale(0.1);
+}
+
+/* ===== ГОЛОВА ===== */
+.ach-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 2;
+}
+
+.ach-icon-wrap {
+    position: relative;
+    width: 68px;
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, 
+        rgba(108, 92, 231, 0.15), 
+        rgba(0, 245, 255, 0.08));
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-style: preserve-3d;
+}
+
+.ach-card-v2.earned .ach-icon-wrap {
+    background: linear-gradient(135deg, 
+        rgba(255, 215, 0, 0.15), 
+        rgba(253, 121, 168, 0.1));
+    border-color: var(--rarity-color, rgba(0, 245, 255, 0.3));
+    box-shadow: 0 0 25px var(--rarity-color, rgba(0, 245, 255, 0.2));
+}
+
+.ach-card-v2:hover .ach-icon-wrap {
+    transform: scale(1.12) rotate(-6deg) translateZ(20px);
+}
+
+.ach-icon-v2 {
+    font-size: 34px;
+    filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.3));
+    transition: transform 0.3s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.ach-card-v2.earned .ach-icon-v2 {
+    filter: drop-shadow(0 0 18px var(--rarity-color, rgba(255, 215, 0, 0.6)));
+}
+
+.ach-card-v2:hover .ach-icon-v2 {
+    animation: achIconWiggle 0.6s ease-in-out;
+}
+
+@keyframes achIconWiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-15deg) scale(1.1); }
+    75% { transform: rotate(15deg) scale(1.1); }
+}
+
+/* ===== БЕЙДЖ РЕДКОСТИ ===== */
+.ach-rarity-badge {
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.ach-rarity-badge.common { 
+    color: #a0a0a0; 
+    border-color: rgba(160, 160, 160, 0.3);
+    background: rgba(160, 160, 160, 0.08);
+}
+.ach-rarity-badge.rare { 
+    color: #0096ff; 
+    border-color: rgba(0, 150, 255, 0.4);
+    background: rgba(0, 150, 255, 0.08);
+}
+.ach-rarity-badge.epic { 
+    color: #b44aff; 
+    border-color: rgba(180, 74, 255, 0.4);
+    background: rgba(180, 74, 255, 0.08);
+}
+.ach-rarity-badge.legendary { 
+    color: #ffd700; 
+    border-color: rgba(255, 215, 0, 0.4);
+    background: rgba(255, 215, 0, 0.08);
+    animation: legendaryShine 2s ease-in-out infinite;
+}
+
+@keyframes legendaryShine {
+    0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); }
+    50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
+}
+
+/* ===== ТЕЛО ===== */
+.ach-card-body {
+    position: relative;
+    z-index: 2;
+}
+
+.ach-card-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 6px;
+    line-height: 1.3;
+}
+
+.ach-card-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0 0 14px;
+    min-height: 36px;
+}
+
+/* ===== ПРОГРЕСС-БАР ===== */
+.ach-progress-v2 {
+    margin-bottom: 14px;
+}
+
+.ach-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+}
+
+.ach-progress-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ach-progress-value {
+    color: var(--neon-cyan);
+    font-weight: 800;
+    font-size: 12px;
+}
+
+.ach-progress-bar-v2 {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.ach-progress-fill-v2 {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+    position: relative;
+    transition: width 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 0 0 15px rgba(0, 245, 255, 0.4);
+}
+
+.ach-progress-fill-v2::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: progressShine 2s ease-in-out infinite;
+    border-radius: 10px;
+}
+
+@keyframes progressShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.ach-card-v2.earned .ach-progress-fill-v2 {
+    background: linear-gradient(90deg, #2ecc71, #27ae60);
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.5);
+}
+
+/* ===== ФУТЕР ===== */
+.ach-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    z-index: 2;
+}
+
+.ach-title-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.ach-title-info strong {
+    color: var(--neon-cyan);
+}
+
+.ach-btn-v2 {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: none;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.ach-btn-v2.set {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0, 245, 255, 0.3);
+}
+
+.ach-btn-v2.set:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 245, 255, 0.5);
+}
+
+.ach-btn-v2.active {
+    background: linear-gradient(135deg, #ffd700, #f39c12);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+    animation: activeButtonPulse 2s ease-in-out infinite;
+}
+
+@keyframes activeButtonPulse {
+    0%, 100% { box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); }
+    50% { box-shadow: 0 4px 25px rgba(255, 215, 0, 0.7); }
+}
+
+/* ===== ЗНАЧОК "ПОЛУЧЕНО" ===== */
+.ach-earned-check {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    box-shadow: 0 0 25px rgba(46, 204, 113, 0.6);
+    z-index: 4;
+    animation: checkBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes checkBounce {
+    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+    60% { transform: scale(1.3) rotate(10deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+}
+
+/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
+.ach-empty-v2 {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 80px 20px;
+    animation: achHeroIn 0.6s ease;
+}
+
+.ach-empty-icon-v2 {
+    font-size: 80px;
+    margin-bottom: 16px;
+    display: inline-block;
+    animation: achSadFloat 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(108, 92, 231, 0.4));
+}
+
+@keyframes achSadFloat {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-12px) rotate(5deg); }
+}
+
+.ach-empty-title-v2 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.ach-empty-desc-v2 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    max-width: 400px;
+    margin: 0 auto 24px;
+    line-height: 1.6;
+}
+
+.ach-empty-btn-v2 {
+    padding: 12px 28px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 24px rgba(0, 245, 255, 0.3);
+    font-family: inherit;
+}
+
+.ach-empty-btn-v2:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 36px rgba(0, 245, 255, 0.5);
+}
+
+/* ===== МОДАЛКА ДОСТИЖЕНИЯ ===== */
+.ach-modal-content {
+    text-align: center;
+    padding: 8px 0;
+}
+
+.ach-modal-icon {
+    font-size: 90px;
+    margin-bottom: 12px;
+    display: inline-block;
+    animation: achModalIconIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes achModalIconIn {
+    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+    60% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.ach-modal-icon.legendary {
+    animation: achModalIconIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
+               legendaryGlow 2s ease-in-out infinite 0.7s;
+}
+
+@keyframes legendaryGlow {
+    0%, 100% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6)); }
+    50% { filter: drop-shadow(0 0 50px rgba(255, 215, 0, 1)); }
+}
+
+.ach-modal-rarity {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 14px;
+}
+
+.ach-modal-rarity.common { background: rgba(160,160,160,0.15); color: #a0a0a0; }
+.ach-modal-rarity.rare { background: rgba(0,150,255,0.15); color: #0096ff; }
+.ach-modal-rarity.epic { background: rgba(180,74,255,0.15); color: #b44aff; }
+.ach-modal-rarity.legendary { 
+    background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(253,121,168,0.15)); 
+    color: #ffd700;
+    animation: legendaryShine 2s ease-in-out infinite;
+}
+
+.ach-modal-name {
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+
+.ach-modal-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.ach-modal-progress {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ach-modal-progress-bar {
+    height: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.ach-modal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 245, 255, 0.5);
+    transition: width 1.2s ease;
+}
+
+.ach-modal-progress-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.ach-modal-progress-text strong {
+    color: var(--neon-cyan);
+    font-size: 15px;
+}
+
+/* ===== АНИМАЦИЯ ПОЛУЧЕНИЯ ДОСТИЖЕНИЯ ===== */
+.ach-unlock-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    z-index: 99998;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    animation: unlockFadeIn 0.4s ease;
+}
+
+.ach-unlock-overlay.show {
+    display: flex;
+}
+
+@keyframes unlockFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.ach-unlock-ray {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    height: 600px;
+    transform: translate(-50%, -50%);
+    background: conic-gradient(
+        from 0deg,
+        transparent,
+        rgba(255, 215, 0, 0.15),
+        transparent 20%,
+        transparent 30%,
+        rgba(255, 215, 0, 0.15),
+        transparent 50%,
+        transparent 60%,
+        rgba(255, 215, 0, 0.15),
+        transparent 80%,
+        transparent
+    );
+    animation: raysRotate 8s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes raysRotate {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.ach-unlock-icon {
+    font-size: 140px;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 2;
+    animation: unlockIconIn 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: drop-shadow(0 0 50px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes unlockIconIn {
+    0% { transform: scale(0) rotate(-360deg); opacity: 0; }
+    60% { transform: scale(1.4) rotate(20deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+}
+
+.ach-unlock-label {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    color: #ffd700;
+    font-weight: 800;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 2;
+    animation: unlockTextIn 0.6s ease 0.5s backwards;
+}
+
+@keyframes unlockTextIn {
+    from { opacity: 0; transform: translateY(20px); letter-spacing: 20px; }
+    to { opacity: 1; transform: translateY(0); letter-spacing: 6px; }
+}
+
+.ach-unlock-name {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 0 20px;
+    animation: unlockTextIn 0.6s ease 0.7s backwards;
+    text-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+}
+
+.ach-unlock-desc {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 32px;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 0 20px;
+    animation: unlockTextIn 0.6s ease 0.9s backwards;
+}
+
+.ach-unlock-btn {
+    padding: 14px 40px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, #ffd700, #f39c12);
+    color: #000;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    position: relative;
+    z-index: 2;
+    animation: unlockTextIn 0.6s ease 1.1s backwards,
+               unlockBtnPulse 2s ease-in-out 1.5s infinite;
+    box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
+}
+
+@keyframes unlockBtnPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5); }
+    50% { transform: scale(1.05); box-shadow: 0 12px 40px rgba(255, 215, 0, 0.8); }
+}
+
+.ach-unlock-btn:hover {
+    transform: scale(1.08);
+}
+
+/* ===== АДАПТИВ ===== */
+@media (max-width: 768px) {
+    .ach-hero { padding: 24px 20px; }
+    .ach-hero-content { gap: 20px; justify-content: center; text-align: center; }
+    .ach-progress-ring { width: 120px; height: 120px; }
+    .ach-progress-ring-percent { font-size: 26px; }
+    .ach-hero-title { font-size: 24px; }
+    .ach-hero-subtitle { font-size: 13px; }
+    .ach-hero-info { text-align: center; }
+    .ach-mini-stats { justify-content: center; }
+    .achievements-grid-v2 { grid-template-columns: 1fr; gap: 12px; }
+    .ach-controls { flex-direction: column; }
+    .ach-sort-select { width: 100%; min-width: 100%; }
+    .ach-unlock-name { font-size: 26px; }
+    .ach-unlock-icon { font-size: 100px; }
+    .ach-unlock-desc { font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+    .ach-hero { padding: 20px 16px; }
+    .ach-progress-ring { width: 100px; height: 100px; }
+    .ach-progress-ring-percent { font-size: 22px; }
+    .ach-progress-ring-label { font-size: 9px; }
+    .ach-hero-title { font-size: 20px; }
+    .ach-mini-stats { gap: 8px; }
+    .ach-mini-stat { padding: 8px 12px; }
+    .ach-mini-stat-value { font-size: 14px; }
+    .ach-mini-stat-label { font-size: 9px; }
+    .ach-card-v2 { padding: 16px; }
+    .ach-icon-wrap { width: 56px; height: 56px; }
+    .ach-icon-v2 { font-size: 28px; }
+    .ach-card-name { font-size: 15px; }
+    .ach-unlock-icon { font-size: 80px; }
+    .ach-unlock-name { font-size: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ach-card-v2, .ach-hero, .ach-icon-wrap, .ach-unlock-icon,
+    .ach-progress-fill-v2, .ach-unlock-ray {
+        animation: none !important;
+        transition: none !important;
+    }
+}
