@@ -77,7 +77,7 @@
         @keyframes pulseText { 0%,100%{opacity:0.2}50%{opacity:1} }
     </style>
 </head>
-<body>
+<body data-page="home">
 
     <div id="preloader">
         <div class="spinner"></div>
@@ -109,12 +109,19 @@
 
     <div class="layout">
         <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🌟 Навигация</h2>
+            </div>
+            
             <nav class="sidebar-nav" id="sidebarNav"></nav>
+            
+            <div class="sidebar-divider"></div>
+            
             <div class="sidebar-footer" id="sidebarFooter">
-                <div class="sidebar-user-info" onclick="openPetModal()" style="cursor:pointer;">
-                    🌟 <span id="sidebarUserName">Пользователь</span>
-                    <span class="pet-icon-inline" id="petIcon">🐱</span>
-                </div>
+                <button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">
+                    <span>🚀</span>
+                    <span>Войти в аккаунт</span>
+                </button>
             </div>
         </aside>
 
@@ -235,37 +242,55 @@
                     </section>
                 </div>
 
-                <!-- ===== ДЕТАЛЬНАЯ ===== -->
+                <!-- ===== ДЕТАЛЬНАЯ v2.0 ===== -->
                 <div id="page-detail" style="display:none;">
+                    
+                    <!-- Фоновое свечение от постера -->
+                    <div class="detail-ambient-glow" id="detailAmbientGlow"></div>
+                    
                     <span class="back-btn" onclick="goBack()">
                         <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
                         Назад
                     </span>
-                    <div class="detail-content">
-                        <div class="detail-left">
-                            <img class="detail-poster" id="detailPoster" src="" alt="Постер">
-                            <div class="detail-age-restriction" id="detailAgeRestriction">
-                                <span class="age-badge age-0">0+</span>
+
+                    <!-- HERO С РАЗМЫТЫМ ПОСТЕРОМ -->
+                    <div class="detail-hero">
+                        <div class="detail-hero-bg" id="detailHeroBg"></div>
+                        <div class="detail-hero-overlay"></div>
+                        <div class="detail-hero-particles"></div>
+                        
+                        <div class="detail-hero-content">
+                            <div class="detail-poster-wrapper">
+                                <img class="detail-poster" id="detailPoster" src="" alt="Постер">
+                                <div class="detail-age-restriction" id="detailAgeRestriction">
+                                    <span class="age-badge age-0">0+</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="detail-info">
-                            <h1 id="detailTitle"></h1>
-                            <div class="eng" id="detailEng"></div>
-                            <div class="meta" id="detailMeta"></div>
-                            <div class="detail-tags" id="detailTags"></div>
-                            <div class="detail-desc-wrapper">
-                                <div class="detail-desc" id="detailDesc"></div>
-                                <button class="desc-toggle" id="descToggle" onclick="toggleDescription()">
-                                    Читать полностью <span class="arrow">▼</span>
+                            
+                            <div class="detail-info">
+                                <h1 id="detailTitle"></h1>
+                                <div class="eng" id="detailEng"></div>
+                                
+                                <div class="detail-meta-row" id="detailMeta"></div>
+                                
+                                <div class="detail-tags" id="detailTags"></div>
+                                
+                                <div class="detail-desc-wrapper">
+                                    <div class="detail-desc" id="detailDesc"></div>
+                                    <button class="desc-toggle" id="descToggle" onclick="toggleDescription()">
+                                        Читать полностью <span class="arrow">▼</span>
+                                    </button>
+                                </div>
+                                
+                                <button class="fav-btn" id="favBtn" onclick="toggleFav()">
+                                    <svg width="20" height="20"><use href="icons/icons.svg#icon-heart-empty"/></svg>
+                                    В избранное
                                 </button>
                             </div>
-                            <button class="fav-btn" id="favBtn" onclick="toggleFav()">
-                                <svg width="20" height="20"><use href="icons/icons.svg#icon-heart-empty"/></svg>
-                                В избранное
-                            </button>
                         </div>
                     </div>
 
+                    <!-- ГДЕ СМОТРЕТЬ -->
                     <div class="watch-section" id="watchSection">
                         <div class="watch-header">
                             <h3>🎬 Где смотреть</h3>
@@ -321,9 +346,28 @@
                             </button>
                         </div>
 
+                        <!-- Прогресс серий -->
+                        <div class="watch-episodes-info" id="watchEpisodesInfo" style="display:none;">
+                            <div class="watch-episodes-header">
+                                <div class="watch-episodes-title">
+                                    <span>📺</span>
+                                    <span id="watchEpisodesTitle">Просмотр серий</span>
+                                </div>
+                                <span class="watch-episodes-count" id="watchEpisodesCount">0 серий</span>
+                            </div>
+                            <div class="watch-progress-bar">
+                                <div class="watch-progress-fill" id="watchProgressFill" style="width:0%"></div>
+                            </div>
+                            <div class="watch-progress-text">
+                                <span id="watchProgressCurrent">Просмотрено: 0</span>
+                                <span id="watchProgressPercent">0%</span>
+                            </div>
+                        </div>
+
                         <div id="watchEmbedContainer" class="watch-embed-container" style="display:none;"></div>
                     </div>
 
+                    <!-- КОММЕНТАРИИ -->
                     <div class="comments-section">
                         <h3>💬 Комментарии</h3>
                         <div class="comment-form">
@@ -426,7 +470,6 @@
                 <!-- ===== ДОСТИЖЕНИЯ v2.0 ===== -->
                 <div id="page-achievements" style="display:none;">
                     
-                    <!-- SVG градиент для кольца прогресса -->
                     <svg width="0" height="0" style="position:absolute;">
                         <defs>
                             <linearGradient id="achGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -442,7 +485,6 @@
                         Назад
                     </span>
 
-                    <!-- ШАПКА С КОЛЬЦОМ ПРОГРЕССА -->
                     <div class="ach-hero">
                         <div class="ach-hero-content">
                             
@@ -494,7 +536,6 @@
                         </div>
                     </div>
 
-                    <!-- СОРТИРОВКА -->
                     <div class="ach-controls ach-controls-single">
                         <div class="ach-sort-wrapper">
                             <select class="ach-sort-select" id="achSortSelect" onchange="renderAchievements()">
@@ -507,7 +548,6 @@
                         </div>
                     </div>
 
-                    <!-- СЕТКА ДОСТИЖЕНИЙ -->
                     <div class="achievements-grid-v2" id="achievementsGrid">
                         <div class="ach-empty-v2">
                             <span class="ach-empty-icon-v2">⏳</span>
@@ -608,7 +648,6 @@
                 <div id="page-profile" style="display:none;">
                     <div class="profile-container">
                         
-                        <!-- Анимированный баннер -->
                         <div class="profile-banner" id="profileBanner" style="background: linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);">
                             <div class="banner-overlay"></div>
                             <button class="profile-banner-edit" onclick="changeBanner()">
@@ -616,7 +655,6 @@
                             </button>
                         </div>
 
-                        <!-- Карточка профиля (вынесена из баннера) -->
                         <div class="profile-header-card">
                             <div class="profile-avatar-wrapper">
                                 <div class="avatar-large" onclick="document.getElementById('avatarFileInput').click()">
@@ -648,14 +686,12 @@
                             </div>
                         </div>
 
-                        <!-- Bio -->
                         <div class="profile-bio-block" onclick="editProfile('bio')">
                             <div class="bio-icon">📝</div>
                             <div class="bio-text" id="profileBio">Нажмите чтобы добавить описание</div>
                             <div class="bio-hint">✏️ Редактировать</div>
                         </div>
                         
-                        <!-- Статистика -->
                         <div class="stats-cards">
                             <div class="stat-card" onclick="navigate('favorites')">
                                 <div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-favorites"/></svg></div>
@@ -679,7 +715,6 @@
                             </div>
                         </div>
 
-                        <!-- Продолжить просмотр -->
                         <div class="continue-watching-section" id="continueWatchingSection">
                             <div class="section-header">
                                 <h3>▶️ Продолжить просмотр</h3>
@@ -690,7 +725,6 @@
                             </div>
                         </div>
                         
-                        <!-- Последние достижения -->
                         <div class="profile-achievements-preview">
                             <div class="section-header">
                                 <h3>🏆 Последние достижения</h3>
@@ -701,7 +735,6 @@
                             </div>
                         </div>
                         
-                        <!-- Топ пользователей -->
                         <div class="profile-top-users">
                             <div id="topUsers">
                                 <div style="text-align:center;padding:20px;color:var(--text-muted);">
@@ -900,8 +933,6 @@
             if (user) {
                 if (typeof startOnlineTracking === 'function') startOnlineTracking();
                 if (typeof initPet === 'function') initPet();
-                const userNameEl = document.getElementById('sidebarUserName');
-                if (userNameEl) userNameEl.textContent = user.name;
             }
             
             window.addEventListener('scroll', function() {
@@ -949,8 +980,17 @@
         window.toggleMenu = function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
-            if (sidebar) sidebar.classList.toggle('open');
-            if (overlay) overlay.classList.toggle('open');
+            if (!sidebar || !overlay) return;
+            
+            const isOpen = sidebar.classList.contains('open');
+            
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+            } else {
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+            }
         };
 
         window.closeMenu = function() {
