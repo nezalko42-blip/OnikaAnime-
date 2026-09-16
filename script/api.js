@@ -209,7 +209,7 @@ const API = {
     },
 
     // ============================================
-    // 6. ДЕТАЛИ — через REST API (с описанием!)
+    // 6. ДЕТАЛИ — через REST API
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
@@ -220,7 +220,6 @@ const API = {
             return null;
         }
 
-        // ✅ ОСНОВНОЙ ИСТОЧНИК: REST API
         try {
             const response = await fetch(this.SHIKIMORI_REST + '/' + cleanId);
 
@@ -236,7 +235,6 @@ const API = {
             console.warn('⚠️ REST не сработал:', e.message);
         }
 
-        // ⚠️ FALLBACK: GraphQL
         try {
             const query = `{
                 anime(id: ${cleanId}) {
@@ -272,7 +270,6 @@ const API = {
             console.warn('⚠️ GraphQL fallback не сработал');
         }
 
-        // ⚠️ КРАЙНИЙ FALLBACK: каталог
         const cached = allData[id];
         if (cached) {
             console.log('⚠️ Fallback на каталог');
@@ -284,7 +281,7 @@ const API = {
     },
 
     // ============================================
-    // ✅ 6.1 СКРИНШОТЫ АНИМЕ (кадры)
+    // ✅ 6.1 СКРИНШОТЫ АНИМЕ (проксируются через сервер)
     // ============================================
     async getScreenshots(id) {
         const cleanId = id.toString().replace('shikimori_', '');
@@ -316,7 +313,7 @@ const API = {
     },
 
     // ============================================
-    // 7. РЕКОМЕНДАЦИИ — СЛУЧАЙНЫЕ ИЗ ТОПА
+    // 7. РЕКОМЕНДАЦИИ
     // ============================================
     async getRecommended(limit = 7) {
         const fetchLimit = Math.max(limit * 5, 35);
@@ -522,7 +519,6 @@ const API = {
         return base;
     },
 
-    // ✅ Конвертер для REST API Shikimori
     _convertRestAnime(a) {
         let title = a.russian || a.name || 'Без названия';
 
@@ -605,4 +601,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (Shikimori GraphQL + REST + Screenshots) загружен');
+console.log('✅ API модуль (Shikimori GraphQL + REST + Screenshots + Proxy) загружен');
