@@ -3949,3 +3949,451 @@ h3 {
         transition: none !important;
     }
 }
+
+/* ============================================
+   COVERFLOW КАРУСЕЛЬ С СНАПОМ
+   ============================================ */
+
+.coverflow-section {
+    margin: 30px 0;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.coverflow-header {
+    text-align: center;
+    margin-bottom: 24px;
+    padding: 0 20px;
+}
+
+.coverflow-header h2 {
+    font-size: 26px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+}
+
+.coverflow-header p {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* ===== КОНТЕЙНЕР С PERSPECTIVE ===== */
+.coverflow-container {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 0;
+    perspective: 1600px;
+    perspective-origin: 50% 40%;
+    height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+}
+
+.coverflow-container:active {
+    cursor: grabbing;
+}
+
+/* Скрываем дефолтный скроллбар */
+.coverflow-track {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 calc(50% - 140px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    -webkit-overflow-scrolling: touch;
+}
+
+.coverflow-track::-webkit-scrollbar {
+    display: none;
+}
+
+/* ===== СЛАЙД ===== */
+.coverflow-slide {
+    flex: 0 0 280px;
+    width: 280px;
+    height: 380px;
+    border-radius: 20px;
+    overflow: hidden;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform-style: preserve-3d;
+    background: var(--bg-card);
+    border: 2px solid transparent;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    will-change: transform, opacity, filter;
+    user-select: none;
+}
+
+.coverflow-slide-poster {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.6s ease;
+}
+
+.coverflow-slide-poster::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        transparent 35%,
+        rgba(10, 10, 20, 0.5) 65%,
+        rgba(10, 10, 20, 0.95) 100%
+    );
+}
+
+.coverflow-slide-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px 18px;
+    z-index: 2;
+    transform: translateZ(30px);
+}
+
+.coverflow-slide-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+.coverflow-slide-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: 500;
+}
+
+.coverflow-slide-info span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.coverflow-slide-age {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 3;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* ===== СОСТОЯНИЯ (COVERFLOW ЭФФЕКТ) ===== */
+
+/* Активный (центральный) — крупный, яркий */
+.coverflow-slide.is-active {
+    transform: translateZ(0) scale(1.08);
+    z-index: 10;
+    border-color: rgba(0, 245, 255, 0.4);
+    box-shadow: 
+        0 30px 70px rgba(0, 0, 0, 0.7),
+        0 0 80px rgba(108, 92, 231, 0.35),
+        0 0 30px rgba(0, 245, 255, 0.2);
+    filter: brightness(1.05);
+}
+
+.coverflow-slide.is-active .coverflow-slide-poster {
+    transform: scale(1.05);
+}
+
+/* Предыдущий и следующий — уменьшены, затемнены, повёрнуты */
+.coverflow-slide.is-prev {
+    transform: translateX(-15px) translateZ(-100px) rotateY(28deg) scale(0.82);
+    z-index: 5;
+    opacity: 0.7;
+    filter: brightness(0.55) saturate(0.7);
+}
+
+.coverflow-slide.is-next {
+    transform: translateX(15px) translateZ(-100px) rotateY(-28deg) scale(0.82);
+    z-index: 5;
+    opacity: 0.7;
+    filter: brightness(0.55) saturate(0.7);
+}
+
+/* Дальние — сильно уменьшены и затемнены */
+.coverflow-slide.is-far-prev {
+    transform: translateX(-30px) translateZ(-220px) rotateY(35deg) scale(0.62);
+    z-index: 1;
+    opacity: 0.35;
+    filter: brightness(0.35) saturate(0.5) blur(1px);
+}
+
+.coverflow-slide.is-far-next {
+    transform: translateX(30px) translateZ(-220px) rotateY(-35deg) scale(0.62);
+    z-index: 1;
+    opacity: 0.35;
+    filter: brightness(0.35) saturate(0.5) blur(1px);
+}
+
+/* Скрытые */
+.coverflow-slide.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateZ(-350px) scale(0.4);
+}
+
+/* Hover на неактивных */
+.coverflow-slide:not(.is-active):hover {
+    filter: brightness(0.85) saturate(0.9);
+    opacity: 0.9;
+}
+
+/* ===== НАВИГАЦИЯ СТРЕЛКАМИ ===== */
+.coverflow-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 245, 255, 0.15);
+    background: rgba(10, 10, 20, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: #fff;
+    cursor: pointer;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(0, 245, 255, 0.1);
+}
+
+.coverflow-nav:hover {
+    background: rgba(0, 245, 255, 0.15);
+    border-color: var(--neon-cyan);
+    transform: translateY(-50%) scale(1.12);
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.6),
+        0 0 50px rgba(0, 245, 255, 0.4);
+}
+
+.coverflow-nav:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.coverflow-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.coverflow-nav:disabled:hover {
+    transform: translateY(-50%) scale(1);
+    background: rgba(10, 10, 20, 0.85);
+    border-color: rgba(0, 245, 255, 0.15);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.coverflow-prev {
+    left: 20px;
+}
+
+.coverflow-next {
+    right: 20px;
+}
+
+/* ===== ТОЧКИ-ИНДИКАТОРЫ ===== */
+.coverflow-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    padding: 0 20px;
+    flex-wrap: wrap;
+}
+
+.coverflow-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.coverflow-dot:hover {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.3);
+}
+
+.coverflow-dot.active {
+    width: 28px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+    box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+}
+
+/* ===== СЧЁТЧИК ===== */
+.coverflow-counter {
+    position: absolute;
+    top: 10px;
+    right: 30px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 6px 14px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    letter-spacing: 1px;
+}
+
+.coverflow-counter strong {
+    color: var(--neon-cyan);
+    font-size: 14px;
+}
+
+/* ===== АДАПТИВ ===== */
+@media (max-width: 900px) {
+    .coverflow-container {
+        height: 380px;
+        perspective: 1200px;
+    }
+    .coverflow-slide {
+        flex: 0 0 240px;
+        width: 240px;
+        height: 320px;
+    }
+    .coverflow-slide.is-prev {
+        transform: translateX(-10px) translateZ(-90px) rotateY(25deg) scale(0.8);
+    }
+    .coverflow-slide.is-next {
+        transform: translateX(10px) translateZ(-90px) rotateY(-25deg) scale(0.8);
+    }
+    .coverflow-slide.is-far-prev,
+    .coverflow-slide.is-far-next {
+        opacity: 0.15;
+    }
+}
+
+@media (max-width: 600px) {
+    .coverflow-section {
+        margin: 20px 0;
+    }
+    .coverflow-container {
+        height: 340px;
+        perspective: 900px;
+        padding: 20px 0;
+    }
+    .coverflow-track {
+        gap: 14px;
+        padding: 0 calc(50% - 110px);
+    }
+    .coverflow-slide {
+        flex: 0 0 200px;
+        width: 200px;
+        height: 280px;
+    }
+    .coverflow-slide-title {
+        font-size: 14px;
+    }
+    .coverflow-slide-info {
+        font-size: 11px;
+    }
+    .coverflow-slide-content {
+        padding: 14px 12px;
+    }
+    .coverflow-slide.is-active {
+        transform: translateZ(0) scale(1.05);
+    }
+    .coverflow-slide.is-prev {
+        transform: translateX(-8px) translateZ(-70px) rotateY(22deg) scale(0.78);
+    }
+    .coverflow-slide.is-next {
+        transform: translateX(8px) translateZ(-70px) rotateY(-22deg) scale(0.78);
+    }
+    .coverflow-slide.is-far-prev,
+    .coverflow-slide.is-far-next {
+        opacity: 0;
+        pointer-events: none;
+    }
+    .coverflow-nav {
+        width: 40px;
+        height: 40px;
+    }
+    .coverflow-prev { left: 8px; }
+    .coverflow-next { right: 8px; }
+    .coverflow-header h2 {
+        font-size: 20px;
+    }
+    .coverflow-counter {
+        top: 4px;
+        right: 12px;
+        font-size: 11px;
+        padding: 4px 10px;
+    }
+}
+
+@media (max-width: 400px) {
+    .coverflow-slide {
+        flex: 0 0 170px;
+        width: 170px;
+        height: 240px;
+    }
+    .coverflow-track {
+        padding: 0 calc(50% - 95px);
+    }
+    .coverflow-slide-title {
+        font-size: 12px;
+    }
+    .coverflow-slide-info {
+        font-size: 10px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .coverflow-slide,
+    .coverflow-nav,
+    .coverflow-dot,
+    .coverflow-slide-poster {
+        animation: none !important;
+        transition: none !important;
+    }
+}
