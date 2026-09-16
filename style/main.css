@@ -8847,16 +8847,16 @@ svg use {
 }
 
 /* ============================================
-   ПРОФИЛЬ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
+   ПРОФИЛЬ v2.0 — ИСПРАВЛЕННАЯ ВЕРСИЯ
    ============================================ */
 
 /* ===== АНИМИРОВАННЫЙ БАННЕР ===== */
 .profile-banner {
     position: relative;
-    height: 240px;
+    height: 200px;
     border-radius: 24px;
     overflow: hidden;
-    margin-bottom: 70px;
+    margin-bottom: 0;
     background-size: 300% 300% !important;
     animation: profileBannerShift 15s ease infinite;
     border: 1px solid rgba(0, 245, 255, 0.1);
@@ -8871,7 +8871,6 @@ svg use {
     50% { background-position: 100% 50%; }
 }
 
-/* Туманности */
 .profile-banner::before {
     content: '';
     position: absolute;
@@ -8890,17 +8889,15 @@ svg use {
     50% { opacity: 1; transform: scale(1.05); }
 }
 
-/* Плавающие частицы */
 .profile-banner::after {
     content: '';
     position: absolute;
     inset: 0;
     background-image: 
         radial-gradient(circle, rgba(255, 255, 255, 0.2) 1px, transparent 1.5px),
-        radial-gradient(circle, rgba(0, 245, 255, 0.15) 1px, transparent 1.5px),
-        radial-gradient(circle, rgba(253, 121, 168, 0.15) 1px, transparent 1.5px);
-    background-size: 80px 80px, 120px 120px, 160px 160px;
-    background-position: 0 0, 40px 40px, 80px 80px;
+        radial-gradient(circle, rgba(0, 245, 255, 0.15) 1px, transparent 1.5px);
+    background-size: 80px 80px, 120px 120px;
+    background-position: 0 0, 40px 40px;
     animation: particlesFloat 30s linear infinite;
     pointer-events: none;
     z-index: 1;
@@ -8908,8 +8905,8 @@ svg use {
 }
 
 @keyframes particlesFloat {
-    0% { background-position: 0 0, 40px 40px, 80px 80px; }
-    100% { background-position: 80px 80px, 120px 120px, 240px 240px; }
+    0% { background-position: 0 0, 40px 40px; }
+    100% { background-position: 80px 80px, 120px 120px; }
 }
 
 .banner-overlay {
@@ -8946,25 +8943,26 @@ svg use {
     box-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
 }
 
-.profile-banner-edit svg {
-    transition: transform 0.4s ease;
-}
-
-/* ===== КАРТОЧКА ПРОФИЛЯ ===== */
+/* ===== КАРТОЧКА ПРОФИЛЯ (вынесена из баннера) ===== */
 .profile-header-card {
-    position: absolute;
-    bottom: -55px;
-    left: 28px;
-    right: 28px;
+    position: relative;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     gap: 24px;
-    padding: 0;
-    background: transparent;
-    border: none;
-    flex-wrap: wrap;
+    padding: 20px 24px;
+    margin-top: -70px;
+    margin-bottom: 20px;
+    background: linear-gradient(145deg, rgba(20, 20, 40, 0.95), rgba(15, 15, 30, 0.95));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    border: 1px solid rgba(0, 245, 255, 0.1);
+    box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
     animation: profileCardIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 5;
+    flex-wrap: wrap;
 }
 
 @keyframes profileCardIn {
@@ -8972,7 +8970,7 @@ svg use {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== АВАТАР С КОЛЬЦОМ УРОВНЯ ===== */
+/* ===== АВАТАР ===== */
 .profile-avatar-wrapper {
     position: relative;
     flex-shrink: 0;
@@ -8981,21 +8979,21 @@ svg use {
 
 .avatar-large {
     position: relative;
-    width: 140px;
-    height: 140px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 48px;
+    font-size: 42px;
     cursor: pointer;
     overflow: visible;
-    border: 4px solid var(--bg-primary);
+    border: 4px solid rgba(20, 20, 40, 0.95);
     box-shadow: 
         0 0 40px rgba(0, 245, 255, 0.4),
         0 0 80px rgba(108, 92, 231, 0.2),
-        0 20px 40px rgba(0, 0, 0, 0.5);
+        0 10px 30px rgba(0, 0, 0, 0.6);
     transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
                 box-shadow 0.4s ease;
     animation: avatarFloat 4s ease-in-out infinite;
@@ -9003,14 +9001,13 @@ svg use {
 
 @keyframes avatarFloat {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
+    50% { transform: translateY(-4px); }
 }
 
-/* Вращающееся кольцо уровня */
 .avatar-large::before {
     content: '';
     position: absolute;
-    inset: -10px;
+    inset: -8px;
     border-radius: 50%;
     background: conic-gradient(
         from 0deg,
@@ -9021,7 +9018,7 @@ svg use {
     );
     z-index: -1;
     animation: avatarRingRotate 4s linear infinite;
-    filter: blur(3px);
+    filter: blur(2px);
     opacity: 0.9;
 }
 
@@ -9029,24 +9026,13 @@ svg use {
     to { transform: rotate(360deg); }
 }
 
-/* Второе кольцо — тонкое, для глубины */
-.avatar-large::after {
-    content: '';
-    position: absolute;
-    inset: -3px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    z-index: 1;
-    pointer-events: none;
-}
-
 .avatar-large:hover {
     animation-play-state: paused;
-    transform: scale(1.06) translateY(-6px);
+    transform: scale(1.05) translateY(-4px);
     box-shadow: 
         0 0 60px rgba(0, 245, 255, 0.6),
         0 0 120px rgba(108, 92, 231, 0.3),
-        0 25px 50px rgba(0, 0, 0, 0.6);
+        0 15px 40px rgba(0, 0, 0, 0.7);
 }
 
 .avatar-large img {
@@ -9059,7 +9045,7 @@ svg use {
 }
 
 .avatar-large #avatarLetter {
-    font-size: 52px;
+    font-size: 42px;
     font-weight: 800;
     color: #fff;
     text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
@@ -9087,7 +9073,7 @@ svg use {
 }
 
 .avatar-edit-icon {
-    font-size: 26px;
+    font-size: 22px;
     animation: avatarEditBounce 1s ease infinite alternate;
 }
 
@@ -9097,7 +9083,7 @@ svg use {
 }
 
 .avatar-edit-text {
-    font-size: 11px;
+    font-size: 10px;
     color: #fff;
     font-weight: 700;
     letter-spacing: 0.5px;
@@ -9106,12 +9092,12 @@ svg use {
 /* Статус онлайн */
 .avatar-status {
     position: absolute;
-    bottom: 8px;
-    right: 8px;
-    width: 26px;
-    height: 26px;
+    bottom: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
-    border: 4px solid var(--bg-primary);
+    border: 3px solid rgba(20, 20, 40, 0.95);
     background: #2ecc71;
     box-shadow: 0 0 20px rgba(46, 204, 113, 0.6);
     z-index: 15;
@@ -9138,14 +9124,14 @@ svg use {
 /* Бейдж уровня */
 .level-badge {
     position: absolute;
-    bottom: -10px;
+    bottom: -8px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 5px 16px;
+    padding: 4px 14px;
     border-radius: 20px;
     background: linear-gradient(135deg, #ffd700, #f39c12);
     color: #000;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.5px;
     box-shadow: 0 4px 20px rgba(255, 215, 0, 0.6);
@@ -9169,8 +9155,8 @@ svg use {
 /* ===== СЕКЦИЯ ИМЕНИ ===== */
 .profile-name-section {
     flex: 1;
-    min-width: 250px;
-    padding-bottom: 12px;
+    min-width: 200px;
+    padding: 0;
 }
 
 .profile-name-row {
@@ -9182,7 +9168,7 @@ svg use {
 }
 
 .profile-name-section h1 {
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 800;
     background: linear-gradient(135deg, #fff, var(--neon-cyan), var(--neon-purple));
     -webkit-background-clip: text;
@@ -9199,7 +9185,7 @@ svg use {
     gap: 6px;
     font-size: 12px;
     font-weight: 700;
-    padding: 5px 14px;
+    padding: 4px 12px;
     border-radius: 20px;
     background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(253, 121, 168, 0.15));
     border: 1px solid rgba(255, 215, 0, 0.3);
@@ -9219,12 +9205,12 @@ svg use {
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-muted);
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
     transition: all 0.3s ease;
-    padding: 6px 10px;
+    padding: 6px;
     border-radius: 50%;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -9241,7 +9227,7 @@ svg use {
 .profile-email {
     color: var(--text-secondary);
     font-size: 13px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
 }
 
 .profile-status {
@@ -9250,7 +9236,7 @@ svg use {
     gap: 6px;
     font-size: 13px;
     font-weight: 600;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .profile-join-date {
@@ -9260,13 +9246,13 @@ svg use {
 
 /* ===== XP БАР ===== */
 .profile-level-xp {
-    max-width: 420px;
-    margin: 12px 0;
+    max-width: 380px;
+    margin: 10px 0 0;
 }
 
 .xp-bar {
     position: relative;
-    height: 26px;
+    height: 24px;
     background: rgba(255, 255, 255, 0.04);
     border-radius: 14px;
     overflow: hidden;
@@ -9312,7 +9298,7 @@ svg use {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 800;
     color: #fff;
     text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
@@ -9330,7 +9316,6 @@ svg use {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 16px;
-    margin-top: 70px;
     margin-bottom: 20px;
     cursor: pointer;
     border: 1px solid rgba(0, 245, 255, 0.08);
@@ -9405,7 +9390,7 @@ svg use {
     transform: translateX(4px);
 }
 
-/* ===== КАРТОЧКИ СТАТИСТИКИ (GLASSMORPHISM) ===== */
+/* ===== КАРТОЧКИ СТАТИСТИКИ ===== */
 .stats-cards {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -9415,7 +9400,7 @@ svg use {
 
 .stat-card {
     position: relative;
-    padding: 22px 16px;
+    padding: 20px 14px;
     border-radius: 20px;
     text-align: center;
     cursor: pointer;
@@ -9434,17 +9419,16 @@ svg use {
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.stat-card:nth-child(1) { animation-delay: 0.2s; }
-.stat-card:nth-child(2) { animation-delay: 0.28s; }
-.stat-card:nth-child(3) { animation-delay: 0.36s; }
-.stat-card:nth-child(4) { animation-delay: 0.44s; }
+.stat-card:nth-child(1) { animation-delay: 0.15s; }
+.stat-card:nth-child(2) { animation-delay: 0.22s; }
+.stat-card:nth-child(3) { animation-delay: 0.29s; }
+.stat-card:nth-child(4) { animation-delay: 0.36s; }
 
 @keyframes statCardIn {
     from { opacity: 0; transform: translateY(30px) scale(0.9); }
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Живой градиент внутри карточки */
 .stat-card::before {
     content: '';
     position: absolute;
@@ -9472,7 +9456,6 @@ svg use {
     }
 }
 
-/* Внешнее неоновое свечение */
 .stat-card::after {
     content: '';
     position: absolute;
@@ -9501,9 +9484,9 @@ svg use {
 }
 
 .stat-card .stat-icon {
-    font-size: 30px;
+    font-size: 28px;
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     position: relative;
     z-index: 2;
@@ -9516,7 +9499,7 @@ svg use {
 }
 
 .stat-card .num {
-    font-size: 34px;
+    font-size: 30px;
     font-weight: 800;
     background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
     -webkit-background-clip: text;
@@ -9545,7 +9528,6 @@ svg use {
     z-index: 2;
 }
 
-/* Индивидуальные цвета карточек */
 .stat-card:nth-child(1) { --stat-color: rgba(253, 121, 168, 0.6); }
 .stat-card:nth-child(2) { --stat-color: rgba(0, 245, 255, 0.6); }
 .stat-card:nth-child(3) { --stat-color: rgba(255, 215, 0, 0.6); }
@@ -9553,8 +9535,6 @@ svg use {
 
 /* ===== СЕКЦИИ ===== */
 .continue-watching-section,
-.activity-feed-section,
-.genre-stats-section,
 .profile-achievements-preview,
 .profile-top-users {
     background: rgba(255, 255, 255, 0.02);
@@ -9572,11 +9552,9 @@ svg use {
         inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
-.continue-watching-section { animation-delay: 0.5s; }
-.activity-feed-section { animation-delay: 0.58s; }
-.genre-stats-section { animation-delay: 0.66s; }
-.profile-achievements-preview { animation-delay: 0.74s; }
-.profile-top-users { animation-delay: 0.82s; }
+.continue-watching-section { animation-delay: 0.4s; }
+.profile-achievements-preview { animation-delay: 0.5s; }
+.profile-top-users { animation-delay: 0.6s; }
 
 .section-header {
     display: flex;
@@ -9599,12 +9577,6 @@ svg use {
     height: 2px;
     background: linear-gradient(90deg, var(--neon-cyan), transparent);
     border-radius: 2px;
-    animation: headerLineExpand 1.5s ease-out 0.5s backwards;
-}
-
-@keyframes headerLineExpand {
-    from { width: 0; opacity: 0; }
-    to { width: 60px; opacity: 1; }
 }
 
 .section-header h3 {
@@ -9648,7 +9620,7 @@ svg use {
     box-shadow: 0 0 15px rgba(0, 245, 255, 0.15);
 }
 
-/* ===== ПРОДОЛЖИТЬ ПРОСМОТР (улучшенный) ===== */
+/* ===== ПРОДОЛЖИТЬ ПРОСМОТР ===== */
 .continue-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -9765,150 +9737,10 @@ svg use {
     50% { background-position: 100% 50%; }
 }
 
-.continue-progress .fill::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-    animation: xpShine 2s ease-in-out infinite;
-    border-radius: 10px;
-}
-
 .continue-time {
     font-size: 10px;
     color: var(--text-muted);
     font-weight: 600;
-}
-
-/* ===== АКТИВНОСТЬ ===== */
-.activity-feed {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.activity-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    animation: activityItemIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-    position: relative;
-    overflow: hidden;
-}
-
-@keyframes activityItemIn {
-    from { opacity: 0; transform: translateX(-30px); }
-    to { opacity: 1; transform: translateX(0); }
-}
-
-.activity-item:hover {
-    background: rgba(0, 245, 255, 0.05);
-    border-color: rgba(0, 245, 255, 0.2);
-    transform: translateX(8px);
-    box-shadow: 
-        0 6px 25px rgba(0, 245, 255, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.activity-icon {
-    font-size: 18px;
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 245, 255, 0.08);
-    border-radius: 50%;
-    border: 1px solid rgba(0, 245, 255, 0.15);
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 0 15px rgba(0, 245, 255, 0.1);
-}
-
-.activity-item:hover .activity-icon {
-    transform: scale(1.15) rotate(-10deg);
-    background: rgba(0, 245, 255, 0.15);
-    box-shadow: 0 0 25px rgba(0, 245, 255, 0.3);
-}
-
-.activity-text {
-    flex: 1;
-    font-size: 13px;
-    color: var(--text-primary);
-    line-height: 1.4;
-}
-
-.activity-time {
-    font-size: 11px;
-    color: var(--text-muted);
-    white-space: nowrap;
-    font-weight: 700;
-    padding: 3px 10px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
-}
-
-/* ===== ЖАНРЫ ===== */
-.genre-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.genre-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-primary);
-    border: 1px solid;
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    cursor: default;
-    animation: genreTagIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-    position: relative;
-    overflow: hidden;
-}
-
-@keyframes genreTagIn {
-    from { opacity: 0; transform: scale(0.7); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.genre-tag::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-    transform: translateX(-100%);
-    transition: transform 0.6s ease;
-}
-
-.genre-tag:hover::before {
-    transform: translateX(100%);
-}
-
-.genre-tag .count {
-    font-size: 11px;
-    font-weight: 800;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.genre-tag:hover {
-    transform: translateY(-4px) scale(1.08);
-    box-shadow: 
-        0 10px 30px rgba(0, 0, 0, 0.3),
-        0 0 30px currentColor;
-    filter: brightness(1.3);
 }
 
 /* ===== ДОСТИЖЕНИЯ (ПРЕВЬЮ) ===== */
@@ -9993,23 +9825,19 @@ svg use {
 
 /* ===== АДАПТИВ ===== */
 @media (max-width: 900px) {
-    .profile-banner {
-        height: 220px;
-    }
     .profile-header-card {
-        left: 16px;
-        right: 16px;
         gap: 18px;
+        padding: 18px 20px;
     }
     .avatar-large {
-        width: 120px;
-        height: 120px;
+        width: 100px;
+        height: 100px;
     }
     .avatar-large #avatarLetter {
-        font-size: 44px;
+        font-size: 36px;
     }
     .profile-name-section h1 {
-        font-size: 26px;
+        font-size: 22px;
     }
     .stats-cards {
         grid-template-columns: repeat(2, 1fr);
@@ -10018,30 +9846,29 @@ svg use {
 
 @media (max-width: 600px) {
     .profile-banner {
-        height: 180px;
-        margin-bottom: 100px;
+        height: 160px;
     }
     .profile-header-card {
-        left: 12px;
-        right: 12px;
-        gap: 12px;
         flex-direction: column;
         align-items: center;
         text-align: center;
-        bottom: -85px;
+        padding: 20px 16px;
+        margin-top: -60px;
+        gap: 14px;
     }
     .avatar-large {
-        width: 110px;
-        height: 110px;
+        width: 100px;
+        height: 100px;
     }
     .avatar-large #avatarLetter {
-        font-size: 40px;
+        font-size: 36px;
     }
     .level-badge {
         font-size: 11px;
-        padding: 4px 12px;
+        padding: 3px 12px;
     }
     .profile-name-section {
+        width: 100%;
         padding-bottom: 0;
         min-width: 100%;
     }
@@ -10058,22 +9885,20 @@ svg use {
     }
     .profile-level-xp {
         max-width: 100%;
-    }
-    .profile-bio-block {
-        margin-top: 110px;
+        margin: 12px auto 0;
     }
     .stats-cards {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
     .stat-card {
-        padding: 16px 12px;
+        padding: 16px 10px;
     }
     .stat-card .num {
-        font-size: 26px;
+        font-size: 24px;
     }
     .stat-card .stat-icon {
-        font-size: 24px;
+        font-size: 22px;
     }
     .continue-grid {
         grid-template-columns: 1fr;
@@ -10085,10 +9910,17 @@ svg use {
 
 @media (max-width: 400px) {
     .stat-card .num {
-        font-size: 22px;
+        font-size: 20px;
     }
     .stat-card .lbl {
         font-size: 10px;
+    }
+    .avatar-large {
+        width: 90px;
+        height: 90px;
+    }
+    .avatar-large #avatarLetter {
+        font-size: 32px;
     }
 }
 
@@ -10104,7 +9936,6 @@ svg use {
     .stat-card::before,
     .continue-card,
     .continue-progress .fill,
-    .activity-icon,
     .profile-ach-item,
     .profile-ach-item::before {
         animation: none !important;
