@@ -1,6 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME
-// v2.2 — с проксированными скриншотами
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (БЕЗ СКРИНШОТОВ)
 // ============================================
 
 const allData = {};
@@ -32,12 +31,6 @@ let myCommentsFiltered = [];
 // ===== СОРТИРОВКА ДОСТИЖЕНИЙ =====
 let achCurrentSort = 'rarity_desc';
 
-// ===== СКРИНШОТЫ =====
-let screenshotsData = [];
-let currentScreenshotIndex = 0;
-let lightboxIndex = 0;
-let lightboxTouchStart = 0;
-
 const RARITY_ORDER = { legendary: 4, epic: 3, rare: 2, common: 1 };
 const RARITY_LABELS = {
     common: '⚪ Обычное',
@@ -46,23 +39,38 @@ const RARITY_LABELS = {
     legendary: '🟡 Легендарное'
 };
 
-// ===== ДОСТИЖЕНИЯ =====
+// ===== ДОСТИЖЕНИЯ С РЕДКОСТЬЮ v2.0 =====
 const ACHIEVEMENTS_LIST = [
-    { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель', rarity: 'common', category: 'viewer', target: 100, metric: 'episodes' },
-    { id: 'ep200', name: '🎬 Зритель 2 уровня', desc: 'Посмотреть 200 серий', icon: '🎥', title: 'Любопытный', rarity: 'common', category: 'viewer', target: 200, metric: 'episodes' },
-    { id: 'ep500', name: '🎬 Зритель 3 уровня', desc: 'Посмотреть 500 серий', icon: '📺', title: 'Заядлый', rarity: 'rare', category: 'viewer', target: 500, metric: 'episodes' },
-    { id: 'ep750', name: '🎬 Зритель 4 уровня', desc: 'Посмотреть 750 серий', icon: '🌟', title: 'Эксперт', rarity: 'epic', category: 'viewer', target: 750, metric: 'episodes' },
-    { id: 'ep1000', name: '🎬 Зритель 5 уровня', desc: 'Посмотреть 1000 серий', icon: '🏆', title: 'Легенда', rarity: 'legendary', category: 'viewer', target: 1000, metric: 'episodes' },
-    { id: 'cm100', name: '💬 Комментатор 1 уровня', desc: 'Оставить 100 комментариев', icon: '💬', title: 'Говорун', rarity: 'common', category: 'commenter', target: 100, metric: 'comments' },
-    { id: 'cm200', name: '💬 Комментатор 2 уровня', desc: 'Оставить 200 комментариев', icon: '🗣️', title: 'Собеседник', rarity: 'common', category: 'commenter', target: 200, metric: 'comments' },
-    { id: 'cm500', name: '💬 Комментатор 3 уровня', desc: 'Оставить 500 комментариев', icon: '🎙️', title: 'Оратор', rarity: 'rare', category: 'commenter', target: 500, metric: 'comments' },
-    { id: 'cm750', name: '💬 Комментатор 4 уровня', desc: 'Оставить 750 комментариев', icon: '📢', title: 'Мастер слова', rarity: 'epic', category: 'commenter', target: 750, metric: 'comments' },
-    { id: 'cm1000', name: '💬 Комментатор 5 уровня', desc: 'Оставить 1000 комментариев', icon: '👑', title: 'Глашатай', rarity: 'legendary', category: 'commenter', target: 1000, metric: 'comments' },
-    { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме в избранное', icon: '❤️', title: 'Коллекционер', rarity: 'common', category: 'collector', target: 100, metric: 'favorites' },
-    { id: 'fv200', name: '❤️ Коллекционер 2 уровня', desc: 'Добавить 200 аниме в избранное', icon: '💝', title: 'Ценитель', rarity: 'common', category: 'collector', target: 200, metric: 'favorites' },
-    { id: 'fv500', name: '❤️ Коллекционер 3 уровня', desc: 'Добавить 500 аниме в избранное', icon: '💎', title: 'Знаток', rarity: 'rare', category: 'collector', target: 500, metric: 'favorites' },
-    { id: 'fv750', name: '❤️ Коллекционер 4 уровня', desc: 'Добавить 750 аниме в избранное', icon: '👑', title: 'Библиофил', rarity: 'epic', category: 'collector', target: 750, metric: 'favorites' },
-    { id: 'fv1000', name: '❤️ Коллекционер 5 уровня', desc: 'Добавить 1000 аниме в избранное', icon: '🏆', title: 'Хранитель', rarity: 'legendary', category: 'collector', target: 1000, metric: 'favorites' }
+    { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель',
+      rarity: 'common', category: 'viewer', target: 100, metric: 'episodes' },
+    { id: 'ep200', name: '🎬 Зритель 2 уровня', desc: 'Посмотреть 200 серий', icon: '🎥', title: 'Любопытный',
+      rarity: 'common', category: 'viewer', target: 200, metric: 'episodes' },
+    { id: 'ep500', name: '🎬 Зритель 3 уровня', desc: 'Посмотреть 500 серий', icon: '📺', title: 'Заядлый',
+      rarity: 'rare', category: 'viewer', target: 500, metric: 'episodes' },
+    { id: 'ep750', name: '🎬 Зритель 4 уровня', desc: 'Посмотреть 750 серий', icon: '🌟', title: 'Эксперт',
+      rarity: 'epic', category: 'viewer', target: 750, metric: 'episodes' },
+    { id: 'ep1000', name: '🎬 Зритель 5 уровня', desc: 'Посмотреть 1000 серий', icon: '🏆', title: 'Легенда',
+      rarity: 'legendary', category: 'viewer', target: 1000, metric: 'episodes' },
+    { id: 'cm100', name: '💬 Комментатор 1 уровня', desc: 'Оставить 100 комментариев', icon: '💬', title: 'Говорун',
+      rarity: 'common', category: 'commenter', target: 100, metric: 'comments' },
+    { id: 'cm200', name: '💬 Комментатор 2 уровня', desc: 'Оставить 200 комментариев', icon: '🗣️', title: 'Собеседник',
+      rarity: 'common', category: 'commenter', target: 200, metric: 'comments' },
+    { id: 'cm500', name: '💬 Комментатор 3 уровня', desc: 'Оставить 500 комментариев', icon: '🎙️', title: 'Оратор',
+      rarity: 'rare', category: 'commenter', target: 500, metric: 'comments' },
+    { id: 'cm750', name: '💬 Комментатор 4 уровня', desc: 'Оставить 750 комментариев', icon: '📢', title: 'Мастер слова',
+      rarity: 'epic', category: 'commenter', target: 750, metric: 'comments' },
+    { id: 'cm1000', name: '💬 Комментатор 5 уровня', desc: 'Оставить 1000 комментариев', icon: '👑', title: 'Глашатай',
+      rarity: 'legendary', category: 'commenter', target: 1000, metric: 'comments' },
+    { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме в избранное', icon: '❤️', title: 'Коллекционер',
+      rarity: 'common', category: 'collector', target: 100, metric: 'favorites' },
+    { id: 'fv200', name: '❤️ Коллекционер 2 уровня', desc: 'Добавить 200 аниме в избранное', icon: '💝', title: 'Ценитель',
+      rarity: 'common', category: 'collector', target: 200, metric: 'favorites' },
+    { id: 'fv500', name: '❤️ Коллекционер 3 уровня', desc: 'Добавить 500 аниме в избранное', icon: '💎', title: 'Знаток',
+      rarity: 'rare', category: 'collector', target: 500, metric: 'favorites' },
+    { id: 'fv750', name: '❤️ Коллекционер 4 уровня', desc: 'Добавить 750 аниме в избранное', icon: '👑', title: 'Библиофил',
+      rarity: 'epic', category: 'collector', target: 750, metric: 'favorites' },
+    { id: 'fv1000', name: '❤️ Коллекционер 5 уровня', desc: 'Добавить 1000 аниме в избранное', icon: '🏆', title: 'Хранитель',
+      rarity: 'legendary', category: 'collector', target: 1000, metric: 'favorites' }
 ];
 
 // ===== ЦВЕТА ДЛЯ ЖАНРОВ =====
@@ -125,7 +133,6 @@ function updateUI() {
     const user = DB.get('currentUser');
     const nav = document.getElementById('sidebarNav');
     const footer = document.getElementById('sidebarFooter');
-
     if (!nav || !footer) return;
 
     if (user) {
@@ -180,13 +187,8 @@ function toggleMenu() {
     const overlay = document.getElementById('sidebarOverlay');
     if (!sidebar || !overlay) return;
     const isOpen = sidebar.classList.contains('open');
-    if (isOpen) {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('open');
-    } else {
-        sidebar.classList.add('open');
-        overlay.classList.add('open');
-    }
+    if (isOpen) { sidebar.classList.remove('open'); overlay.classList.remove('open'); }
+    else { sidebar.classList.add('open'); overlay.classList.add('open'); }
 }
 
 function closeMenu() {
@@ -249,9 +251,7 @@ async function loadRecommendationsForHero() {
             startHeroAutoSlide();
             console.log('🎲 Загружено', recs.length, 'рекомендаций');
         }
-    } catch (e) {
-        console.error('Ошибка загрузки рекомендаций:', e);
-    }
+    } catch (e) { console.error('Ошибка загрузки рекомендаций:', e); }
 }
 
 function renderHeroSlider(items) {
@@ -332,10 +332,7 @@ function slideHero(direction) {
     if (!cards.length) return;
     heroCurrentSlide = (heroCurrentSlide + direction + cards.length) % cards.length;
     updateHeroCards();
-    if (heroAutoSlideTimer) {
-        clearInterval(heroAutoSlideTimer);
-        startHeroAutoSlide();
-    }
+    if (heroAutoSlideTimer) { clearInterval(heroAutoSlideTimer); startHeroAutoSlide(); }
 }
 
 function goToHeroSlide(index) {
@@ -343,10 +340,7 @@ function goToHeroSlide(index) {
     if (!cards.length || index === heroCurrentSlide) return;
     heroCurrentSlide = index;
     updateHeroCards();
-    if (heroAutoSlideTimer) {
-        clearInterval(heroAutoSlideTimer);
-        startHeroAutoSlide();
-    }
+    if (heroAutoSlideTimer) { clearInterval(heroAutoSlideTimer); startHeroAutoSlide(); }
 }
 
 // ============================================
@@ -423,11 +417,7 @@ async function loadCatalog(targetPage = null) {
             renderPagination(page, result.items.length);
             isAllLoaded = result.items.length < CATALOG_LIMIT;
         } else {
-            if (page > 1) {
-                page--;
-                isLoading = false;
-                return loadCatalog();
-            }
+            if (page > 1) { page--; isLoading = false; return loadCatalog(); }
             const searchText = searchValue ? ` "${searchValue}"` : '';
             grid.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted);grid-column:1/-1;"><div style="font-size:64px;margin-bottom:16px;">🔍</div><p style="font-size:18px;font-weight:600;">Ничего не найдено${searchText}</p></div>`;
             if (stats) stats.textContent = '';
@@ -438,11 +428,9 @@ async function loadCatalog(targetPage = null) {
     } catch (error) {
         console.error('❌ Ошибка загрузки:', error);
         if (!allItems.length) {
-            grid.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted);grid-column:1/-1;"><div style="font-size:64px;margin-bottom:16px;">⚠️</div><p style="font-size:18px;font-weight:600;margin-bottom:8px;">Ошибка загрузки</p><button onclick="loadCatalog()" class="random-retry-btn" style="margin-top:16px;">🔄 Попробовать снова</button></div>`;
+            grid.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted);grid-column:1/-1;"><div style="font-size:64px;margin-bottom:16px;">⚠️</div><p style="font-size:18px;font-weight:600;">Ошибка загрузки</p><button onclick="loadCatalog()" class="random-retry-btn" style="margin-top:16px;">🔄 Попробовать снова</button></div>`;
         }
-    } finally {
-        isLoading = false;
-    }
+    } finally { isLoading = false; }
 }
 
 // ============================================
@@ -457,11 +445,7 @@ function renderPagination(currentPageNum, itemsCount) {
 
     const hasPrev = currentPageNum > 1;
     const hasNext = itemsCount >= CATALOG_LIMIT;
-
-    if (!hasPrev && !hasNext) {
-        pagination.style.display = 'none';
-        return;
-    }
+    if (!hasPrev && !hasNext) { pagination.style.display = 'none'; return; }
 
     pagination.style.display = 'flex';
     if (prevBtn) prevBtn.disabled = !hasPrev;
@@ -697,10 +681,7 @@ document.addEventListener('DOMContentLoaded', function() {
     autocompleteContainer.style.cssText = `position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border-radius: var(--radius); border: 1px solid rgba(108,92,231,0.1); max-height: 300px; overflow-y: auto; z-index: 1000; display: none; backdrop-filter: blur(20px); box-shadow: 0 10px 40px rgba(0,0,0,0.5); margin-top: 4px;`;
 
     const wrapper = searchInput.closest('.catalog-search-wrapper');
-    if (wrapper) {
-        wrapper.style.position = 'relative';
-        wrapper.appendChild(autocompleteContainer);
-    }
+    if (wrapper) { wrapper.style.position = 'relative'; wrapper.appendChild(autocompleteContainer); }
 
     let autocompleteTimeout = null;
 
@@ -713,10 +694,7 @@ document.addEventListener('DOMContentLoaded', function() {
         autocompleteTimeout = setTimeout(async () => {
             try {
                 const suggestions = await API.searchAutocomplete(value, 8);
-                if (!suggestions.length) {
-                    autocompleteContainer.style.display = 'none';
-                    return;
-                }
+                if (!suggestions.length) { autocompleteContainer.style.display = 'none'; return; }
                 let html = '';
                 suggestions.forEach(item => {
                     html += `<div class="autocomplete-item" onclick="selectSearchSuggestion('${item.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,0.03);">
@@ -756,13 +734,9 @@ async function openDetail(id) {
     const posterEl = document.getElementById('detailPoster');
     if (posterEl) posterEl.style.display = 'none';
 
-    const screenshotsSection = document.getElementById('screenshotsSection');
-    if (screenshotsSection) screenshotsSection.style.display = 'none';
-
     try {
         const data = await API.getAnimeDetails(id);
         console.log('📦 Данные:', data);
-
         if (!data) {
             showToast('❌ Аниме не найдено', 'error');
             const descEl = document.getElementById('detailDesc');
@@ -828,17 +802,11 @@ function showDetail(anime) {
 
         const img = anime.images?.jpg?.image_url || '';
         if (posterEl) {
-            if (img) {
-                posterEl.src = img;
-                posterEl.style.display = 'block';
-            } else {
-                posterEl.style.display = 'none';
-            }
+            if (img) { posterEl.src = img; posterEl.style.display = 'block'; }
+            else posterEl.style.display = 'none';
         }
 
-        if (heroBg && img) {
-            try { heroBg.style.backgroundImage = `url('${img}')`; } catch(e) {}
-        }
+        if (heroBg && img) { try { heroBg.style.backgroundImage = `url('${img}')`; } catch(e) {} }
 
         const ambientGlow = document.getElementById('detailAmbientGlow');
         if (ambientGlow && img) {
@@ -864,9 +832,7 @@ function showDetail(anime) {
                     const color = getGenreColor(g);
                     return `<span class="detail-tag" style="--tag-color: ${color}; --tag-bg: ${color}15; --tag-border: ${color}40; animation-delay: ${i * 0.05}s;" onclick="event.stopPropagation(); onGenreClick('${safeG}');">${g}</span>`;
                 }).join('');
-            } else {
-                tagsEl.innerHTML = '';
-            }
+            } else tagsEl.innerHTML = '';
         }
 
         const user = DB.get('currentUser');
@@ -888,9 +854,6 @@ function showDetail(anime) {
         }
 
         try { renderWatchProgress(displayTitle, anime); } catch(e) {}
-
-        // ✅ ЗАГРУЖАЕМ СКРИНШОТЫ
-        try { loadScreenshots(anime.rawId || anime.id); } catch(e) {}
 
         renderComments(displayTitle);
         closeWatchEmbed();
@@ -969,9 +932,7 @@ function extractDominantColor(imgUrl, callback) {
             const imageData = ctx.getImageData(0, 0, 50, 50).data;
             let r = 0, g = 0, b = 0, count = 0;
             for (let i = 0; i < imageData.length; i += 40) {
-                r += imageData[i];
-                g += imageData[i + 1];
-                b += imageData[i + 2];
+                r += imageData[i]; g += imageData[i + 1]; b += imageData[i + 2];
                 count++;
             }
             if (count === 0) { safeCallback('rgba(108, 92, 231, 0.3)'); return; }
@@ -983,9 +944,7 @@ function extractDominantColor(imgUrl, callback) {
             g = Math.min(255, Math.round(g * factor));
             b = Math.min(255, Math.round(b * factor));
             safeCallback(`rgba(${r}, ${g}, ${b}, 0.4)`);
-        } catch(e) {
-            safeCallback('rgba(108, 92, 231, 0.3)');
-        }
+        } catch(e) { safeCallback('rgba(108, 92, 231, 0.3)'); }
     };
     img.onerror = function() { clearTimeout(timeout); safeCallback('rgba(108, 92, 231, 0.3)'); };
     img.src = imgUrl;
@@ -1002,7 +961,6 @@ function renderWatchProgress(animeTitle, anime) {
     const watching = DB.getUserData(user.name, 'continueWatching', {});
     const current = watching[animeTitle];
     const totalEpisodes = parseInt(anime?.episodes) || 0;
-
     if (!current && totalEpisodes === 0) { container.style.display = 'none'; return; }
 
     const watchedEp = current ? (current.episode || 0) : 0;
@@ -1022,202 +980,6 @@ function renderWatchProgress(animeTitle, anime) {
     if (percentEl) percentEl.textContent = percent + '%';
     container.style.display = 'block';
 }
-
-// ============================================
-// 8.5. СКРИНШОТЫ АНИМЕ
-// ============================================
-
-async function loadScreenshots(animeId) {
-    const section = document.getElementById('screenshotsSection');
-    const track = document.getElementById('screenshotsTrack');
-    const dots = document.getElementById('screenshotsDots');
-
-    if (!section || !track) return;
-
-    section.style.display = 'none';
-    track.innerHTML = '';
-    if (dots) dots.innerHTML = '';
-    screenshotsData = [];
-    currentScreenshotIndex = 0;
-
-    try {
-        const screenshots = await API.getScreenshots(animeId);
-
-        if (!screenshots || screenshots.length === 0) {
-            console.log('📸 Нет скриншотов для этого аниме');
-            return;
-        }
-
-        screenshotsData = screenshots;
-        renderScreenshots();
-        section.style.display = 'block';
-
-        // ✅ Принудительно снимаем анимацию — на случай багов
-        setTimeout(() => {
-            document.querySelectorAll('.screenshot-card').forEach(c => {
-                c.style.opacity = '1';
-            });
-        }, 800);
-
-    } catch (e) {
-        console.warn('⚠️ Ошибка загрузки скриншотов:', e.message);
-    }
-}
-
-function renderScreenshots() {
-    const track = document.getElementById('screenshotsTrack');
-    const dots = document.getElementById('screenshotsDots');
-    if (!track) return;
-
-    let cardsHtml = '';
-    screenshotsData.forEach((s, index) => {
-        const imgSrc = s.preview || s.original;
-        const fullSrc = s.original || s.preview;
-
-        cardsHtml += `
-            <div class="screenshot-card"
-                 data-index="${index}"
-                 data-full="${fullSrc}"
-                 onclick="openLightbox(${index})"
-                 style="animation-delay: ${index * 0.08}s;">
-                <img src="${imgSrc}" 
-                     alt="Скриншот ${index + 1}" 
-                     loading="lazy"
-                     onerror="this.style.background='#1a1a3e';this.style.minHeight='200px';">
-                <div class="screenshot-zoom-hint">🔍</div>
-            </div>
-        `;
-    });
-    track.innerHTML = cardsHtml;
-
-    if (dots) {
-        let dotsHtml = '';
-        screenshotsData.forEach((_, index) => {
-            dotsHtml += `<button class="screenshot-dot${index === 0 ? ' active' : ''}" onclick="goToScreenshot(${index})" aria-label="Кадр ${index + 1}"></button>`;
-        });
-        dots.innerHTML = dotsHtml;
-    }
-
-    updateScreenshotsCarousel();
-}
-
-function updateScreenshotsCarousel() {
-    const track = document.getElementById('screenshotsTrack');
-    const dots = document.querySelectorAll('.screenshot-dot');
-    const prevBtn = document.querySelector('.screenshots-prev');
-    const nextBtn = document.querySelector('.screenshots-next');
-
-    if (!track) return;
-    const firstCard = track.querySelector('.screenshot-card');
-    if (!firstCard) return;
-
-    const cardWidth = firstCard.offsetWidth;
-    const gap = 16;
-    const offset = -currentScreenshotIndex * (cardWidth + gap);
-    track.style.transform = `translateX(${offset}px)`;
-
-    dots.forEach((dot, i) => dot.classList.toggle('active', i === currentScreenshotIndex));
-    if (prevBtn) prevBtn.disabled = currentScreenshotIndex === 0;
-    if (nextBtn) nextBtn.disabled = currentScreenshotIndex >= screenshotsData.length - 1;
-}
-
-function slideScreenshots(direction) {
-    if (screenshotsData.length === 0) return;
-    const newIndex = currentScreenshotIndex + direction;
-    if (newIndex < 0 || newIndex >= screenshotsData.length) return;
-    currentScreenshotIndex = newIndex;
-    updateScreenshotsCarousel();
-}
-
-function goToScreenshot(index) {
-    if (index < 0 || index >= screenshotsData.length) return;
-    currentScreenshotIndex = index;
-    updateScreenshotsCarousel();
-}
-
-// ===== ЛАЙТБОКС =====
-function openLightbox(index) {
-    if (screenshotsData.length === 0) return;
-
-    lightboxIndex = index;
-    const lightbox = document.getElementById('screenshotLightbox');
-    const img = document.getElementById('lightboxImage');
-    const counter = document.getElementById('lightboxCounter');
-
-    if (!lightbox || !img) return;
-
-    img.classList.add('loading');
-    const src = screenshotsData[index].original || screenshotsData[index].preview;
-    img.src = src;
-
-    img.onload = function() { img.classList.remove('loading'); };
-
-    if (counter) counter.textContent = `${index + 1} / ${screenshotsData.length}`;
-
-    updateLightboxNav();
-    lightbox.classList.add('show');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeLightbox() {
-    const lightbox = document.getElementById('screenshotLightbox');
-    if (lightbox) lightbox.classList.remove('show');
-    document.body.style.overflow = '';
-}
-
-function navigateLightbox(direction) {
-    if (screenshotsData.length === 0) return;
-    const newIndex = lightboxIndex + direction;
-    if (newIndex < 0 || newIndex >= screenshotsData.length) return;
-    lightboxIndex = newIndex;
-
-    const img = document.getElementById('lightboxImage');
-    const counter = document.getElementById('lightboxCounter');
-
-    if (img) {
-        img.classList.add('loading');
-        const src = screenshotsData[newIndex].original || screenshotsData[newIndex].preview;
-        img.src = src;
-        img.onload = function() { img.classList.remove('loading'); };
-    }
-    if (counter) counter.textContent = `${newIndex + 1} / ${screenshotsData.length}`;
-    updateLightboxNav();
-}
-
-function updateLightboxNav() {
-    const prevBtn = document.querySelector('.lightbox-prev');
-    const nextBtn = document.querySelector('.lightbox-next');
-    if (prevBtn) prevBtn.disabled = lightboxIndex === 0;
-    if (nextBtn) nextBtn.disabled = lightboxIndex >= screenshotsData.length - 1;
-}
-
-document.addEventListener('keydown', function(e) {
-    const lightbox = document.getElementById('screenshotLightbox');
-    if (!lightbox || !lightbox.classList.contains('show')) return;
-    if (e.key === 'Escape') closeLightbox();
-    else if (e.key === 'ArrowLeft') navigateLightbox(-1);
-    else if (e.key === 'ArrowRight') navigateLightbox(1);
-});
-
-document.addEventListener('touchstart', function(e) {
-    const lightbox = document.getElementById('screenshotLightbox');
-    if (!lightbox || !lightbox.classList.contains('show')) return;
-    lightboxTouchStart = e.touches[0].clientX;
-}, { passive: true });
-
-document.addEventListener('touchend', function(e) {
-    const lightbox = document.getElementById('screenshotLightbox');
-    if (!lightbox || !lightbox.classList.contains('show')) return;
-    const diff = e.changedTouches[0].clientX - lightboxTouchStart;
-    if (Math.abs(diff) > 60) {
-        if (diff > 0) navigateLightbox(-1);
-        else navigateLightbox(1);
-    }
-}, { passive: true });
-
-window.addEventListener('resize', function() {
-    if (screenshotsData.length > 0) updateScreenshotsCarousel();
-});
 
 // ============================================
 // 9. KODI
@@ -1257,9 +1019,7 @@ async function watchOnVK() {
         const data = await response.json();
         if (data.success && data.sources && data.sources.vk && data.sources.vk.length > 0) {
             renderSourceEpisodes('vk', data.sources.vk, title);
-        } else {
-            renderNoSources('vk', title);
-        }
+        } else renderNoSources('vk', title);
     } catch (e) { renderNoSources('vk', title); }
 }
 
@@ -1274,9 +1034,7 @@ async function watchOnDeep() {
         const data = await response.json();
         if (data.success && data.sources && data.sources.deep && data.sources.deep.length > 0) {
             renderSourceEpisodes('deep', data.sources.deep, title);
-        } else {
-            renderNoSources('deep', title);
-        }
+        } else renderNoSources('deep', title);
     } catch (e) { renderNoSources('deep', title); }
 }
 
@@ -1326,7 +1084,6 @@ async function playSourceEpisode(source, index, title) {
                 embedUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${vid}&hd=2&autoplay=1`;
             }
             playerArea.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media; fullscreen; picture-in-picture" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"></iframe>`;
-
             const user = DB.get('currentUser');
             if (user) {
                 saveContinueWatching(user.name, title, episode.episode, data.sources[source].length);
@@ -1384,7 +1141,6 @@ function renderComments(animeName) {
                 const userProfile = profiles[c.user_name] || {};
                 const avatarData = userProfile.avatar || localStorage.getItem('avatar_' + c.user_name) || '';
                 const avatarHtml = avatarData && avatarData.length > 100 ? `<img src="${avatarData}" alt="${c.user_name}">` : `<span>${letter}</span>`;
-
                 html += `<div class="comment-item${isMine ? ' mine' : ''}" style="animation-delay: ${index * 0.05}s;"><div class="comment-avatar">${avatarHtml}</div><div class="comment-content"><div class="comment-header"><span class="comment-user" onclick="openUserFromComment('${c.user_name.replace(/'/g, "\\'")}')">${c.user_name}</span>${isMine ? '<span class="comment-you-badge">👤 Ты</span>' : ''}<span class="comment-date">${c.date}</span></div><div class="comment-text">${c.text}</div></div>${canDelete ? `<button class="c-delete-btn" onclick="event.stopPropagation(); deleteComment(${c.id})">✕</button>` : ''}</div>`;
             });
             container.innerHTML = html;
@@ -1587,11 +1343,7 @@ function renderFavCard(name, index) {
 
 function onFavCardClick(event, name) {
     const card = event.currentTarget;
-    if (card.classList.contains('mass-mode')) {
-        card.classList.toggle('selected');
-        updateMassCount();
-        return;
-    }
+    if (card.classList.contains('mass-mode')) { card.classList.toggle('selected'); updateMassCount(); return; }
     openDetailFromFav(name);
 }
 
@@ -1620,14 +1372,8 @@ function removeFromFav(name) {
                     else {
                         document.querySelectorAll('.fav-section').forEach(section => {
                             const sectionCards = section.querySelectorAll('.fav-card');
-                            if (sectionCards.length === 0) {
-                                section.style.transition = 'all 0.4s ease';
-                                section.style.opacity = '0';
-                                setTimeout(() => section.remove(), 400);
-                            } else {
-                                const count = section.querySelector('.fav-section-count');
-                                if (count) count.textContent = sectionCards.length;
-                            }
+                            if (sectionCards.length === 0) { section.style.transition = 'all 0.4s ease'; section.style.opacity = '0'; setTimeout(() => section.remove(), 400); }
+                            else { const count = section.querySelector('.fav-section-count'); if (count) count.textContent = sectionCards.length; }
                         });
                     }
                 }, 500);
@@ -1680,12 +1426,7 @@ function filterFavorites() {
 function clearFavSearch() {
     const input = document.getElementById('favSearchInput');
     const clearBtn = document.getElementById('favSearchClear');
-    if (input) {
-        input.value = '';
-        input.focus();
-        if (clearBtn) clearBtn.style.display = 'none';
-        applyFavFilters();
-    }
+    if (input) { input.value = ''; input.focus(); if (clearBtn) clearBtn.style.display = 'none'; applyFavFilters(); }
 }
 
 function toggleFavView() {
@@ -1713,17 +1454,8 @@ function toggleMassMode() {
     const cards = document.querySelectorAll('.fav-card');
     if (!panel || !btn) return;
     const isActive = panel.style.display !== 'none';
-    if (isActive) {
-        panel.style.display = 'none';
-        btn.classList.remove('active');
-        btn.innerHTML = '☑️ Выбрать';
-        cards.forEach(c => c.classList.remove('mass-mode', 'selected'));
-    } else {
-        panel.style.display = 'flex';
-        btn.classList.add('active');
-        btn.innerHTML = '✕ Отмена';
-        cards.forEach(c => c.classList.add('mass-mode'));
-    }
+    if (isActive) { panel.style.display = 'none'; btn.classList.remove('active'); btn.innerHTML = '☑️ Выбрать'; cards.forEach(c => c.classList.remove('mass-mode', 'selected')); }
+    else { panel.style.display = 'flex'; btn.classList.add('active'); btn.innerHTML = '✕ Отмена'; cards.forEach(c => c.classList.add('mass-mode')); }
     updateMassCount();
 }
 
@@ -1733,15 +1465,8 @@ function updateMassCount() {
     if (countEl) countEl.textContent = count;
 }
 
-function selectAllFav() {
-    document.querySelectorAll('.fav-card.mass-mode').forEach(c => c.classList.add('selected'));
-    updateMassCount();
-}
-
-function deselectAllFav() {
-    document.querySelectorAll('.fav-card.selected').forEach(c => c.classList.remove('selected'));
-    updateMassCount();
-}
+function selectAllFav() { document.querySelectorAll('.fav-card.mass-mode').forEach(c => c.classList.add('selected')); updateMassCount(); }
+function deselectAllFav() { document.querySelectorAll('.fav-card.selected').forEach(c => c.classList.remove('selected')); updateMassCount(); }
 
 function deleteSelectedFav() {
     const user = DB.get('currentUser');
@@ -1752,10 +1477,7 @@ function deleteSelectedFav() {
     showConfirmModal('🗑 Удалить выбранные?', `Удалить ${selected.length} аниме из избранного?`, function() {
         const favs = DB.getUserData(user.name, 'favorites', []);
         const namesToRemove = [];
-        selected.forEach(card => {
-            const name = card.getAttribute('data-name');
-            if (name) namesToRemove.push(name);
-        });
+        selected.forEach(card => { const name = card.getAttribute('data-name'); if (name) namesToRemove.push(name); });
         const newFavs = favs.filter(name => !namesToRemove.includes(name));
         DB.setUserData(user.name, 'favorites', newFavs);
         DB.save();
@@ -1782,11 +1504,7 @@ function searchAndOpen(name) {
     if (!name) return;
     navigate('home');
     const searchInput = document.getElementById('catalogSearchInput');
-    if (searchInput) {
-        searchInput.value = name;
-        const clearBtn = document.getElementById('catalogSearchClear');
-        if (clearBtn) clearBtn.style.display = 'flex';
-    }
+    if (searchInput) { searchInput.value = name; const clearBtn = document.getElementById('catalogSearchClear'); if (clearBtn) clearBtn.style.display = 'flex'; }
     applyCatalogFilters();
 }
 
@@ -1829,10 +1547,7 @@ async function renderAchievements() {
         const current = metrics[ach.metric] || 0;
         const progress = Math.min(100, Math.round((current / ach.target) * 100));
         const isEarned = earned.indexOf(ach.id) !== -1;
-        if (!isEarned && current >= ach.target) {
-            DB.addAchievement(user.name, ach.id);
-            setTimeout(() => showAchUnlock(ach), 500);
-        }
+        if (!isEarned && current >= ach.target) { DB.addAchievement(user.name, ach.id); setTimeout(() => showAchUnlock(ach), 500); }
         return { ...ach, current, progress, isEarned };
     });
 
@@ -2661,16 +2376,8 @@ function toggleMcMassMode() {
     const btn = document.getElementById('mcMassBtn');
     if (!panel || !btn) return;
     mcMassMode = !mcMassMode;
-    if (mcMassMode) {
-        panel.style.display = 'flex';
-        btn.classList.add('active');
-        btn.innerHTML = '✕ Отмена';
-    } else {
-        panel.style.display = 'none';
-        btn.classList.remove('active');
-        btn.innerHTML = '☑️ Выбрать';
-        mcSelectedIds.clear();
-    }
+    if (mcMassMode) { panel.style.display = 'flex'; btn.classList.add('active'); btn.innerHTML = '✕ Отмена'; }
+    else { panel.style.display = 'none'; btn.classList.remove('active'); btn.innerHTML = '☑️ Выбрать'; mcSelectedIds.clear(); }
     applyMcFilters();
 }
 
@@ -2734,12 +2441,7 @@ function filterMyComments() {
 function clearMcSearch() {
     const input = document.getElementById('mcSearchInput');
     const clearBtn = document.getElementById('mcSearchClear');
-    if (input) {
-        input.value = '';
-        input.focus();
-        if (clearBtn) clearBtn.style.display = 'none';
-        applyMcFilters();
-    }
+    if (input) { input.value = ''; input.focus(); if (clearBtn) clearBtn.style.display = 'none'; applyMcFilters(); }
 }
 
 // ============================================
@@ -2861,14 +2563,5 @@ window.renderWatchProgress = renderWatchProgress;
 window.extractDominantColor = extractDominantColor;
 window.getGenreColor = getGenreColor;
 window.onGenreClick = onGenreClick;
-
-window.loadScreenshots = loadScreenshots;
-window.renderScreenshots = renderScreenshots;
-window.slideScreenshots = slideScreenshots;
-window.goToScreenshot = goToScreenshot;
-window.openLightbox = openLightbox;
-window.closeLightbox = closeLightbox;
-window.navigateLightbox = navigateLightbox;
-window.updateScreenshotsCarousel = updateScreenshotsCarousel;
 
 console.log('✅ OnikaAnime полностью загружен!');
