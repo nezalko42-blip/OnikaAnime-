@@ -1111,7 +1111,6 @@ h3 {
     min-height: 80px;
 }
 
-/* Загрузка */
 .random-loading {
     display: flex;
     flex-direction: column;
@@ -1131,7 +1130,6 @@ h3 {
     box-shadow: 0 0 40px rgba(0, 245, 255, 0.05);
 }
 
-/* Карточка результата */
 .random-result-card {
     display: flex;
     gap: 24px;
@@ -1309,7 +1307,6 @@ h3 {
     transform: translateY(-2px);
 }
 
-/* Ошибка */
 .random-error {
     display: flex;
     flex-direction: column;
@@ -1339,7 +1336,6 @@ h3 {
     box-shadow: 0 4px 20px rgba(0, 245, 255, 0.05);
 }
 
-/* ===== АДАПТИВ РАНДОМА ===== */
 @media (max-width: 768px) {
     .random-result-card {
         flex-direction: column;
@@ -2552,7 +2548,7 @@ h3 {
 }
 
 /* ============================================
-   ДОСТИЖЕНИЯ (НЕОНОВЫЕ)
+   ДОСТИЖЕНИЯ (СТАРАЯ ВЕРСИЯ)
    ============================================ */
 
 .achievements-container {
@@ -4368,7 +4364,6 @@ svg use {
     z-index: 10;
 }
 
-/* ===== АДАПТИВ ===== */
 @media (max-width: 600px) {
     .player-tab {
         font-size: 11px;
@@ -4482,7 +4477,6 @@ svg use {
     color: var(--text-primary);
 }
 
-/* ===== СТАТИСТИКА КАТАЛОГА (БЕЗ НАДПИСИ "НАЙДЕНО") ===== */
 .catalog-stats {
     text-align: center;
     font-size: 13px;
@@ -5077,7 +5071,6 @@ svg use {
     justify-content: flex-end !important;
 }
 
-/* ✅ Название сайта — всегда видно и по центру */
 .site-title {
     display: block !important;
     font-size: 22px !important;
@@ -5115,126 +5108,6 @@ svg use {
 }
 
 /* ============================================
-   ПАГИНАЦИЯ КАТАЛОГА
-   ============================================ */
-
-.pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-top: 32px;
-    padding: 20px 0;
-    flex-wrap: wrap;
-}
-
-.pagination-btn {
-    padding: 10px 20px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(0, 245, 255, 0.1);
-    background: rgba(0, 245, 255, 0.02);
-    color: var(--text-primary);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: inherit;
-}
-
-.pagination-btn:hover:not(:disabled) {
-    background: rgba(0, 245, 255, 0.08);
-    border-color: var(--neon-cyan);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 245, 255, 0.15);
-}
-
-.pagination-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.pagination-pages {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.pagination-page {
-    min-width: 40px;
-    height: 40px;
-    padding: 0 12px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.02);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: inherit;
-}
-
-.pagination-page:hover:not(.active) {
-    background: rgba(0, 245, 255, 0.05);
-    border-color: rgba(0, 245, 255, 0.2);
-    color: var(--text-primary);
-    transform: translateY(-2px);
-}
-
-.pagination-page.active {
-    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
-    color: #fff;
-    border-color: transparent;
-    box-shadow: 0 4px 20px rgba(0, 245, 255, 0.25);
-    transform: scale(1.05);
-}
-
-.pagination-dots {
-    padding: 0 6px;
-    color: var(--text-muted);
-    font-size: 14px;
-    user-select: none;
-}
-
-@media (max-width: 600px) {
-    .pagination {
-        gap: 6px;
-        margin-top: 24px;
-    }
-    
-    .pagination-btn {
-        padding: 8px 14px;
-        font-size: 13px;
-    }
-    
-    .pagination-page {
-        min-width: 34px;
-        height: 34px;
-        padding: 0 8px;
-        font-size: 13px;
-    }
-}
-
-@media (max-width: 380px) {
-    .pagination-btn span {
-        display: none;
-    }
-    
-    .pagination-btn {
-        padding: 8px 12px;
-    }
-}
-
-/* ============================================
    RANDOM ANIME - НОВЫЙ ДИЗАЙН
    ============================================ */
 
@@ -5250,7 +5123,6 @@ svg use {
     padding: 0 16px;
 }
 
-/* ===== ЗАГОЛОВОК ===== */
 .random-header {
     margin-bottom: 28px;
     animation: fadeInUp 0.6s ease;
@@ -5288,7 +5160,6 @@ svg use {
     line-height: 1.5;
 }
 
-/* ===== КНОПКА "ПОДОБРАТЬ" ===== */
 .random-trigger-btn {
     position: relative;
     display: inline-flex;
@@ -5371,13 +5242,11 @@ svg use {
     opacity: 0.85;
 }
 
-/* ===== РЕЗУЛЬТАТ ===== */
 .random-result {
     min-height: 80px;
     margin-top: 32px;
 }
 
-/* ===== ЗАГРУЗКА ===== */
 .random-loading {
     display: flex;
     flex-direction: column;
@@ -5487,7 +5356,6 @@ svg use {
     }
 }
 
-/* ===== ПОСТЕР ===== */
 .random-anime-poster {
     position: relative;
     width: 240px;
@@ -5541,7 +5409,6 @@ svg use {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* ===== ИНФО ===== */
 .random-anime-info {
     flex: 1;
     padding: 28px 28px 28px 24px;
@@ -5599,7 +5466,6 @@ svg use {
     font-size: 16px;
 }
 
-/* ===== КНОПКИ ===== */
 .random-anime-actions {
     display: flex;
     gap: 10px;
@@ -5681,7 +5547,6 @@ svg use {
     transform: rotate(180deg);
 }
 
-/* ===== ОШИБКА ===== */
 .random-error-new {
     display: flex;
     flex-direction: column;
@@ -5708,10 +5573,6 @@ svg use {
     color: var(--text-secondary);
     font-size: 15px;
 }
-
-/* ============================================
-   АДАПТИВ
-   ============================================ */
 
 @media (max-width: 768px) {
     .random-header-icon {
@@ -5849,7 +5710,6 @@ svg use {
     justify-content: center;
 }
 
-/* ===== КАРТОЧКА ===== */
 .hero-3d-card {
     position: absolute;
     width: 280px;
@@ -5938,8 +5798,6 @@ svg use {
     border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* ===== СОСТОЯНИЯ КАРТОЧЕК ===== */
-
 .hero-3d-card.active {
     transform: translateX(0) translateZ(60px) scale(1);
     z-index: 10;
@@ -5988,7 +5846,6 @@ svg use {
     transform: translateX(0) translateZ(-300px) scale(0.4);
 }
 
-/* ===== НАВИГАЦИЯ ===== */
 .hero-3d-nav {
     position: absolute;
     top: 50%;
@@ -6030,7 +5887,6 @@ svg use {
     right: 20px;
 }
 
-/* ===== ТОЧКИ ===== */
 .hero-3d-dots {
     display: flex;
     justify-content: center;
@@ -6063,7 +5919,6 @@ svg use {
     box-shadow: 0 0 20px rgba(0, 245, 255, 0.4);
 }
 
-/* ===== АНИМАЦИЯ ПОЯВЛЕНИЯ ===== */
 @keyframes hero3dIn {
     from {
         opacity: 0;
@@ -6084,10 +5939,6 @@ svg use {
 .hero-3d-card.initial:nth-child(3) { animation-delay: 0.3s; }
 .hero-3d-card.initial:nth-child(4) { animation-delay: 0.45s; }
 .hero-3d-card.initial:nth-child(5) { animation-delay: 0.6s; }
-
-/* ============================================
-   АДАПТИВ
-   ============================================ */
 
 @media (max-width: 900px) {
     .hero-3d-container {
@@ -6214,7 +6065,6 @@ svg use {
    КАТАЛОГ — КАРТОЧКИ С ГЛУБИНОЙ + АНИМАЦИИ
    ============================================ */
 
-/* ===== КАСКАДНОЕ ПОЯВЛЕНИЕ ===== */
 .grid .card {
     animation: cardFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
     will-change: transform, opacity;
@@ -6231,7 +6081,6 @@ svg use {
     }
 }
 
-/* Задержки для каскада */
 .grid .card:nth-child(1) { animation-delay: 0.02s; }
 .grid .card:nth-child(2) { animation-delay: 0.06s; }
 .grid .card:nth-child(3) { animation-delay: 0.10s; }
@@ -6245,7 +6094,6 @@ svg use {
 .grid .card:nth-child(11) { animation-delay: 0.42s; }
 .grid .card:nth-child(12) { animation-delay: 0.46s; }
 
-/* ===== HOVER — 3D ПОДЪЁМ ===== */
 .grid .card {
     position: relative;
     transition: 
@@ -6271,7 +6119,6 @@ svg use {
     z-index: 10;
 }
 
-/* Неоновая подсветка вокруг */
 .grid .card::before {
     content: '';
     position: absolute;
@@ -6290,7 +6137,6 @@ svg use {
     opacity: 0.5;
 }
 
-/* ===== ZOOM ПОСТЕРА ===== */
 .grid .card .card-img {
     overflow: hidden;
     position: relative;
@@ -6306,7 +6152,6 @@ svg use {
     transform: scale(1.12);
 }
 
-/* Градиент поверх постера при hover */
 .grid .card .card-img::after {
     content: '';
     position: absolute;
@@ -6327,7 +6172,6 @@ svg use {
     opacity: 1;
 }
 
-/* ===== ЭФФЕКТ СВЕТА ПРОХОДЯЩЕГО ===== */
 .grid .card .card-img::before {
     content: '';
     position: absolute;
@@ -6350,7 +6194,6 @@ svg use {
     left: 100%;
 }
 
-/* ===== ПЛАВНЫЙ ПЕРЕХОД ЗАГОЛОВКА ===== */
 .grid .card .title {
     transition: color 0.3s ease;
 }
@@ -6359,7 +6202,6 @@ svg use {
     color: var(--neon-cyan);
 }
 
-/* ===== ПУЛЬСАЦИЯ БЕЙДЖА ВОЗРАСТА ===== */
 .grid .card .card-age {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -6436,7 +6278,6 @@ svg use {
     50% { opacity: 0.85; }
 }
 
-/* ===== ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ СТРАНИЦ ===== */
 .grid {
     transition: opacity 0.3s ease;
 }
@@ -6460,7 +6301,6 @@ svg use {
     }
 }
 
-/* ===== ПЛАВНОЕ ПОЯВЛЕНИЕ СТАТИСТИКИ ===== */
 .catalog-stats {
     transition: opacity 0.3s ease;
 }
@@ -6481,7 +6321,6 @@ svg use {
     }
 }
 
-/* ===== ПАГИНАЦИЯ — HOVER ЭФФЕКТ ===== */
 .pagination-page {
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
@@ -6495,7 +6334,6 @@ svg use {
     transform: translateY(-1px) scale(0.98);
 }
 
-/* ===== АДАПТИВ ===== */
 @media (max-width: 768px) {
     .grid .card:hover {
         transform: translateY(-5px) scale(1.02);
@@ -6505,7 +6343,6 @@ svg use {
         transform: scale(1.06);
     }
     
-    /* Уменьшаем задержки на мобильных */
     .grid .card:nth-child(n) {
         animation-delay: calc((var(--card-index, 0)) * 0.03s);
     }
@@ -6521,7 +6358,6 @@ svg use {
     }
 }
 
-/* ===== УМЕНЬШЕННАЯ АНИМАЦИЯ ДЛЯ ОСОБЫХ НАСТРОЕК ===== */
 @media (prefers-reduced-motion: reduce) {
     .grid .card,
     .grid .card .card-img img,
@@ -6648,7 +6484,6 @@ svg use {
    ИЗБРАННОЕ v2.0 — ПОЛНЫЙ РЕДИЗАЙН
    ============================================ */
 
-/* ===== ЗАГОЛОВОК ===== */
 .fav-header {
     display: flex;
     justify-content: space-between;
@@ -6768,7 +6603,6 @@ svg use {
     border-color: transparent;
 }
 
-/* ===== СТАТИСТИКА ===== */
 .fav-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -6815,7 +6649,6 @@ svg use {
     font-weight: 700;
 }
 
-/* ===== ПОИСК + СОРТИРОВКА ===== */
 .fav-controls {
     display: flex;
     gap: 12px;
@@ -6909,7 +6742,6 @@ svg use {
     box-shadow: 0 0 30px rgba(0, 245, 255, 0.08);
 }
 
-/* ===== ПАНЕЛЬ МАССОВЫХ ДЕЙСТВИЙ ===== */
 .fav-mass-panel {
     display: flex;
     justify-content: space-between;
@@ -6961,7 +6793,6 @@ svg use {
 
 .fav-mass-btn.cancel { color: var(--text-muted); }
 
-/* ===== СЕКЦИИ ПО СТАТУСУ ===== */
 .fav-section {
     margin-bottom: 32px;
     animation: favHeaderIn 0.5s ease;
@@ -6999,7 +6830,6 @@ svg use {
     border: 1px solid rgba(0, 245, 255, 0.15);
 }
 
-/* ===== СЕТКА ===== */
 .fav-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -7011,7 +6841,6 @@ svg use {
     gap: 10px;
 }
 
-/* ===== КАРТОЧКА ===== */
 .fav-card {
     position: relative;
     border-radius: 14px;
@@ -7249,7 +7078,6 @@ svg use {
     right: 14px;
 }
 
-/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
 .fav-empty {
     grid-column: 1/-1;
     display: flex;
@@ -7306,7 +7134,6 @@ svg use {
     box-shadow: 0 10px 36px rgba(0, 245, 255, 0.4);
 }
 
-/* ===== АДАПТИВ ===== */
 @media (max-width: 1200px) { .fav-grid { grid-template-columns: repeat(5, 1fr); } }
 @media (max-width: 992px) { 
     .fav-grid { grid-template-columns: repeat(4, 1fr); }
@@ -8034,7 +7861,6 @@ svg use {
    ДОСТИЖЕНИЯ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
    ============================================ */
 
-/* ===== ШАПКА С КОЛЬЦОМ ПРОГРЕССА ===== */
 .ach-hero {
     position: relative;
     background: linear-gradient(135deg, 
@@ -8094,7 +7920,6 @@ svg use {
     flex-wrap: wrap;
 }
 
-/* ===== КОЛЬЦО ПРОГРЕССА ===== */
 .ach-progress-ring {
     position: relative;
     width: 140px;
@@ -8152,7 +7977,6 @@ svg use {
     margin-top: 4px;
 }
 
-/* ===== ИНФО БЛОК ===== */
 .ach-hero-info {
     flex: 1;
     min-width: 220px;
@@ -8175,7 +7999,6 @@ svg use {
     margin: 0 0 16px;
 }
 
-/* ===== АКТИВНЫЙ ТИТУЛ ===== */
 .ach-active-title {
     display: inline-flex;
     align-items: center;
@@ -8222,7 +8045,6 @@ svg use {
     margin-bottom: 12px;
 }
 
-/* ===== МИНИ-СТАТИСТИКА ===== */
 .ach-mini-stats {
     display: flex;
     gap: 12px;
@@ -8270,7 +8092,7 @@ svg use {
     font-weight: 600;
 }
 
-/* ===== ФИЛЬТРЫ + ТАБЫ ===== */
+/* ===== СОРТИРОВКА ===== */
 .ach-controls {
     display: flex;
     justify-content: space-between;
@@ -8280,58 +8102,8 @@ svg use {
     animation: achHeroIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s backwards;
 }
 
-.ach-tabs {
-    display: flex;
-    gap: 4px;
-    background: rgba(255, 255, 255, 0.02);
-    padding: 4px;
-    border-radius: 14px;
-    border: 1px solid rgba(0, 245, 255, 0.05);
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.ach-tabs::-webkit-scrollbar { display: none; }
-
-.ach-tab {
-    flex-shrink: 0;
-    padding: 10px 18px;
-    border: none;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: inherit;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.ach-tab:hover {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.ach-tab.active {
-    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
-    color: #fff;
-    box-shadow: 0 4px 20px rgba(0, 245, 255, 0.25);
-}
-
-.ach-tab-count {
-    font-size: 10px;
-    padding: 1px 7px;
-    border-radius: 10px;
-    background: rgba(0, 0, 0, 0.3);
-    font-weight: 700;
-}
-
-.ach-tab.active .ach-tab-count {
-    background: rgba(255, 255, 255, 0.25);
+.ach-controls-single {
+    justify-content: flex-end;
 }
 
 .ach-sort-wrapper {
@@ -8391,7 +8163,6 @@ svg use {
     to { opacity: 1; transform: translateY(0) scale(1) rotateX(0); }
 }
 
-/* ===== РЕДКОСТЬ ===== */
 .ach-card-v2.rarity-common { --rarity-color: #a0a0a0; }
 .ach-card-v2.rarity-rare { --rarity-color: #0096ff; }
 .ach-card-v2.rarity-epic { --rarity-color: #b44aff; }
@@ -8411,7 +8182,6 @@ svg use {
     background: linear-gradient(145deg, rgba(255, 215, 0, 0.1), rgba(253, 121, 168, 0.06), rgba(15, 15, 30, 0.95));
 }
 
-/* Свечение для полученных */
 .ach-card-v2.earned::before {
     content: '';
     position: absolute;
@@ -8432,7 +8202,6 @@ svg use {
     50% { opacity: 0.7; transform: scale(1.02); }
 }
 
-/* Hover эффект */
 .ach-card-v2:hover {
     transform: translateY(-10px) scale(1.03) perspective(1000px) rotateX(2deg);
     border-color: var(--rarity-color, var(--neon-cyan));
@@ -8442,7 +8211,6 @@ svg use {
     z-index: 10;
 }
 
-/* Блик */
 .ach-card-v2 .ach-shine {
     position: absolute;
     top: 0;
@@ -8459,7 +8227,6 @@ svg use {
     left: 100%;
 }
 
-/* Закрытые */
 .ach-card-v2.locked {
     opacity: 0.7;
     filter: grayscale(0.4);
@@ -8470,7 +8237,6 @@ svg use {
     filter: grayscale(0.1);
 }
 
-/* ===== ГОЛОВА ===== */
 .ach-card-header {
     display: flex;
     align-items: flex-start;
@@ -8530,7 +8296,6 @@ svg use {
     75% { transform: rotate(15deg) scale(1.1); }
 }
 
-/* ===== БЕЙДЖ РЕДКОСТИ ===== */
 .ach-rarity-badge {
     padding: 4px 10px;
     border-radius: 10px;
@@ -8572,7 +8337,6 @@ svg use {
     50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
 }
 
-/* ===== ТЕЛО ===== */
 .ach-card-body {
     position: relative;
     z-index: 2;
@@ -8594,7 +8358,6 @@ svg use {
     min-height: 36px;
 }
 
-/* ===== ПРОГРЕСС-БАР ===== */
 .ach-progress-v2 {
     margin-bottom: 14px;
 }
@@ -8656,7 +8419,6 @@ svg use {
     box-shadow: 0 0 15px rgba(46, 204, 113, 0.5);
 }
 
-/* ===== ФУТЕР ===== */
 .ach-card-footer {
     display: flex;
     align-items: center;
@@ -8720,7 +8482,12 @@ svg use {
     50% { box-shadow: 0 4px 25px rgba(255, 215, 0, 0.7); }
 }
 
-/* ===== ЗНАЧОК "ПОЛУЧЕНО" ===== */
+.ach-btn-v2.locked {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
 .ach-earned-check {
     position: absolute;
     top: 16px;
@@ -8746,7 +8513,6 @@ svg use {
     100% { transform: scale(1) rotate(0); }
 }
 
-/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
 .ach-empty-v2 {
     grid-column: 1 / -1;
     text-align: center;
@@ -9045,6 +8811,9 @@ svg use {
     .ach-mini-stats { justify-content: center; }
     .achievements-grid-v2 { grid-template-columns: 1fr; gap: 12px; }
     .ach-controls { flex-direction: column; }
+    .ach-controls-single { justify-content: stretch; }
+    .ach-controls-single .ach-sort-wrapper { width: 100%; }
+    .ach-controls-single .ach-sort-select { width: 100%; min-width: 100%; }
     .ach-sort-select { width: 100%; min-width: 100%; }
     .ach-unlock-name { font-size: 26px; }
     .ach-unlock-icon { font-size: 100px; }
