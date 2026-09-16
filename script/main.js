@@ -1,6 +1,6 @@
 // ============================================
 // ГЛАВНЫЙ ФАЙЛ ONIKAANIME
-// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0
+// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0 + МЕНЮ v2.0
 // ============================================
 
 const allData = {};
@@ -42,7 +42,6 @@ const RARITY_LABELS = {
 
 // ===== ДОСТИЖЕНИЯ С РЕДКОСТЬЮ v2.0 =====
 const ACHIEVEMENTS_LIST = [
-    // ===== ЗРИТЕЛЬ =====
     { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель',
       rarity: 'common', category: 'viewer', target: 100, metric: 'episodes' },
     { id: 'ep200', name: '🎬 Зритель 2 уровня', desc: 'Посмотреть 200 серий', icon: '🎥', title: 'Любопытный',
@@ -53,8 +52,6 @@ const ACHIEVEMENTS_LIST = [
       rarity: 'epic', category: 'viewer', target: 750, metric: 'episodes' },
     { id: 'ep1000', name: '🎬 Зритель 5 уровня', desc: 'Посмотреть 1000 серий', icon: '🏆', title: 'Легенда',
       rarity: 'legendary', category: 'viewer', target: 1000, metric: 'episodes' },
-
-    // ===== КОММЕНТАТОР =====
     { id: 'cm100', name: '💬 Комментатор 1 уровня', desc: 'Оставить 100 комментариев', icon: '💬', title: 'Говорун',
       rarity: 'common', category: 'commenter', target: 100, metric: 'comments' },
     { id: 'cm200', name: '💬 Комментатор 2 уровня', desc: 'Оставить 200 комментариев', icon: '🗣️', title: 'Собеседник',
@@ -65,8 +62,6 @@ const ACHIEVEMENTS_LIST = [
       rarity: 'epic', category: 'commenter', target: 750, metric: 'comments' },
     { id: 'cm1000', name: '💬 Комментатор 5 уровня', desc: 'Оставить 1000 комментариев', icon: '👑', title: 'Глашатай',
       rarity: 'legendary', category: 'commenter', target: 1000, metric: 'comments' },
-
-    // ===== КОЛЛЕКЦИОНЕР =====
     { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме в избранное', icon: '❤️', title: 'Коллекционер',
       rarity: 'common', category: 'collector', target: 100, metric: 'favorites' },
     { id: 'fv200', name: '❤️ Коллекционер 2 уровня', desc: 'Добавить 200 аниме в избранное', icon: '💝', title: 'Ценитель',
@@ -84,11 +79,20 @@ const ACHIEVEMENTS_LIST = [
 // ============================================
 function navigate(pageName) {
     currentPage = pageName;
+
+    // ✅ Устанавливаем data-page для тематических цветов сайдбара
+    document.body.setAttribute('data-page', pageName);
+
     const pages = ['home', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings'];
 
     pages.forEach(p => {
         const el = document.getElementById(`page-${p}`);
         if (el) el.style.display = p === pageName ? 'block' : 'none';
+    });
+
+    // ✅ Обновляем активную ссылку в меню
+    document.querySelectorAll('.sidebar-nav a').forEach(a => {
+        a.classList.toggle('active', a.dataset.page === pageName);
     });
 
     if (pageName === 'home') {
@@ -114,7 +118,7 @@ function goBack() {
 }
 
 // ============================================
-// UI
+// UI — ОБНОВЛЁННОЕ МЕНЮ v2.0
 // ============================================
 function updateUI() {
     const user = DB.get('currentUser');
@@ -124,42 +128,110 @@ function updateUI() {
     if (!nav || !footer) return;
 
     if (user) {
+        // ✅ Данные для бейджей
+        const favs = DB.getUserData(user.name, 'favorites', []);
+        const favCount = favs.length;
+
+        const commentCount = (window._myCommentsCache && window._myCommentsCache.user === user.name)
+            ? window._myCommentsCache.count
+            : 0;
+
+        // ✅ XP и уровень
+        const xp = calculateXP(user.name);
+        const level = Math.floor(xp / 100);
+        const xpProgress = Math.min((xp % 100), 100);
+
+        // ✅ Аватар
+        const profiles = DB.get('profiles', {});
+        const profile = profiles[user.name] || {};
+        const avatarData = profile.avatar || localStorage.getItem('avatar_' + user.name) || '';
+        const letter = user.name[0].toUpperCase();
+
+        const avatarHtml = avatarData && avatarData.length > 100
+            ? `<img src="${avatarData}" alt="${user.name}">`
+            : `<span>${letter}</span>`;
+
+        // ✅ Ссылки с бейджами
         nav.innerHTML = `
-            <a class="active" data-page="home" onclick="navigate('home'); closeMenu();">
-                <span class="icon">🏠</span> Главная
+            <a data-page="home" onclick="navigate('home'); closeMenu();">
+                <span class="icon">🏠</span>
+                <span>Главная</span>
             </a>
             <a data-page="favorites" onclick="navigate('favorites'); closeMenu();">
-                <span class="icon">❤️</span> Избранное
+                <span class="icon">❤️</span>
+                <span>Избранное</span>
+                ${favCount > 0 ? `<span class="sidebar-badge">${favCount > 99 ? '99+' : favCount}</span>` : ''}
             </a>
             <a data-page="mycomments" onclick="navigate('mycomments'); closeMenu();">
-                <span class="icon">💬</span> Мои комментарии
+                <span class="icon">💬</span>
+                <span>Мои комментарии</span>
+                ${commentCount > 0 ? `<span class="sidebar-badge">${commentCount > 99 ? '99+' : commentCount}</span>` : ''}
             </a>
             <a data-page="achievements" onclick="navigate('achievements'); closeMenu();">
-                <span class="icon">🏆</span> Достижения
+                <span class="icon">🏆</span>
+                <span>Достижения</span>
             </a>
             <a data-page="profile" onclick="navigate('profile'); closeMenu();">
-                <span class="icon">👤</span> Профиль
+                <span class="icon">👤</span>
+                <span>Профиль</span>
             </a>
             <a data-page="settings" onclick="navigate('settings'); closeMenu();">
-                <span class="icon">⚙️</span> Настройки
+                <span class="icon">⚙️</span>
+                <span>Настройки</span>
             </a>
         `;
-        footer.innerHTML = `<div class="sidebar-user-info">🌟 ${user.name}</div>`;
+
+        // ✅ Красивый футер с карточкой пользователя
+        footer.innerHTML = `
+            <div class="sidebar-user-card" onclick="navigate('profile'); closeMenu();">
+                <div class="sidebar-user-avatar">${avatarHtml}</div>
+                <div class="sidebar-user-info-block">
+                    <div class="sidebar-user-name">${user.name}</div>
+                    <div class="sidebar-user-level">Lv.${level}</div>
+                    <div class="sidebar-user-xp">
+                        <div class="sidebar-user-xp-fill" style="width:${xpProgress}%"></div>
+                    </div>
+                </div>
+            </div>
+            <button class="sidebar-logout-btn" onclick="event.stopPropagation(); logout();">
+                <span class="logout-icon">🚪</span>
+                <span>Выйти</span>
+            </button>
+        `;
+
+        // ✅ Устанавливаем активную ссылку
+        const activeLink = nav.querySelector(`a[data-page="${currentPage}"]`);
+        if (activeLink) activeLink.classList.add('active');
     } else {
         nav.innerHTML = `
             <a class="active" data-page="home" onclick="navigate('home'); closeMenu();">
-                <span class="icon">🏠</span> Главная
+                <span class="icon">🏠</span>
+                <span>Главная</span>
             </a>
         `;
-        footer.innerHTML = `<button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">🚀 Войти</button>`;
+        footer.innerHTML = `
+            <button class="sidebar-login-btn" onclick="showLoginModal(); closeMenu();">
+                <span>🚀</span>
+                <span>Войти в аккаунт</span>
+            </button>
+        `;
     }
 }
 
 function toggleMenu() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.toggle('open');
-    if (overlay) overlay.classList.toggle('open');
+    if (!sidebar || !overlay) return;
+
+    const isOpen = sidebar.classList.contains('open');
+
+    if (isOpen) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+    } else {
+        sidebar.classList.add('open');
+        overlay.classList.add('open');
+    }
 }
 
 function closeMenu() {
@@ -202,6 +274,16 @@ window.addEventListener('beforeunload', function() {
         DB.setUserData(userExit.name, 'onlineTime', totalTimeExit + elapsedExit);
         DB.setUserData(userExit.name, 'lastSeen', Date.now());
         DB.save();
+    }
+});
+
+// ============================================
+// ХЕДЕР ПРИ СКРОЛЛЕ
+// ============================================
+window.addEventListener('scroll', function() {
+    const header = document.querySelector('.header');
+    if (header) {
+        header.classList.toggle('scrolled', window.scrollY > 50);
     }
 });
 
@@ -1282,6 +1364,10 @@ function toggleFav(name) {
     }
     DB.setUserData(user.name, 'favorites', favs);
     DB.save();
+
+    // ✅ Обновляем меню (бейдж изменится)
+    updateUI();
+
     if (currentPage === 'favorites') renderFavorites();
 }
 
@@ -1518,6 +1604,9 @@ function removeFromFav(name) {
         DB.setUserData(user.name, 'favorites', favs);
         DB.save();
 
+        // ✅ Обновляем меню
+        updateUI();
+
         const cards = document.querySelectorAll('.fav-card');
 
         cards.forEach(card => {
@@ -1726,6 +1815,9 @@ function deleteSelectedFav() {
             const newFavs = favs.filter(name => !namesToRemove.includes(name));
             DB.setUserData(user.name, 'favorites', newFavs);
             DB.save();
+
+            // ✅ Обновляем меню
+            updateUI();
 
             selected.forEach((card, i) => {
                 setTimeout(() => {
@@ -2284,7 +2376,6 @@ function renderProfile() {
         }
     }
 
-    // ✅ Анимированные счётчики
     animateNumber('statFav', favs.length);
     animateNumber('statComments', getCommentCount(user.name));
     animateNumber('statAchievements', earned.length);
@@ -2309,7 +2400,6 @@ function renderProfile() {
     renderTopUsers();
 }
 
-// ===== ✅ АНИМАЦИЯ ЧИСЕЛ (count-up) =====
 function animateNumber(elementId, targetValue, duration = 1200) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -2339,7 +2429,6 @@ function animateNumber(elementId, targetValue, duration = 1200) {
     el._animFrame = requestAnimationFrame(update);
 }
 
-// ===== ✅ АНИМАЦИЯ ВРЕМЕНИ =====
 function animateTimeCounter(elementId, totalSeconds, duration = 1200) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -2612,6 +2701,10 @@ function uploadAvatar(input) {
         const letter = document.getElementById('avatarLetter');
         if (img) { img.src = avatarData; img.style.display = 'block'; }
         if (letter) letter.style.display = 'none';
+
+        // ✅ Обновляем меню с новым аватаром
+        updateUI();
+
         showToast('✅ Аватар обновлен!', 'success');
     };
     reader.readAsDataURL(file);
@@ -2867,6 +2960,9 @@ function renderMyComments() {
             console.log(`✅ Моих комментариев: ${myCommentsAll.length}`);
 
             window._myCommentsCache = { user: user.name, count: myCommentsAll.length };
+
+            // ✅ Обновляем меню (бейдж комментариев)
+            updateUI();
 
             updateMcStats(myCommentsAll);
             applyMcFilters();
