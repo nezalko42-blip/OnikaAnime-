@@ -1,18 +1,19 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME — SHIKIMORI (GraphQL + REST)
+// API МОДУЛЬ ONIKAANIME — SHIKIMORI (GraphQL + REST + SCREENSHOTS)
 // ============================================
 
 const API = {
     SHIKIMORI_PROXY: '/api/shikimori',
     SHIKIMORI_REST: '/api/shikimori-rest',
-    
+    SCREENSHOTS: '/api/screenshots',
+
     _cache: new Map(),
     _cacheTTL: 15 * 60 * 1000,
 
     // ===== БАЗОВЫЙ GRAPHQL ЗАПРОС =====
     async _graphql(query, useCache = true, cacheKey = null) {
         const key = cacheKey || query;
-        
+
         if (useCache && this._cache.has(key)) {
             const cached = this._cache.get(key);
             if (Date.now() - cached.time < this._cacheTTL) {
@@ -20,29 +21,29 @@ const API = {
             }
             this._cache.delete(key);
         }
-        
+
         try {
             const response = await fetch(this.SHIKIMORI_PROXY, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query })
             });
-            
+
             if (!response.ok) {
                 throw new Error('Proxy HTTP ' + response.status);
             }
-            
+
             const data = await response.json();
-            
+
             if (data.errors) {
                 console.error('❌ GraphQL errors:', JSON.stringify(data.errors));
                 throw new Error(data.errors[0]?.message || 'GraphQL error');
             }
-            
+
             if (useCache && data.data) {
                 this._cache.set(key, { data: data.data, time: Date.now() });
             }
-            
+
             return data.data;
         } catch (e) {
             console.error('❌ GraphQL Error:', e.message);
@@ -72,10 +73,10 @@ const API = {
                 genres { id name russian kind }
             }
         }`;
-        
+
         const data = await this._graphql(query, true, `catalog_${page}_${limit}_${order}`);
         if (!data || !data.animes) return { items: [], totalPages: 1, totalCount: 0 };
-        
+
         const items = data.animes.map(a => this._convertAnime(a));
         return { items, totalPages: 1, totalCount: items.length };
     },
@@ -85,7 +86,7 @@ const API = {
     // ============================================
     async searchAnime(query, page = 1, limit = 12) {
         if (!query || query.length < 2) return { items: [], totalPages: 1, totalCount: 0 };
-        
+
         const gql = `{
             animes(search: ${JSON.stringify(query)}, page: ${page}, limit: ${limit}) {
                 id
@@ -104,10 +105,10 @@ const API = {
                 genres { id name russian kind }
             }
         }`;
-        
+
         const data = await this._graphql(gql, true, `search_${query}_${page}_${limit}`);
         if (!data || !data.animes) return { items: [], totalPages: 1, totalCount: 0 };
-        
+
         const items = data.animes.map(a => this._convertAnime(a));
         return { items, totalPages: 1, totalCount: items.length };
     },
@@ -134,10 +135,10 @@ const API = {
                 genres { id name russian kind }
             }
         }`;
-        
+
         const data = await this._graphql(query, true, `latest_${page}_${limit}`);
         if (!data || !data.animes) return { items: [], totalPages: 1, totalCount: 0 };
-        
+
         const items = data.animes.map(a => this._convertAnime(a));
         return { items, totalPages: 1, totalCount: items.length };
     },
@@ -169,10 +170,10 @@ const API = {
                 genres { id name russian kind }
             }
         }`;
-        
+
         const data = await this._graphql(query, true, `genre_${genreId}_${page}_${limit}`);
         if (!data || !data.animes) return { items: [], totalPages: 1, totalCount: 0 };
-        
+
         const items = data.animes.map(a => this._convertAnime(a));
         return { items, totalPages: 1, totalCount: items.length };
     },
@@ -200,10 +201,10 @@ const API = {
                 genres { id name russian kind }
             }
         }`;
-        
+
         const data = await this._graphql(query, false);
         if (!data || !data.animes) return [];
-        
+
         return data.animes.map(a => this._convertAnime(a));
     },
 
@@ -213,28 +214,28 @@ const API = {
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
         console.log('🔍 Детали для ID:', cleanId);
-        
+
         if (!cleanId || !/^\d+$/.test(cleanId)) {
             console.error('❌ Неверный ID:', cleanId);
             return null;
         }
-        
+
         // ✅ ОСНОВНОЙ ИСТОЧНИК: REST API
         try {
             const response = await fetch(this.SHIKIMORI_REST + '/' + cleanId);
-            
+
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);
             }
-            
+
             const a = await response.json();
             console.log('✅ REST получен:', a.russian || a.name);
-            
+
             return this._convertRestAnime(a);
         } catch (e) {
             console.warn('⚠️ REST не сработал:', e.message);
         }
-        
+
         // ⚠️ FALLBACK: GraphQL
         try {
             const query = `{
@@ -260,9 +261,9 @@ const API = {
                     studios { id name }
                 }
             }`;
-            
+
             const data = await this._graphql(query, false);
-            
+
             if (data && data.anime) {
                 console.log('✅ GraphQL fallback:', data.anime.russian || data.anime.name);
                 return this._convertAnimeDetails(data.anime);
@@ -270,26 +271,56 @@ const API = {
         } catch (e) {
             console.warn('⚠️ GraphQL fallback не сработал');
         }
-        
+
         // ⚠️ КРАЙНИЙ FALLBACK: каталог
         const cached = allData[id];
         if (cached) {
             console.log('⚠️ Fallback на каталог');
             return cached;
         }
-        
+
         console.error('❌ Детали не найдены для:', id);
         return null;
     },
 
     // ============================================
-    // 7. РЕКОМЕНДАЦИИ — СЛУЧАЙНЫЕ ИЗ ТОПА (ИСПРАВЛЕНО!)
+    // ✅ 6.1 СКРИНШОТЫ АНИМЕ (кадры)
+    // ============================================
+    async getScreenshots(id) {
+        const cleanId = id.toString().replace('shikimori_', '');
+
+        if (!cleanId || !/^\d+$/.test(cleanId)) {
+            console.warn('⚠️ Неверный ID для скриншотов:', id);
+            return [];
+        }
+
+        try {
+            const response = await fetch(this.SCREENSHOTS + '/' + cleanId);
+
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+
+            const data = await response.json();
+
+            if (data.screenshots && Array.isArray(data.screenshots)) {
+                console.log(`📸 Загружено ${data.screenshots.length} скриншотов для ID ${cleanId}`);
+                return data.screenshots;
+            }
+
+            return [];
+        } catch (e) {
+            console.warn('⚠️ Не удалось загрузить скриншоты:', e.message);
+            return [];
+        }
+    },
+
+    // ============================================
+    // 7. РЕКОМЕНДАЦИИ — СЛУЧАЙНЫЕ ИЗ ТОПА
     // ============================================
     async getRecommended(limit = 7) {
-        // ✅ Запрашиваем в 5 раз больше, чтобы было из чего выбирать
         const fetchLimit = Math.max(limit * 5, 35);
-        
-        // ✅ Параллельно запрашиваем топ по рейтингу И по популярности
+
         const [topData, popularData] = await Promise.all([
             this._graphql(`{
                 animes(page: 1, limit: ${fetchLimit}, order: ranked) {
@@ -324,28 +355,26 @@ const API = {
                 }
             }`, false)
         ]);
-        
+
         const top = (topData?.animes || []).map(a => this._convertAnime(a));
         const popular = (popularData?.animes || []).map(a => this._convertAnime(a));
-        
-        // ✅ Объединяем и убираем дубликаты
+
         const combined = [...top, ...popular];
         const unique = [];
         const seen = new Set();
-        
+
         for (const item of combined) {
             if (!seen.has(item.id) && item.title && item.title !== 'Без названия') {
                 seen.add(item.id);
                 unique.push(item);
             }
         }
-        
-        // ✅ Перемешиваем и берём случайные
+
         const shuffled = unique.sort(() => Math.random() - 0.5);
         const result = shuffled.slice(0, limit);
-        
+
         console.log(`🎲 Рекомендации: ${result.length} из ${unique.length} уникальных`);
-        
+
         return result;
     },
 
@@ -354,7 +383,7 @@ const API = {
     // ============================================
     async searchAutocomplete(query, limit = 8) {
         if (!query || query.length < 2) return [];
-        
+
         const gql = `{
             animes(search: ${JSON.stringify(query)}, limit: ${limit}) {
                 id
@@ -364,10 +393,10 @@ const API = {
                 poster { originalUrl mainUrl }
             }
         }`;
-        
+
         const data = await this._graphql(gql, true, `auto_${query}_${limit}`);
         if (!data || !data.animes) return [];
-        
+
         return data.animes.map(a => ({
             id: 'shikimori_' + a.id,
             title: a.russian || a.name,
@@ -429,12 +458,12 @@ const API = {
         if (a.poster) {
             poster = a.poster.originalUrl || a.poster.mainUrl || '';
         }
-        
+
         const genres = (a.genres || [])
             .filter(g => g.kind === 'anime' || !g.kind)
             .map(g => g.russian || g.name)
             .filter(Boolean);
-        
+
         let ageRating = '0+';
         if (a.rating) {
             const ageMap = {
@@ -443,7 +472,7 @@ const API = {
             };
             ageRating = ageMap[a.rating] || '0+';
         }
-        
+
         let status = 'Неизвестно';
         if (a.status) {
             const statusMap = {
@@ -451,7 +480,7 @@ const API = {
             };
             status = statusMap[a.status] || a.status;
         }
-        
+
         return {
             mal_id: 'shikimori_' + a.id,
             id: 'shikimori_' + a.id,
@@ -477,10 +506,10 @@ const API = {
 
     _convertAnimeDetails(a) {
         const base = this._convertAnime(a);
-        
+
         let description = a.description || '';
         description = description.replace(/<[^>]*>/g, '').trim();
-        
+
         base.synopsis = description || 'Описание отсутствует';
         base.description = description;
         base.title_japanese = a.japanese || '';
@@ -489,19 +518,19 @@ const API = {
         base.url = a.url || `https://shikimori.one/animes/${a.id}`;
         base.airedOn = a.airedOn || {};
         base.season = a.season || '';
-        
+
         return base;
     },
 
     // ✅ Конвертер для REST API Shikimori
     _convertRestAnime(a) {
         let title = a.russian || a.name || 'Без названия';
-        
+
         let poster = '';
         if (a.image) {
             if (a.image.original) {
-                poster = a.image.original.startsWith('http') 
-                    ? a.image.original 
+                poster = a.image.original.startsWith('http')
+                    ? a.image.original
                     : 'https://shikimori.one' + a.image.original;
             } else if (a.image.preview) {
                 poster = a.image.preview.startsWith('http')
@@ -509,11 +538,11 @@ const API = {
                     : 'https://shikimori.one' + a.image.preview;
             }
         }
-        
+
         const genres = (a.genres || [])
             .map(g => g.russian || g.name)
             .filter(Boolean);
-        
+
         let ageRating = '0+';
         if (a.rating) {
             const ageMap = {
@@ -522,7 +551,7 @@ const API = {
             };
             ageRating = ageMap[a.rating] || '0+';
         }
-        
+
         let status = 'Неизвестно';
         if (a.status) {
             const statusMap = {
@@ -530,15 +559,15 @@ const API = {
             };
             status = statusMap[a.status] || a.status;
         }
-        
+
         let year = '--';
         if (a.aired_on) {
             year = a.aired_on.split('-')[0];
         }
-        
+
         let description = a.description || '';
         description = description.replace(/<[^>]*>/g, '').trim();
-        
+
         return {
             mal_id: 'shikimori_' + a.id,
             id: 'shikimori_' + a.id,
@@ -576,4 +605,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (Shikimori GraphQL + REST) загружен');
+console.log('✅ API модуль (Shikimori GraphQL + REST + Screenshots) загружен');
