@@ -423,27 +423,122 @@
 
                 </div>
 
-                <!-- ===== ДОСТИЖЕНИЯ ===== -->
+                <!-- ===== ДОСТИЖЕНИЯ v2.0 ===== -->
                 <div id="page-achievements" style="display:none;">
+                    
+                    <!-- SVG градиент для кольца прогресса -->
+                    <svg width="0" height="0" style="position:absolute;">
+                        <defs>
+                            <linearGradient id="achGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#00f5ff"/>
+                                <stop offset="50%" stop-color="#b44aff"/>
+                                <stop offset="100%" stop-color="#ff2d78"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    
                     <span class="back-btn" onclick="goBack()">
                         <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
                         Назад
                     </span>
-                    <div class="achievements-container">
-                        <div class="achievements-header">
-                            <div class="achievements-stats">
-                                <div class="ach-stat"><span class="ach-stat-num" id="achEarnedCount">0</span><span class="ach-stat-label">Получено</span></div>
-                                <div class="ach-stat"><span class="ach-stat-num" id="achTotalCount">0</span><span class="ach-stat-label">Всего</span></div>
-                                <div class="ach-stat"><span class="ach-stat-num" id="achProgress">0%</span><span class="ach-stat-label">Прогресс</span></div>
+
+                    <!-- ШАПКА С КОЛЬЦОМ ПРОГРЕССА -->
+                    <div class="ach-hero">
+                        <div class="ach-hero-content">
+                            
+                            <div class="ach-progress-ring">
+                                <svg viewBox="0 0 120 120">
+                                    <circle class="ach-progress-ring-bg" cx="60" cy="60" r="52"/>
+                                    <circle class="ach-progress-ring-fill" 
+                                            id="achRingFill"
+                                            cx="60" cy="60" r="52"
+                                            stroke-dasharray="326.7"
+                                            stroke-dashoffset="326.7"/>
+                                </svg>
+                                <div class="ach-progress-ring-text">
+                                    <div class="ach-progress-ring-percent" id="achRingPercent">0%</div>
+                                    <div class="ach-progress-ring-label">Прогресс</div>
+                                </div>
                             </div>
-                            <div class="achievements-progress-bar">
-                                <div class="ach-progress-fill" id="achProgressFill" style="width:0%"></div>
+
+                            <div class="ach-hero-info">
+                                <h1 class="ach-hero-title">🏆 Достижения</h1>
+                                <p class="ach-hero-subtitle">Твоя коллекция побед и титулов</p>
+                                
+                                <div id="achActiveTitleContainer"></div>
+                                
+                                <div class="ach-mini-stats">
+                                    <div class="ach-mini-stat">
+                                        <span class="ach-mini-stat-icon">✅</span>
+                                        <div>
+                                            <div class="ach-mini-stat-value" id="achEarnedCount">0</div>
+                                            <div class="ach-mini-stat-label">Получено</div>
+                                        </div>
+                                    </div>
+                                    <div class="ach-mini-stat">
+                                        <span class="ach-mini-stat-icon">🎯</span>
+                                        <div>
+                                            <div class="ach-mini-stat-value" id="achTotalCount">0</div>
+                                            <div class="ach-mini-stat-label">Всего</div>
+                                        </div>
+                                    </div>
+                                    <div class="ach-mini-stat">
+                                        <span class="ach-mini-stat-icon">⏳</span>
+                                        <div>
+                                            <div class="ach-mini-stat-value" id="achRemainingCount">0</div>
+                                            <div class="ach-mini-stat-label">Осталось</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="achievements-grid" id="achievementsGrid">
-                            <div class="empty-state"><span class="empty-icon">🏆</span><p>Достижения загружаются...</p></div>
                         </div>
                     </div>
+
+                    <!-- ФИЛЬТРЫ -->
+                    <div class="ach-controls">
+                        <div class="ach-tabs" id="achTabs">
+                            <button class="ach-tab active" data-filter="all" onclick="setAchFilter('all', this)">
+                                🎯 Все <span class="ach-tab-count" id="achTabAllCount">0</span>
+                            </button>
+                            <button class="ach-tab" data-filter="earned" onclick="setAchFilter('earned', this)">
+                                ✅ Полученные <span class="ach-tab-count" id="achTabEarnedCount">0</span>
+                            </button>
+                            <button class="ach-tab" data-filter="progress" onclick="setAchFilter('progress', this)">
+                                ⏳ В процессе <span class="ach-tab-count" id="achTabProgressCount">0</span>
+                            </button>
+                            <button class="ach-tab" data-filter="locked" onclick="setAchFilter('locked', this)">
+                                🔒 Закрытые <span class="ach-tab-count" id="achTabLockedCount">0</span>
+                            </button>
+                        </div>
+                        
+                        <div class="ach-sort-wrapper">
+                            <select class="ach-sort-select" id="achSortSelect" onchange="renderAchievements()">
+                                <option value="rarity_desc">💎 По редкости</option>
+                                <option value="earned_first">✅ Сначала полученные</option>
+                                <option value="locked_first">🔒 Сначала закрытые</option>
+                                <option value="progress_desc">📊 По прогрессу</option>
+                                <option value="name_asc">🔤 А-Я</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- СЕТКА ДОСТИЖЕНИЙ -->
+                    <div class="achievements-grid-v2" id="achievementsGrid">
+                        <div class="ach-empty-v2">
+                            <span class="ach-empty-icon-v2">⏳</span>
+                            <h3 class="ach-empty-title-v2">Загрузка...</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ОВЕРЛЕЙ АНИМАЦИИ ПОЛУЧЕНИЯ -->
+                <div class="ach-unlock-overlay" id="achUnlockOverlay">
+                    <div class="ach-unlock-ray"></div>
+                    <div class="ach-unlock-icon" id="achUnlockIcon">🏆</div>
+                    <div class="ach-unlock-label">Новое достижение</div>
+                    <div class="ach-unlock-name" id="achUnlockName">Достижение</div>
+                    <div class="ach-unlock-desc" id="achUnlockDesc">Описание</div>
+                    <button class="ach-unlock-btn" onclick="closeAchUnlock()">Забрать! ✨</button>
                 </div>
 
                 <!-- ===== МОИ КОММЕНТАРИИ v2.0 ===== -->
