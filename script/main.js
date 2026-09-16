@@ -1,6 +1,6 @@
 // ============================================
 // ГЛАВНЫЙ ФАЙЛ ONIKAANIME
-// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0 + МЕНЮ v2.0 + АНИМЕ v2.0
+// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0 + МЕНЮ v2.0 + АНИМЕ v2.1
 // ============================================
 
 const allData = {};
@@ -105,7 +105,6 @@ function getGenreColor(genre) {
 function navigate(pageName) {
     currentPage = pageName;
 
-    // ✅ Устанавливаем data-page для тематических цветов сайдбара
     document.body.setAttribute('data-page', pageName);
 
     const pages = ['home', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings'];
@@ -115,7 +114,6 @@ function navigate(pageName) {
         if (el) el.style.display = p === pageName ? 'block' : 'none';
     });
 
-    // ✅ Обновляем активную ссылку в меню
     document.querySelectorAll('.sidebar-nav a').forEach(a => {
         a.classList.toggle('active', a.dataset.page === pageName);
     });
@@ -738,6 +736,26 @@ function setGenre(genreId, btn) {
     loadCatalog(1);
 }
 
+// ✅ НОВАЯ — клик по жанру-чипсу на странице аниме
+function onGenreClick(genreName) {
+    if (!genreName) return;
+
+    navigate('home');
+
+    const searchInput = document.getElementById('catalogSearchInput');
+    if (searchInput) {
+        searchInput.value = genreName;
+        const clearBtn = document.getElementById('catalogSearchClear');
+        if (clearBtn) clearBtn.style.display = 'flex';
+    }
+
+    const titleEl = document.getElementById('catalogTitle');
+    if (titleEl) titleEl.textContent = '🎭 ' + genreName;
+
+    applyCatalogFilters();
+    showToast(`🎭 Ищем: ${genreName}`, 'info');
+}
+
 // ============================================
 // 5. СЛУЧАЙНОЕ АНИМЕ
 // ============================================
@@ -958,138 +976,176 @@ async function openDetail(id) {
 }
 
 // ============================================
-// 8. ПОКАЗАТЬ ДЕТАЛИ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
+// 8. ПОКАЗАТЬ ДЕТАЛИ v2.1 — ИСПРАВЛЕННАЯ
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
 
-    const titleEl = document.getElementById('detailTitle');
-    const engEl = document.getElementById('detailEng');
-    const metaEl = document.getElementById('detailMeta');
-    const descEl = document.getElementById('detailDesc');
-    const posterEl = document.getElementById('detailPoster');
-    const heroBg = document.getElementById('detailHeroBg');
-    const ageBadge = document.querySelector('.age-badge');
-    const tagsEl = document.getElementById('detailTags');
-    const favBtn = document.getElementById('favBtn');
+    try {
+        const titleEl = document.getElementById('detailTitle');
+        const engEl = document.getElementById('detailEng');
+        const metaEl = document.getElementById('detailMeta');
+        const descEl = document.getElementById('detailDesc');
+        const posterEl = document.getElementById('detailPoster');
+        const heroBg = document.getElementById('detailHeroBg');
+        const ageBadge = document.querySelector('.age-badge');
+        const tagsEl = document.getElementById('detailTags');
+        const favBtn = document.getElementById('favBtn');
 
-    const displayTitle = anime.title || anime.title_russian || 'Без названия';
-    const engTitle = anime.title_english || '';
+        const displayTitle = anime.title || anime.title_russian || 'Без названия';
+        const engTitle = anime.title_english || '';
 
-    if (titleEl) titleEl.textContent = displayTitle;
-    if (engEl) engEl.textContent = engTitle;
+        if (titleEl) titleEl.textContent = displayTitle;
+        if (engEl) engEl.textContent = engTitle;
 
-    const year = anime.year || '--';
-    const episodes = anime.episodes || '?';
-    const score = anime.score || 0;
+        const year = anime.year || '--';
+        const episodes = anime.episodes || '?';
+        const score = parseFloat(anime.score) || 0;
 
-    // ✅ Мета-строка с рейтингом
-    if (metaEl) {
-        let scoreClass = 'low';
-        if (score >= 9) scoreClass = 'high';
-        else if (score >= 7) scoreClass = 'medium';
+        // ✅ Мета-строка с рейтингом
+        if (metaEl) {
+            let scoreClass = 'low';
+            if (score >= 9) scoreClass = 'high';
+            else if (score >= 7) scoreClass = 'medium';
 
-        metaEl.innerHTML = `
-            ${score > 0 ? `
-                <span class="detail-score ${scoreClass}">
-                    <span class="star-icon">⭐</span>
-                    <span>${score.toFixed(1)}</span>
-                </span>
-            ` : ''}
-            ${year && year !== '--' ? `
-                <span class="detail-meta-item">
-                    📅 ${year}
-                </span>
-            ` : ''}
-            ${episodes && episodes !== '?' ? `
-                <span class="detail-meta-item">
-                    📺 ${episodes} эп.
-                </span>
-            ` : ''}
-            ${anime.status ? `
-                <span class="detail-meta-item">
-                    ${anime.status}
-                </span>
-            ` : ''}
-        `;
-    }
+            let metaHtml = '';
 
-    if (descEl) descEl.textContent = anime.synopsis || anime.description || 'Описание отсутствует';
-
-    const img = anime.images?.jpg?.image_url || '';
-    if (posterEl) {
-        if (img) {
-            posterEl.src = img;
-            posterEl.style.display = 'block';
-        } else {
-            posterEl.style.display = 'none';
-        }
-    }
-
-    // ✅ Фон баннера (размытый постер)
-    if (heroBg && img) {
-        heroBg.style.backgroundImage = `url('${img}')`;
-    }
-
-    // ✅ Фоновое свечение от постера
-    const ambientGlow = document.getElementById('detailAmbientGlow');
-    if (ambientGlow && img) {
-        extractDominantColor(img, function(color) {
-            ambientGlow.style.setProperty('--ambient-color', color);
-            ambientGlow.classList.add('active');
-        });
-    }
-
-    if (ageBadge) {
-        const age = anime.age_rating || '0+';
-        ageBadge.textContent = age;
-        ageBadge.className = `age-badge age-${age.replace('+', '')}`;
-    }
-
-    // ✅ Жанры-чипсы с уникальными цветами
-    if (tagsEl) {
-        const genres = anime.genres || [];
-        tagsEl.innerHTML = genres.map((g, i) => {
-            const color = getGenreColor(g);
-            return `
-                <span class="detail-tag" 
-                      style="--tag-color: ${color}; --tag-bg: ${color}15; --tag-border: ${color}40; animation-delay: ${i * 0.05}s;"
-                      onclick="event.stopPropagation(); setGenre('${g}'); navigate('home');">
-                    ${g}
-                </span>
-            `;
-        }).join('');
-    }
-
-    // ✅ Кнопка избранного
-    const user = DB.get('currentUser');
-    const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
-    const isFav = favs.indexOf(displayTitle) > -1;
-
-    if (favBtn) {
-        updateFavButton(favBtn, isFav);
-        favBtn.onclick = function() {
-            if (!user) {
-                showToast('Войдите в аккаунт!', 'error');
-                return;
+            if (score > 0) {
+                metaHtml += `
+                    <span class="detail-score ${scoreClass}">
+                        <span class="star-icon">⭐</span>
+                        <span>${score.toFixed(1)}</span>
+                    </span>
+                `;
             }
-            toggleFav(displayTitle);
-            setTimeout(() => {
-                const favsNow = DB.getUserData(user.name, 'favorites', []);
-                const isFavNow = favsNow.indexOf(displayTitle) > -1;
-                updateFavButton(favBtn, isFavNow);
-                if (isFavNow) {
-                    spawnFavConfetti(favBtn);
+
+            if (year && year !== '--') {
+                metaHtml += `
+                    <span class="detail-meta-item">
+                        📅 ${year}
+                    </span>
+                `;
+            }
+
+            if (episodes && episodes !== '?') {
+                metaHtml += `
+                    <span class="detail-meta-item">
+                        📺 ${episodes} эп.
+                    </span>
+                `;
+            }
+
+            if (anime.status) {
+                metaHtml += `
+                    <span class="detail-meta-item">
+                        ${anime.status}
+                    </span>
+                `;
+            }
+
+            metaEl.innerHTML = metaHtml;
+        }
+
+        if (descEl) descEl.textContent = anime.synopsis || anime.description || 'Описание отсутствует';
+
+        const img = anime.images?.jpg?.image_url || '';
+        if (posterEl) {
+            if (img) {
+                posterEl.src = img;
+                posterEl.style.display = 'block';
+            } else {
+                posterEl.style.display = 'none';
+            }
+        }
+
+        // ✅ Фон баннера (размытый постер)
+        if (heroBg && img) {
+            try {
+                heroBg.style.backgroundImage = `url('${img}')`;
+            } catch(e) {
+                console.warn('Hero bg error:', e);
+            }
+        }
+
+        // ✅ Фоновое свечение от постера
+        const ambientGlow = document.getElementById('detailAmbientGlow');
+        if (ambientGlow && img) {
+            try {
+                extractDominantColor(img, function(color) {
+                    ambientGlow.style.setProperty('--ambient-color', color);
+                    ambientGlow.classList.add('active');
+                });
+            } catch(e) {
+                console.warn('Ambient glow error:', e);
+            }
+        }
+
+        if (ageBadge) {
+            const age = anime.age_rating || '0+';
+            ageBadge.textContent = age;
+            ageBadge.className = `age-badge age-${age.replace('+', '')}`;
+        }
+
+        // ✅ Жанры-чипсы
+        if (tagsEl) {
+            const genres = Array.isArray(anime.genres) ? anime.genres : [];
+            if (genres.length > 0) {
+                tagsEl.innerHTML = genres.map((g, i) => {
+                    const safeG = String(g).replace(/'/g, "\\'");
+                    const color = getGenreColor(g);
+                    return `
+                        <span class="detail-tag" 
+                              style="--tag-color: ${color}; --tag-bg: ${color}15; --tag-border: ${color}40; animation-delay: ${i * 0.05}s;"
+                              onclick="event.stopPropagation(); onGenreClick('${safeG}');">
+                            ${g}
+                        </span>
+                    `;
+                }).join('');
+            } else {
+                tagsEl.innerHTML = '';
+            }
+        }
+
+        // ✅ Кнопка избранного
+        const user = DB.get('currentUser');
+        const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
+        const isFav = favs.indexOf(displayTitle) > -1;
+
+        if (favBtn) {
+            updateFavButton(favBtn, isFav);
+            favBtn.onclick = function() {
+                if (!user) {
+                    showToast('Войдите в аккаунт!', 'error');
+                    return;
                 }
-            }, 100);
-        };
+                toggleFav(displayTitle);
+                setTimeout(() => {
+                    const favsNow = DB.getUserData(user.name, 'favorites', []);
+                    const isFavNow = favsNow.indexOf(displayTitle) > -1;
+                    updateFavButton(favBtn, isFavNow);
+                    if (isFavNow) {
+                        try { spawnFavConfetti(favBtn); } catch(e) {}
+                    }
+                }, 100);
+            };
+        }
+
+        // ✅ Прогресс просмотра
+        try {
+            renderWatchProgress(displayTitle, anime);
+        } catch(e) {
+            console.warn('Watch progress error:', e);
+            const container = document.getElementById('watchEpisodesInfo');
+            if (container) container.style.display = 'none';
+        }
+
+        renderComments(displayTitle);
+        closeWatchEmbed();
+
+    } catch (err) {
+        console.error('❌ Ошибка showDetail:', err);
+        showToast('Ошибка отображения: ' + err.message, 'error');
     }
-
-    // ✅ Прогресс просмотра серий
-    renderWatchProgress(displayTitle, anime);
-
-    renderComments(displayTitle);
-    closeWatchEmbed();
 }
 
 // ===== ✅ ОБНОВЛЕНИЕ КНОПКИ ИЗБРАННОГО =====
@@ -1110,73 +1166,98 @@ function updateFavButton(btn, isFav) {
     }
 }
 
-// ===== ✅ КОНФЕТТИ ПРИ ДОБАВЛЕНИИ В ИЗБРАННОЕ =====
+// ===== ✅ КОНФЕТТИ =====
 function spawnFavConfetti(btn) {
     if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    const colors = ['#ff2d78', '#fd79a8', '#e84393', '#ff6b9d', '#ffed4e'];
-    const container = document.createElement('div');
-    container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:99999;';
-    document.body.appendChild(container);
+    try {
+        const rect = btn.getBoundingClientRect();
+        if (!rect || rect.width === 0) return;
 
-    let html = '';
-    for (let i = 0; i < 24; i++) {
-        const x = rect.left + rect.width / 2;
-        const y = rect.top + rect.height / 2;
-        const size = 4 + Math.random() * 8;
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const tx = (Math.random() - 0.5) * 300;
-        const ty = -Math.random() * 200 - 50;
-        const duration = 0.8 + Math.random() * 0.8;
-        const delay = Math.random() * 0.2;
-        const rotate = Math.random() * 720;
-        const borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        const colors = ['#ff2d78', '#fd79a8', '#e84393', '#ff6b9d', '#ffed4e'];
+        const container = document.createElement('div');
+        container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:99999;';
+        document.body.appendChild(container);
 
-        html += `
-            <div style="
-                position:absolute;
-                left:${x}px;
-                top:${y}px;
-                width:${size}px;
-                height:${size}px;
-                background:${color};
-                border-radius:${borderRadius};
-                opacity:0;
-                animation: favConfettiFly ${duration}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-                animation-delay:${delay}s;
-                --tx:${tx}px;
-                --ty:${ty}px;
-                --rot:${rotate}deg;
-            "></div>
-        `;
-    }
+        let html = '';
+        for (let i = 0; i < 24; i++) {
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            const size = 4 + Math.random() * 8;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const tx = (Math.random() - 0.5) * 300;
+            const ty = -Math.random() * 200 - 50;
+            const duration = 0.8 + Math.random() * 0.8;
+            const delay = Math.random() * 0.2;
+            const rotate = Math.random() * 720;
+            const borderRadius = Math.random() > 0.5 ? '50%' : '2px';
 
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes favConfettiFly {
-            0% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
-            }
-            50% {
-                opacity: 1;
-            }
-            100% {
-                opacity: 0;
-                transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.6) rotate(var(--rot));
-            }
+            html += `
+                <div style="
+                    position:absolute;
+                    left:${x}px;
+                    top:${y}px;
+                    width:${size}px;
+                    height:${size}px;
+                    background:${color};
+                    border-radius:${borderRadius};
+                    opacity:0;
+                    animation: favConfettiFly ${duration}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                    animation-delay:${delay}s;
+                    --tx:${tx}px;
+                    --ty:${ty}px;
+                    --rot:${rotate}deg;
+                "></div>
+            `;
         }
-    `;
-    container.appendChild(style);
-    container.innerHTML += html;
-    setTimeout(() => container.remove(), 2000);
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes favConfettiFly {
+                0% {
+                    opacity: 1;
+                    transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+                }
+                50% {
+                    opacity: 1;
+                }
+                100% {
+                    opacity: 0;
+                    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.6) rotate(var(--rot));
+                }
+            }
+        `;
+        container.appendChild(style);
+        container.innerHTML += html;
+        setTimeout(() => container.remove(), 2000);
+    } catch(e) {
+        console.warn('Confetti error:', e);
+    }
 }
 
 // ===== ✅ ИЗВЛЕЧЕНИЕ ДОМИНИРУЮЩЕГО ЦВЕТА =====
 function extractDominantColor(imgUrl, callback) {
+    if (!imgUrl) {
+        callback('rgba(108, 92, 231, 0.3)');
+        return;
+    }
+
     const img = new Image();
     img.crossOrigin = 'Anonymous';
+
+    let called = false;
+    const safeCallback = (color) => {
+        if (!called) {
+            called = true;
+            callback(color);
+        }
+    };
+
+    const timeout = setTimeout(() => {
+        safeCallback('rgba(108, 92, 231, 0.3)');
+    }, 3000);
+
     img.onload = function() {
+        clearTimeout(timeout);
         try {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -1194,6 +1275,11 @@ function extractDominantColor(imgUrl, callback) {
                 count++;
             }
 
+            if (count === 0) {
+                safeCallback('rgba(108, 92, 231, 0.3)');
+                return;
+            }
+
             r = Math.round(r / count);
             g = Math.round(g / count);
             b = Math.round(b / count);
@@ -1204,14 +1290,18 @@ function extractDominantColor(imgUrl, callback) {
             g = Math.min(255, Math.round(g * factor));
             b = Math.min(255, Math.round(b * factor));
 
-            callback(`rgba(${r}, ${g}, ${b}, 0.4)`);
+            safeCallback(`rgba(${r}, ${g}, ${b}, 0.4)`);
         } catch(e) {
-            callback('rgba(108, 92, 231, 0.3)');
+            console.warn('Canvas CORS error');
+            safeCallback('rgba(108, 92, 231, 0.3)');
         }
     };
+
     img.onerror = function() {
-        callback('rgba(108, 92, 231, 0.3)');
+        clearTimeout(timeout);
+        safeCallback('rgba(108, 92, 231, 0.3)');
     };
+
     img.src = imgUrl;
 }
 
@@ -1221,14 +1311,14 @@ function renderWatchProgress(animeTitle, anime) {
     if (!container) return;
 
     const user = DB.get('currentUser');
-    if (!user) {
+    if (!user || !animeTitle) {
         container.style.display = 'none';
         return;
     }
 
     const watching = DB.getUserData(user.name, 'continueWatching', {});
     const current = watching[animeTitle];
-    const totalEpisodes = parseInt(anime.episodes) || 0;
+    const totalEpisodes = parseInt(anime?.episodes) || 0;
 
     if (!current && totalEpisodes === 0) {
         container.style.display = 'none';
@@ -1462,11 +1552,12 @@ async function playSourceEpisode(source, index, title) {
                 </iframe>
             `;
 
-            // ✅ Сохраняем прогресс
             const user = DB.get('currentUser');
             if (user) {
                 saveContinueWatching(user.name, title, episode.episode, data.sources[source].length);
-                renderWatchProgress(title, { episodes: data.sources[source].length });
+                try {
+                    renderWatchProgress(title, { episodes: data.sources[source].length });
+                } catch(e) {}
             }
         } else {
             playerArea.innerHTML = `
@@ -1547,23 +1638,22 @@ function renderComments(animeName) {
                 `;
                 return;
             }
-            
+
             const user = DB.get('currentUser');
             let html = '';
             comments.forEach((c, index) => {
                 const canDelete = user && c.user_name === user.name;
                 const isMine = user && c.user_name === user.name;
                 const letter = c.user_name[0].toUpperCase();
-                
-                // ✅ Ищем аватар пользователя
+
                 const profiles = DB.get('profiles', {});
                 const userProfile = profiles[c.user_name] || {};
                 const avatarData = userProfile.avatar || localStorage.getItem('avatar_' + c.user_name) || '';
-                
+
                 const avatarHtml = avatarData && avatarData.length > 100
                     ? `<img src="${avatarData}" alt="${c.user_name}">`
                     : `<span>${letter}</span>`;
-                
+
                 html += `
                     <div class="comment-item${isMine ? ' mine' : ''}" style="animation-delay: ${index * 0.05}s;">
                         <div class="comment-avatar">${avatarHtml}</div>
@@ -1586,7 +1676,6 @@ function renderComments(animeName) {
         });
 }
 
-// ✅ Открыть профиль из комментария
 function openUserFromComment(userName) {
     const user = DB.get('currentUser');
     if (!user) {
@@ -1635,7 +1724,6 @@ function addComment() {
             addActivity(user.name, 'comment', 'Оставил комментарий к «' + title + '»');
             showToast('💬 Комментарий добавлен!', 'success');
 
-            // ✅ Обновляем бейдж комментариев в меню
             if (window._myCommentsCache && window._myCommentsCache.user === user.name) {
                 window._myCommentsCache.count++;
                 updateUI();
@@ -1670,7 +1758,6 @@ function deleteComment(id) {
                 if (title) renderComments(title);
                 showToast('🗑️ Комментарий удален', 'success');
 
-                // ✅ Обновляем бейдж комментариев в меню
                 if (window._myCommentsCache && window._myCommentsCache.user === user.name) {
                     window._myCommentsCache.count = Math.max(0, window._myCommentsCache.count - 1);
                     updateUI();
@@ -3815,10 +3902,11 @@ window.showAchUnlock = showAchUnlock;
 window.animateNumber = animateNumber;
 window.animateTimeCounter = animateTimeCounter;
 
-// ===== АНИМЕ v2.0 =====
+// ===== АНИМЕ v2.1 =====
 window.updateFavButton = updateFavButton;
 window.renderWatchProgress = renderWatchProgress;
 window.extractDominantColor = extractDominantColor;
 window.getGenreColor = getGenreColor;
+window.onGenreClick = onGenreClick;
 
 console.log('✅ OnikaAnime полностью загружен!');
