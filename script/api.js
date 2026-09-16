@@ -1,11 +1,10 @@
 // ============================================
-// API МОДУЛЬ ONIKAANIME — SHIKIMORI (GraphQL + REST + SCREENSHOTS)
+// API МОДУЛЬ ONIKAANIME — SHIKIMORI (GraphQL + REST)
 // ============================================
 
 const API = {
     SHIKIMORI_PROXY: '/api/shikimori',
     SHIKIMORI_REST: '/api/shikimori-rest',
-    SCREENSHOTS: '/api/screenshots',
 
     _cache: new Map(),
     _cacheTTL: 15 * 60 * 1000,
@@ -209,7 +208,7 @@ const API = {
     },
 
     // ============================================
-    // 6. ДЕТАЛИ — через REST API
+    // 6. ДЕТАЛИ — через REST API (с описанием)
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
@@ -220,6 +219,7 @@ const API = {
             return null;
         }
 
+        // ✅ ОСНОВНОЙ ИСТОЧНИК: REST API
         try {
             const response = await fetch(this.SHIKIMORI_REST + '/' + cleanId);
 
@@ -235,6 +235,7 @@ const API = {
             console.warn('⚠️ REST не сработал:', e.message);
         }
 
+        // ⚠️ FALLBACK: GraphQL
         try {
             const query = `{
                 anime(id: ${cleanId}) {
@@ -270,6 +271,7 @@ const API = {
             console.warn('⚠️ GraphQL fallback не сработал');
         }
 
+        // ⚠️ КРАЙНИЙ FALLBACK: каталог
         const cached = allData[id];
         if (cached) {
             console.log('⚠️ Fallback на каталог');
@@ -281,39 +283,7 @@ const API = {
     },
 
     // ============================================
-    // ✅ 6.1 СКРИНШОТЫ АНИМЕ (проксируются через сервер)
-    // ============================================
-    async getScreenshots(id) {
-        const cleanId = id.toString().replace('shikimori_', '');
-
-        if (!cleanId || !/^\d+$/.test(cleanId)) {
-            console.warn('⚠️ Неверный ID для скриншотов:', id);
-            return [];
-        }
-
-        try {
-            const response = await fetch(this.SCREENSHOTS + '/' + cleanId);
-
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-
-            const data = await response.json();
-
-            if (data.screenshots && Array.isArray(data.screenshots)) {
-                console.log(`📸 Загружено ${data.screenshots.length} скриншотов для ID ${cleanId}`);
-                return data.screenshots;
-            }
-
-            return [];
-        } catch (e) {
-            console.warn('⚠️ Не удалось загрузить скриншоты:', e.message);
-            return [];
-        }
-    },
-
-    // ============================================
-    // 7. РЕКОМЕНДАЦИИ
+    // 7. РЕКОМЕНДАЦИИ — СЛУЧАЙНЫЕ ИЗ ТОПА
     // ============================================
     async getRecommended(limit = 7) {
         const fetchLimit = Math.max(limit * 5, 35);
@@ -601,4 +571,4 @@ const API = {
 };
 
 window.API = API;
-console.log('✅ API модуль (Shikimori GraphQL + REST + Screenshots + Proxy) загружен');
+console.log('✅ API модуль (Shikimori GraphQL + REST) загружен');
