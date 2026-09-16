@@ -1,6 +1,6 @@
 // ============================================
 // ГЛАВНЫЙ ФАЙЛ ONIKAANIME
-// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0 + МЕНЮ v2.0
+// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0 + МЕНЮ v2.0 + АНИМЕ v2.0
 // ============================================
 
 const allData = {};
@@ -74,6 +74,31 @@ const ACHIEVEMENTS_LIST = [
       rarity: 'legendary', category: 'collector', target: 1000, metric: 'favorites' }
 ];
 
+// ===== ЦВЕТА ДЛЯ ЖАНРОВ =====
+function getGenreColor(genre) {
+    const colorMap = {
+        'Экшен': '#ff2d78',
+        'Приключения': '#f39c12',
+        'Комедия': '#f1c40f',
+        'Драма': '#8e44ad',
+        'Фэнтези': '#3498db',
+        'Романтика': '#e84393',
+        'Фантастика': '#00b894',
+        'Повседневность': '#636e72',
+        'Триллер': '#c0392b',
+        'Ужасы': '#6c5ce7',
+        'Спорт': '#e67e22',
+        'Музыка': '#00cec9',
+        'Меха': '#4d8aff',
+        'Сёдзё': '#fd79a8',
+        'Сёнэн': '#0096ff',
+        'Игра': '#a29bfe',
+        'Мистика': '#b44aff',
+        'Детектив': '#00f5ff'
+    };
+    return colorMap[genre] || '#6c5ce7';
+}
+
 // ============================================
 // НАВИГАЦИЯ
 // ============================================
@@ -128,7 +153,6 @@ function updateUI() {
     if (!nav || !footer) return;
 
     if (user) {
-        // ✅ Данные для бейджей
         const favs = DB.getUserData(user.name, 'favorites', []);
         const favCount = favs.length;
 
@@ -136,12 +160,10 @@ function updateUI() {
             ? window._myCommentsCache.count
             : 0;
 
-        // ✅ XP и уровень
         const xp = calculateXP(user.name);
         const level = Math.floor(xp / 100);
         const xpProgress = Math.min((xp % 100), 100);
 
-        // ✅ Аватар
         const profiles = DB.get('profiles', {});
         const profile = profiles[user.name] || {};
         const avatarData = profile.avatar || localStorage.getItem('avatar_' + user.name) || '';
@@ -151,7 +173,6 @@ function updateUI() {
             ? `<img src="${avatarData}" alt="${user.name}">`
             : `<span>${letter}</span>`;
 
-        // ✅ Ссылки с бейджами
         nav.innerHTML = `
             <a data-page="home" onclick="navigate('home'); closeMenu();">
                 <span class="icon">🏠</span>
@@ -181,7 +202,6 @@ function updateUI() {
             </a>
         `;
 
-        // ✅ Красивый футер с карточкой пользователя
         footer.innerHTML = `
             <div class="sidebar-user-card" onclick="navigate('profile'); closeMenu();">
                 <div class="sidebar-user-avatar">${avatarHtml}</div>
@@ -199,7 +219,6 @@ function updateUI() {
             </button>
         `;
 
-        // ✅ Устанавливаем активную ссылку
         const activeLink = nav.querySelector(`a[data-page="${currentPage}"]`);
         if (activeLink) activeLink.classList.add('active');
     } else {
@@ -710,7 +729,7 @@ function setGenre(genreId, btn) {
     const titleEl = document.getElementById('catalogTitle');
     if (titleEl) {
         if (genreId === 'latest') titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
-        else if (genreId) titleEl.textContent = '🎭 ' + (btn ? btn.textContent : 'Жанр');
+        else if (genreId) titleEl.textContent = '🎭 ' + (btn ? btn.textContent : genreId);
         else titleEl.textContent = '📚 ВСЕ АНИМЕ';
     }
 
@@ -939,7 +958,7 @@ async function openDetail(id) {
 }
 
 // ============================================
-// 8. ПОКАЗАТЬ ДЕТАЛИ
+// 8. ПОКАЗАТЬ ДЕТАЛИ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
@@ -949,6 +968,7 @@ function showDetail(anime) {
     const metaEl = document.getElementById('detailMeta');
     const descEl = document.getElementById('detailDesc');
     const posterEl = document.getElementById('detailPoster');
+    const heroBg = document.getElementById('detailHeroBg');
     const ageBadge = document.querySelector('.age-badge');
     const tagsEl = document.getElementById('detailTags');
     const favBtn = document.getElementById('favBtn');
@@ -961,7 +981,38 @@ function showDetail(anime) {
 
     const year = anime.year || '--';
     const episodes = anime.episodes || '?';
-    if (metaEl) metaEl.textContent = `${year} | ${episodes} эп.`;
+    const score = anime.score || 0;
+
+    // ✅ Мета-строка с рейтингом
+    if (metaEl) {
+        let scoreClass = 'low';
+        if (score >= 9) scoreClass = 'high';
+        else if (score >= 7) scoreClass = 'medium';
+
+        metaEl.innerHTML = `
+            ${score > 0 ? `
+                <span class="detail-score ${scoreClass}">
+                    <span class="star-icon">⭐</span>
+                    <span>${score.toFixed(1)}</span>
+                </span>
+            ` : ''}
+            ${year && year !== '--' ? `
+                <span class="detail-meta-item">
+                    📅 ${year}
+                </span>
+            ` : ''}
+            ${episodes && episodes !== '?' ? `
+                <span class="detail-meta-item">
+                    📺 ${episodes} эп.
+                </span>
+            ` : ''}
+            ${anime.status ? `
+                <span class="detail-meta-item">
+                    ${anime.status}
+                </span>
+            ` : ''}
+        `;
+    }
 
     if (descEl) descEl.textContent = anime.synopsis || anime.description || 'Описание отсутствует';
 
@@ -975,29 +1026,232 @@ function showDetail(anime) {
         }
     }
 
+    // ✅ Фон баннера (размытый постер)
+    if (heroBg && img) {
+        heroBg.style.backgroundImage = `url('${img}')`;
+    }
+
+    // ✅ Фоновое свечение от постера
+    const ambientGlow = document.getElementById('detailAmbientGlow');
+    if (ambientGlow && img) {
+        extractDominantColor(img, function(color) {
+            ambientGlow.style.setProperty('--ambient-color', color);
+            ambientGlow.classList.add('active');
+        });
+    }
+
     if (ageBadge) {
         const age = anime.age_rating || '0+';
         ageBadge.textContent = age;
         ageBadge.className = `age-badge age-${age.replace('+', '')}`;
     }
 
+    // ✅ Жанры-чипсы с уникальными цветами
     if (tagsEl) {
         const genres = anime.genres || [];
-        tagsEl.innerHTML = genres.map(g => `<span class="detail-tag">${g}</span>`).join('');
+        tagsEl.innerHTML = genres.map((g, i) => {
+            const color = getGenreColor(g);
+            return `
+                <span class="detail-tag" 
+                      style="--tag-color: ${color}; --tag-bg: ${color}15; --tag-border: ${color}40; animation-delay: ${i * 0.05}s;"
+                      onclick="event.stopPropagation(); setGenre('${g}'); navigate('home');">
+                    ${g}
+                </span>
+            `;
+        }).join('');
     }
 
+    // ✅ Кнопка избранного
     const user = DB.get('currentUser');
     const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
     const isFav = favs.indexOf(displayTitle) > -1;
 
     if (favBtn) {
-        favBtn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
-        favBtn.className = 'fav-btn' + (isFav ? ' active' : '');
-        favBtn.onclick = () => toggleFav(displayTitle);
+        updateFavButton(favBtn, isFav);
+        favBtn.onclick = function() {
+            if (!user) {
+                showToast('Войдите в аккаунт!', 'error');
+                return;
+            }
+            toggleFav(displayTitle);
+            setTimeout(() => {
+                const favsNow = DB.getUserData(user.name, 'favorites', []);
+                const isFavNow = favsNow.indexOf(displayTitle) > -1;
+                updateFavButton(favBtn, isFavNow);
+                if (isFavNow) {
+                    spawnFavConfetti(favBtn);
+                }
+            }, 100);
+        };
     }
+
+    // ✅ Прогресс просмотра серий
+    renderWatchProgress(displayTitle, anime);
 
     renderComments(displayTitle);
     closeWatchEmbed();
+}
+
+// ===== ✅ ОБНОВЛЕНИЕ КНОПКИ ИЗБРАННОГО =====
+function updateFavButton(btn, isFav) {
+    if (!btn) return;
+    if (isFav) {
+        btn.classList.add('active');
+        btn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            В избранном
+        `;
+    } else {
+        btn.classList.remove('active');
+        btn.innerHTML = `
+            <svg width="20" height="20"><use href="icons/icons.svg#icon-heart-empty"/></svg>
+            В избранное
+        `;
+    }
+}
+
+// ===== ✅ КОНФЕТТИ ПРИ ДОБАВЛЕНИИ В ИЗБРАННОЕ =====
+function spawnFavConfetti(btn) {
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const colors = ['#ff2d78', '#fd79a8', '#e84393', '#ff6b9d', '#ffed4e'];
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:99999;';
+    document.body.appendChild(container);
+
+    let html = '';
+    for (let i = 0; i < 24; i++) {
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const size = 4 + Math.random() * 8;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const tx = (Math.random() - 0.5) * 300;
+        const ty = -Math.random() * 200 - 50;
+        const duration = 0.8 + Math.random() * 0.8;
+        const delay = Math.random() * 0.2;
+        const rotate = Math.random() * 720;
+        const borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+
+        html += `
+            <div style="
+                position:absolute;
+                left:${x}px;
+                top:${y}px;
+                width:${size}px;
+                height:${size}px;
+                background:${color};
+                border-radius:${borderRadius};
+                opacity:0;
+                animation: favConfettiFly ${duration}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                animation-delay:${delay}s;
+                --tx:${tx}px;
+                --ty:${ty}px;
+                --rot:${rotate}deg;
+            "></div>
+        `;
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes favConfettiFly {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.6) rotate(var(--rot));
+            }
+        }
+    `;
+    container.appendChild(style);
+    container.innerHTML += html;
+    setTimeout(() => container.remove(), 2000);
+}
+
+// ===== ✅ ИЗВЛЕЧЕНИЕ ДОМИНИРУЮЩЕГО ЦВЕТА =====
+function extractDominantColor(imgUrl, callback) {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = function() {
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 50;
+            canvas.height = 50;
+            ctx.drawImage(img, 0, 0, 50, 50);
+
+            const imageData = ctx.getImageData(0, 0, 50, 50).data;
+            let r = 0, g = 0, b = 0, count = 0;
+
+            for (let i = 0; i < imageData.length; i += 40) {
+                r += imageData[i];
+                g += imageData[i + 1];
+                b += imageData[i + 2];
+                count++;
+            }
+
+            r = Math.round(r / count);
+            g = Math.round(g / count);
+            b = Math.round(b / count);
+
+            const max = Math.max(r, g, b);
+            const factor = 180 / (max || 1);
+            r = Math.min(255, Math.round(r * factor));
+            g = Math.min(255, Math.round(g * factor));
+            b = Math.min(255, Math.round(b * factor));
+
+            callback(`rgba(${r}, ${g}, ${b}, 0.4)`);
+        } catch(e) {
+            callback('rgba(108, 92, 231, 0.3)');
+        }
+    };
+    img.onerror = function() {
+        callback('rgba(108, 92, 231, 0.3)');
+    };
+    img.src = imgUrl;
+}
+
+// ===== ✅ ПРОГРЕСС ПРОСМОТРА СЕРИЙ =====
+function renderWatchProgress(animeTitle, anime) {
+    const container = document.getElementById('watchEpisodesInfo');
+    if (!container) return;
+
+    const user = DB.get('currentUser');
+    if (!user) {
+        container.style.display = 'none';
+        return;
+    }
+
+    const watching = DB.getUserData(user.name, 'continueWatching', {});
+    const current = watching[animeTitle];
+    const totalEpisodes = parseInt(anime.episodes) || 0;
+
+    if (!current && totalEpisodes === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    const watchedEp = current ? (current.episode || 0) : 0;
+    const total = current && current.total ? current.total : totalEpisodes;
+    const percent = total > 0 ? Math.round((watchedEp / total) * 100) : 0;
+
+    const titleEl = document.getElementById('watchEpisodesTitle');
+    const countEl = document.getElementById('watchEpisodesCount');
+    const fillEl = document.getElementById('watchProgressFill');
+    const currentEl = document.getElementById('watchProgressCurrent');
+    const percentEl = document.getElementById('watchProgressPercent');
+
+    if (titleEl) titleEl.textContent = watchedEp > 0 ? 'Твой прогресс' : 'Доступно серий';
+    if (countEl) countEl.textContent = total > 0 ? `${total} серий` : '?';
+    if (fillEl) fillEl.style.width = percent + '%';
+    if (currentEl) currentEl.textContent = `Просмотрено: ${watchedEp} из ${total || '?'}`;
+    if (percentEl) percentEl.textContent = percent + '%';
+
+    container.style.display = 'block';
 }
 
 // ============================================
@@ -1066,7 +1320,14 @@ async function watchOnVK() {
 
     const container = document.getElementById('watchEmbedContainer');
     container.style.display = 'block';
-    container.innerHTML = '<div class="watch-embed-error"><span class="icon">⏳</span><p>Ищем в базе...</p></div>';
+    container.innerHTML = `
+        <div class="watch-embed-wrapper">
+            <div class="player-loader">
+                <div class="player-loader-ring"></div>
+                <div class="player-loader-text">Ищем в базе VK...</div>
+            </div>
+        </div>
+    `;
 
     try {
         const response = await fetch('/api/sources/' + encodeURIComponent(title));
@@ -1088,7 +1349,14 @@ async function watchOnDeep() {
 
     const container = document.getElementById('watchEmbedContainer');
     container.style.display = 'block';
-    container.innerHTML = '<div class="watch-embed-error"><span class="icon">⏳</span><p>Ищем в базе...</p></div>';
+    container.innerHTML = `
+        <div class="watch-embed-wrapper">
+            <div class="player-loader">
+                <div class="player-loader-ring"></div>
+                <div class="player-loader-text">Ищем в базе Deep...</div>
+            </div>
+        </div>
+    `;
 
     try {
         const response = await fetch('/api/sources/' + encodeURIComponent(title));
@@ -1117,7 +1385,7 @@ function renderSourceEpisodes(source, episodes, title) {
             <button onclick="playSourceEpisode('${source}', ${index}, '${title.replace(/'/g, "\\'")}')"
                 class="source-episode-btn"
                 data-index="${index}"
-                style="padding:8px 14px;border-radius:8px;border:1px solid ${index === 0 ? 'var(--neon-cyan)' : 'rgba(0,245,255,0.1)'};
+                style="padding:8px 14px;border-radius:10px;border:1px solid ${index === 0 ? 'var(--neon-cyan)' : 'rgba(0,245,255,0.1)'};
                        background:${index === 0 ? 'rgba(0,245,255,0.1)' : 'rgba(0,245,255,0.02)'};
                        color:${index === 0 ? 'var(--neon-cyan)' : 'var(--text-primary)'};
                        cursor:pointer;font-size:13px;font-weight:600;transition:all 0.3s ease;margin:3px;">
@@ -1132,8 +1400,8 @@ function renderSourceEpisodes(source, episodes, title) {
             <button class="watch-embed-close" onclick="closeWatchEmbed()">✕ Закрыть</button>
         </div>
 
-        <div style="margin-bottom:16px;">
-            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+        <div style="padding:16px 20px;">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
                 📺 Доступно серий: ${episodes.length}
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:200px;overflow-y:auto;">
@@ -1142,13 +1410,13 @@ function renderSourceEpisodes(source, episodes, title) {
         </div>
 
         <div id="sourcePlayerArea" class="watch-embed-wrapper">
-            <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
-                <span style="font-size:48px;">${sourceIcons[source]}</span>
-                <span>Нажмите на серию выше</span>
+            <div class="player-loader">
+                <div class="player-loader-ring"></div>
+                <div class="player-loader-text">Нажмите на серию</div>
             </div>
         </div>
 
-        <div style="margin-top:12px;text-align:center;">
+        <div style="margin-top:12px;text-align:center;padding:0 16px 16px;">
             <a href="${firstEp.url}" target="_blank" rel="noopener" style="color:var(--neon-cyan);font-size:13px;text-decoration:none;">
                 🔗 Открыть в новой вкладке
             </a>
@@ -1193,6 +1461,13 @@ async function playSourceEpisode(source, index, title) {
                     style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;">
                 </iframe>
             `;
+
+            // ✅ Сохраняем прогресс
+            const user = DB.get('currentUser');
+            if (user) {
+                saveContinueWatching(user.name, title, episode.episode, data.sources[source].length);
+                renderWatchProgress(title, { episodes: data.sources[source].length });
+            }
         } else {
             playerArea.innerHTML = `
                 <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#aaa;flex-direction:column;gap:16px;background:rgba(0,0,0,0.85);">
@@ -1225,20 +1500,21 @@ function renderNoSources(source, title) {
             <button class="watch-embed-close" onclick="closeWatchEmbed()">✕ Закрыть</button>
         </div>
 
-        <div class="watch-embed-notice">
-            <strong>⚠️ Пока нет ссылок в базе</strong><br>
-            Мы ищем видео вручную. Попробуйте найти через поиск источника.
-        </div>
-
-        <div class="watch-search-links">
-            <a href="${sourceUrls[source]}" target="_blank" rel="noopener" class="watch-search-link">
-                🔍 Найти «${title}» вручную
-                <span class="link-arrow">→</span>
-            </a>
-            <a href="https://vk.com/deep" target="_blank" rel="noopener" class="watch-search-link">
-                🌟 Сообщество DEEP
-                <span class="link-arrow">→</span>
-            </a>
+        <div style="padding:24px;text-align:center;">
+            <div style="padding:16px;background:rgba(255,215,0,0.05);border-radius:14px;border:1px solid rgba(255,215,0,0.2);margin-bottom:16px;">
+                <strong style="color:#ffd700;">⚠️ Пока нет ссылок в базе</strong><br>
+                <span style="font-size:13px;color:var(--text-secondary);">Мы ищем видео вручную. Попробуйте найти через поиск источника.</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;max-width:400px;margin:0 auto;">
+                <a href="${sourceUrls[source]}" target="_blank" rel="noopener" 
+                   style="padding:14px 20px;border-radius:14px;background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.2);color:var(--neon-cyan);text-decoration:none;font-weight:700;font-size:13px;transition:all 0.3s ease;">
+                    🔍 Найти «${title}» вручную
+                </a>
+                <a href="https://vk.com/deep" target="_blank" rel="noopener"
+                   style="padding:14px 20px;border-radius:14px;background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.2);color:var(--accent-glow);text-decoration:none;font-weight:700;font-size:13px;transition:all 0.3s ease;">
+                    🌟 Сообщество DEEP
+                </a>
+            </div>
         </div>
     `;
 }
@@ -1252,7 +1528,7 @@ function closeWatchEmbed() {
 }
 
 // ============================================
-// 11. КОММЕНТАРИИ (ДЕТАЛЬНАЯ СТРАНИЦА)
+// 11. КОММЕНТАРИИ С АВАТАРАМИ
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1262,27 +1538,66 @@ function renderComments(animeName) {
         .then(res => res.json())
         .then(comments => {
             if (!comments || !comments.length) {
-                container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">💬 Нет комментариев</div>';
+                container.innerHTML = `
+                    <div style="color:#666;text-align:center;padding:40px 20px;">
+                        <div style="font-size:48px;margin-bottom:10px;">💬</div>
+                        <div>Нет комментариев</div>
+                        <div style="font-size:13px;color:var(--text-muted);margin-top:6px;">Будь первым!</div>
+                    </div>
+                `;
                 return;
             }
+            
             const user = DB.get('currentUser');
             let html = '';
-            comments.forEach(c => {
+            comments.forEach((c, index) => {
                 const canDelete = user && c.user_name === user.name;
+                const isMine = user && c.user_name === user.name;
+                const letter = c.user_name[0].toUpperCase();
+                
+                // ✅ Ищем аватар пользователя
+                const profiles = DB.get('profiles', {});
+                const userProfile = profiles[c.user_name] || {};
+                const avatarData = userProfile.avatar || localStorage.getItem('avatar_' + c.user_name) || '';
+                
+                const avatarHtml = avatarData && avatarData.length > 100
+                    ? `<img src="${avatarData}" alt="${c.user_name}">`
+                    : `<span>${letter}</span>`;
+                
                 html += `
-                    <div class="comment-item">
-                        <div class="c-user">${c.user_name}</div>
-                        <div class="c-text">${c.text}</div>
-                        <div class="c-date">${c.date}</div>
-                        ${canDelete ? `<button class="c-delete-btn" onclick="deleteComment(${c.id})">✕</button>` : ''}
+                    <div class="comment-item${isMine ? ' mine' : ''}" style="animation-delay: ${index * 0.05}s;">
+                        <div class="comment-avatar">${avatarHtml}</div>
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-user" onclick="openUserFromComment('${c.user_name.replace(/'/g, "\\'")}')">${c.user_name}</span>
+                                ${isMine ? '<span class="comment-you-badge">👤 Ты</span>' : ''}
+                                <span class="comment-date">${c.date}</span>
+                            </div>
+                            <div class="comment-text">${c.text}</div>
+                        </div>
+                        ${canDelete ? `<button class="c-delete-btn" onclick="event.stopPropagation(); deleteComment(${c.id})">✕</button>` : ''}
                     </div>
                 `;
             });
             container.innerHTML = html;
         })
         .catch(() => {
-            container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">⚠️ Ошибка</div>';
+            container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">⚠️ Ошибка загрузки</div>';
         });
+}
+
+// ✅ Открыть профиль из комментария
+function openUserFromComment(userName) {
+    const user = DB.get('currentUser');
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+    if (user.name === userName) {
+        navigate('profile');
+    } else {
+        showToast(`👤 ${userName}`, 'info');
+    }
 }
 
 function addComment() {
@@ -1297,29 +1612,43 @@ function addComment() {
     const title = document.getElementById('detailTitle').textContent;
     if (!title || title === 'Загрузка...') { showToast('Ошибка: аниме не загружено', 'error'); return; }
 
-    console.log('💬 Отправка комментария:', { anime: title, user_name: user.name, text });
+    const btn = document.querySelector('.comment-form button');
+    if (btn) {
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.6';
+    }
 
     fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ anime: title, user_name: user.name, text: text })
     })
-    .then(res => {
-        console.log('📡 Ответ /api/comments:', res.status);
-        return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
-        console.log('📦 Данные:', data);
+        if (btn) {
+            btn.style.pointerEvents = '';
+            btn.style.opacity = '';
+        }
         if (data.success) {
             input.value = '';
             renderComments(title);
             addActivity(user.name, 'comment', 'Оставил комментарий к «' + title + '»');
             showToast('💬 Комментарий добавлен!', 'success');
+
+            // ✅ Обновляем бейдж комментариев в меню
+            if (window._myCommentsCache && window._myCommentsCache.user === user.name) {
+                window._myCommentsCache.count++;
+                updateUI();
+            }
         } else {
             showToast(data.error || 'Ошибка', 'error');
         }
     })
     .catch(err => {
+        if (btn) {
+            btn.style.pointerEvents = '';
+            btn.style.opacity = '';
+        }
         console.error('❌ Ошибка отправки:', err);
         showToast('Ошибка сети', 'error');
     });
@@ -1340,6 +1669,12 @@ function deleteComment(id) {
                 const title = document.getElementById('detailTitle').textContent;
                 if (title) renderComments(title);
                 showToast('🗑️ Комментарий удален', 'success');
+
+                // ✅ Обновляем бейдж комментариев в меню
+                if (window._myCommentsCache && window._myCommentsCache.user === user.name) {
+                    window._myCommentsCache.count = Math.max(0, window._myCommentsCache.count - 1);
+                    updateUI();
+                }
             }
         });
     });
@@ -1365,7 +1700,6 @@ function toggleFav(name) {
     DB.setUserData(user.name, 'favorites', favs);
     DB.save();
 
-    // ✅ Обновляем меню (бейдж изменится)
     updateUI();
 
     if (currentPage === 'favorites') renderFavorites();
@@ -1604,7 +1938,6 @@ function removeFromFav(name) {
         DB.setUserData(user.name, 'favorites', favs);
         DB.save();
 
-        // ✅ Обновляем меню
         updateUI();
 
         const cards = document.querySelectorAll('.fav-card');
@@ -1816,7 +2149,6 @@ function deleteSelectedFav() {
             DB.setUserData(user.name, 'favorites', newFavs);
             DB.save();
 
-            // ✅ Обновляем меню
             updateUI();
 
             selected.forEach((card, i) => {
@@ -1867,7 +2199,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 13. ДОСТИЖЕНИЯ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
+// 13. ДОСТИЖЕНИЯ v2.0
 // ============================================
 function getUserMetrics(user) {
     const favs = DB.getUserData(user, 'favorites', []);
@@ -2312,7 +2644,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 14. ПРОФИЛЬ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
+// 14. ПРОФИЛЬ v2.0
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -2702,7 +3034,6 @@ function uploadAvatar(input) {
         if (img) { img.src = avatarData; img.style.display = 'block'; }
         if (letter) letter.style.display = 'none';
 
-        // ✅ Обновляем меню с новым аватаром
         updateUI();
 
         showToast('✅ Аватар обновлен!', 'success');
@@ -2933,8 +3264,6 @@ function renderMyComments() {
         return;
     }
 
-    console.log('🔍 Загрузка комментариев для:', user.name);
-
     container.innerHTML = `
         <div style="text-align:center;padding:40px;color:#888;">
             <div class="spinner-small"></div>
@@ -2944,24 +3273,17 @@ function renderMyComments() {
 
     fetch('/api/comments/all')
         .then(res => {
-            console.log('📡 /api/comments/all → статус:', res.status);
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.json();
         })
         .then(comments => {
-            console.log('📦 Всего комментариев в БД:', comments.length);
-
             if (!Array.isArray(comments)) {
-                console.error('❌ Не массив:', comments);
                 comments = [];
             }
 
             myCommentsAll = comments.filter(c => c.user_name === user.name);
-            console.log(`✅ Моих комментариев: ${myCommentsAll.length}`);
-
             window._myCommentsCache = { user: user.name, count: myCommentsAll.length };
 
-            // ✅ Обновляем меню (бейдж комментариев)
             updateUI();
 
             updateMcStats(myCommentsAll);
@@ -3441,6 +3763,8 @@ window.watchOnVK = watchOnVK;
 window.watchOnDeep = watchOnDeep;
 window.playSourceEpisode = playSourceEpisode;
 window.closeWatchEmbed = closeWatchEmbed;
+window.openUserFromComment = openUserFromComment;
+window.spawnFavConfetti = spawnFavConfetti;
 
 // ===== ПАГИНАЦИЯ =====
 window.goToPage = goToPage;
@@ -3490,5 +3814,11 @@ window.showAchUnlock = showAchUnlock;
 // ===== ПРОФИЛЬ v2.0 =====
 window.animateNumber = animateNumber;
 window.animateTimeCounter = animateTimeCounter;
+
+// ===== АНИМЕ v2.0 =====
+window.updateFavButton = updateFavButton;
+window.renderWatchProgress = renderWatchProgress;
+window.extractDominantColor = extractDominantColor;
+window.getGenreColor = getGenreColor;
 
 console.log('✅ OnikaAnime полностью загружен!');
