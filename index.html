@@ -494,23 +494,8 @@
                         </div>
                     </div>
 
-                    <!-- ФИЛЬТРЫ -->
-                    <div class="ach-controls">
-                        <div class="ach-tabs" id="achTabs">
-                            <button class="ach-tab active" data-filter="all" onclick="setAchFilter('all', this)">
-                                🎯 Все <span class="ach-tab-count" id="achTabAllCount">0</span>
-                            </button>
-                            <button class="ach-tab" data-filter="earned" onclick="setAchFilter('earned', this)">
-                                ✅ Полученные <span class="ach-tab-count" id="achTabEarnedCount">0</span>
-                            </button>
-                            <button class="ach-tab" data-filter="progress" onclick="setAchFilter('progress', this)">
-                                ⏳ В процессе <span class="ach-tab-count" id="achTabProgressCount">0</span>
-                            </button>
-                            <button class="ach-tab" data-filter="locked" onclick="setAchFilter('locked', this)">
-                                🔒 Закрытые <span class="ach-tab-count" id="achTabLockedCount">0</span>
-                            </button>
-                        </div>
-                        
+                    <!-- СОРТИРОВКА (без фильтров) -->
+                    <div class="ach-controls ach-controls-single">
                         <div class="ach-sort-wrapper">
                             <select class="ach-sort-select" id="achSortSelect" onchange="renderAchievements()">
                                 <option value="rarity_desc">💎 По редкости</option>
