@@ -339,7 +339,7 @@
                     </div>
                 </div>
 
-                <!-- ===== ИЗБРАННОЕ (v2.0) ===== -->
+                <!-- ===== ИЗБРАННОЕ v2.0 ===== -->
                 <div id="page-favorites" style="display:none;">
                     
                     <div class="fav-header">
@@ -446,20 +446,82 @@
                     </div>
                 </div>
 
-                <!-- ===== МОИ КОММЕНТАРИИ ===== -->
+                <!-- ===== МОИ КОММЕНТАРИИ v2.0 ===== -->
                 <div id="page-mycomments" style="display:none;">
-                    <span class="back-btn" onclick="goBack()">
-                        <svg width="20" height="20"><use href="icons/icons.svg#icon-back"/></svg>
-                        Назад
-                    </span>
-                    <div class="list-page-header">
-                        <span class="icon"><svg width="40" height="40"><use href="icons/icons.svg#icon-comment"/></svg></span>
-                        <h2>💬 Мои комментарии</h2>
-                        <div class="count" id="myCommentsCount">0 комментариев</div>
+                    
+                    <div class="mc-header">
+                        <div class="mc-header-left">
+                            <div class="mc-header-icon">💬</div>
+                            <div>
+                                <h1 class="mc-header-title">Мои комментарии</h1>
+                                <p class="mc-header-subtitle">История твоего общения</p>
+                            </div>
+                        </div>
+                        <div class="mc-header-actions">
+                            <button class="mc-action-btn" onclick="toggleMcGroup()" id="mcGroupBtn" title="Группировка">
+                                📅 По дате
+                            </button>
+                            <button class="mc-action-btn" onclick="toggleMcMassMode()" id="mcMassBtn" title="Массовое выделение">
+                                ☑️ Выбрать
+                            </button>
+                        </div>
                     </div>
-                    <div id="myCommentsList">
-                        <div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>
+
+                    <div class="mc-stats">
+                        <div class="mc-stat-card">
+                            <div class="mc-stat-icon">💬</div>
+                            <div class="mc-stat-value" id="mcStatTotal">0</div>
+                            <div class="mc-stat-label">Всего</div>
+                        </div>
+                        <div class="mc-stat-card">
+                            <div class="mc-stat-icon">🎬</div>
+                            <div class="mc-stat-value" id="mcStatAnime">0</div>
+                            <div class="mc-stat-label">Аниме</div>
+                        </div>
+                        <div class="mc-stat-card">
+                            <div class="mc-stat-icon">📅</div>
+                            <div class="mc-stat-value" id="mcStatWeek">0</div>
+                            <div class="mc-stat-label">За неделю</div>
+                        </div>
+                        <div class="mc-stat-card">
+                            <div class="mc-stat-icon">📏</div>
+                            <div class="mc-stat-value" id="mcStatAvg">0</div>
+                            <div class="mc-stat-label">Ср. длина</div>
+                        </div>
                     </div>
+
+                    <div class="mc-controls">
+                        <div class="mc-search-wrapper">
+                            <span class="mc-search-icon">🔍</span>
+                            <input type="text" id="mcSearchInput" placeholder="Поиск по комментариям..." class="mc-search-input" oninput="filterMyComments()">
+                            <button class="mc-search-clear" id="mcSearchClear" onclick="clearMcSearch()" style="display:none;">✕</button>
+                        </div>
+                        
+                        <div class="mc-sort-wrapper">
+                            <select id="mcSortSelect" class="mc-sort-select" onchange="filterMyComments()">
+                                <option value="date_desc">📅 Новые сначала</option>
+                                <option value="date_asc">📅 Старые сначала</option>
+                                <option value="length_desc">📏 По длине ↓</option>
+                                <option value="length_asc">📏 По длине ↑</option>
+                                <option value="anime_asc">🎬 По аниме А-Я</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mc-mass-panel" id="mcMassPanel" style="display:none;">
+                        <div class="mc-mass-info">
+                            Выбрано: <strong id="mcMassCount">0</strong>
+                        </div>
+                        <div class="mc-mass-actions">
+                            <button class="mc-mass-btn" onclick="selectAllMc()">Выбрать все</button>
+                            <button class="mc-mass-btn" onclick="deselectAllMc()">Снять всё</button>
+                            <button class="mc-mass-btn danger" onclick="deleteSelectedMc()">🗑 Удалить</button>
+                            <button class="mc-mass-btn cancel" onclick="toggleMcMassMode()">Отмена</button>
+                        </div>
+                    </div>
+
+                    <div id="mcGrouped"></div>
+
                 </div>
 
                 <!-- ===== ПРОФИЛЬ ===== -->
