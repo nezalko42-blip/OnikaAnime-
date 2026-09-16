@@ -1,6 +1,6 @@
 // ============================================
 // ГЛАВНЫЙ ФАЙЛ ONIKAANIME
-// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0
+// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0
 // ============================================
 
 const allData = {};
@@ -1775,7 +1775,7 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 13. ДОСТИЖЕНИЯ v2.0 — ЭПИЧНАЯ ВЕРСИЯ (БЕЗ ФИЛЬТРОВ)
+// 13. ДОСТИЖЕНИЯ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
 // ============================================
 function getUserMetrics(user) {
     const favs = DB.getUserData(user, 'favorites', []);
@@ -1816,7 +1816,6 @@ async function renderAchievements() {
         return;
     }
 
-    // Загружаем комментарии (для метрики)
     try {
         const res = await fetch('/api/comments/all');
         const comments = await res.json();
@@ -1830,13 +1829,11 @@ async function renderAchievements() {
     const activeTitle = DB.getActiveTitle(user.name);
     const metrics = getUserMetrics(user.name);
 
-    // Считаем прогресс + автовыдача
     const achievementsWithProgress = ACHIEVEMENTS_LIST.map(ach => {
         const current = metrics[ach.metric] || 0;
         const progress = Math.min(100, Math.round((current / ach.target) * 100));
         const isEarned = earned.indexOf(ach.id) !== -1;
 
-        // ✅ Автовыдача
         if (!isEarned && current >= ach.target) {
             DB.addAchievement(user.name, ach.id);
             setTimeout(() => showAchUnlock(ach), 500);
@@ -1850,10 +1847,8 @@ async function renderAchievements() {
     updateAchievementStats(finalEarned, ACHIEVEMENTS_LIST.length, metrics);
     renderActiveTitle(activeTitle);
 
-    // ✅ Показываем ВСЕ достижения без фильтров
     let allAchievements = [...achievementsWithProgress];
 
-    // Сортировка
     const sortValue = document.getElementById('achSortSelect')?.value || 'rarity_desc';
     achCurrentSort = sortValue;
     allAchievements = sortAchievements(allAchievements, sortValue);
@@ -2225,7 +2220,7 @@ function spawnConfetti() {
 }
 
 // ============================================
-// 14. ПРОФИЛЬ
+// 14. ПРОФИЛЬ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
 // ============================================
 function renderProfile() {
     const user = DB.get('currentUser');
@@ -2289,10 +2284,11 @@ function renderProfile() {
         }
     }
 
-    document.getElementById('statFav').textContent = favs.length;
-    document.getElementById('statComments').textContent = getCommentCount(user.name);
-    document.getElementById('statAchievements').textContent = earned.length;
-    document.getElementById('statTime').textContent = formatTime(onlineTime);
+    // ✅ Анимированные счётчики
+    animateNumber('statFav', favs.length);
+    animateNumber('statComments', getCommentCount(user.name));
+    animateNumber('statAchievements', earned.length);
+    animateTimeCounter('statTime', onlineTime);
 
     const activeTitle = DB.getActiveTitle(user.name);
     const titleBadge = document.getElementById('profileTitle');
@@ -2300,7 +2296,7 @@ function renderProfile() {
         const ach = ACHIEVEMENTS_LIST.find(a => a.id === activeTitle);
         if (ach) {
             titleBadge.textContent = '🎖️ ' + ach.title;
-            titleBadge.style.display = 'inline';
+            titleBadge.style.display = 'inline-flex';
         } else {
             titleBadge.style.display = 'none';
         }
@@ -2313,6 +2309,66 @@ function renderProfile() {
     renderActivityFeed(user.name);
     renderGenreStats(user.name);
     renderTopUsers();
+}
+
+// ===== ✅ АНИМАЦИЯ ЧИСЕЛ (count-up) =====
+function animateNumber(elementId, targetValue, duration = 1200) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    const startValue = 0;
+    const startTime = performance.now();
+
+    // Останавливаем предыдущую анимацию, если она была
+    if (el._animFrame) cancelAnimationFrame(el._animFrame);
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Ease-out cubic для плавного замедления
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const currentValue = Math.round(startValue + (targetValue - startValue) * eased);
+
+        el.textContent = currentValue;
+
+        if (progress < 1) {
+            el._animFrame = requestAnimationFrame(update);
+        } else {
+            el.textContent = targetValue;
+            el._animFrame = null;
+        }
+    }
+
+    el._animFrame = requestAnimationFrame(update);
+}
+
+// ===== ✅ АНИМАЦИЯ ВРЕМЕНИ (0ч → 5ч) =====
+function animateTimeCounter(elementId, totalSeconds, duration = 1200) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    const startTime = performance.now();
+
+    if (el._animFrame) cancelAnimationFrame(el._animFrame);
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const currentValue = Math.round(totalSeconds * eased);
+
+        el.textContent = formatTime(currentValue);
+
+        if (progress < 1) {
+            el._animFrame = requestAnimationFrame(update);
+        } else {
+            el.textContent = formatTime(totalSeconds);
+            el._animFrame = null;
+        }
+    }
+
+    el._animFrame = requestAnimationFrame(update);
 }
 
 function calculateXP(user) {
@@ -2350,13 +2406,13 @@ function renderContinueWatching(user) {
     }
 
     let html = '';
-    entries.slice(0, 6).forEach(([anime, data]) => {
+    entries.slice(0, 6).forEach(([anime, data], index) => {
         const progress = data.episode ? (data.episode / (data.total || 1)) * 100 : 0;
         const img = getPosterForAnime(anime);
 
         html += `
-            <div class="continue-card" onclick="searchAndOpen('${anime}')">
-                ${img ? `<img src="${img}" alt="${anime}">` : `<div style="width:60px;height:80px;background:#333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎬</div>`}
+            <div class="continue-card" onclick="searchAndOpen('${anime}')" style="animation-delay: ${index * 0.08}s;">
+                ${img ? `<img src="${img}" alt="${anime}">` : `<div style="width:65px;height:88px;background:#333;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎬</div>`}
                 <div class="continue-info">
                     <h4>${anime}</h4>
                     <div class="meta">Серия ${data.episode || 1}${data.total ? ' / ' + data.total : ''}</div>
@@ -2386,11 +2442,11 @@ function renderActivityFeed(user) {
     const icons = { 'watch': '▶️', 'favorite': '❤️', 'comment': '💬', 'achievement': '🏆', 'login': '🌐' };
 
     let html = '';
-    activities.slice(0, 10).forEach(act => {
+    activities.slice(0, 10).forEach((act, index) => {
         const icon = icons[act.type] || '📌';
         const time = act.timestamp ? formatTimeAgo(act.timestamp) : 'Недавно';
         html += `
-            <div class="activity-item">
+            <div class="activity-item" style="animation-delay: ${index * 0.05}s;">
                 <span class="activity-icon">${icon}</span>
                 <span class="activity-text">${act.text}</span>
                 <span class="activity-time">${time}</span>
@@ -2431,9 +2487,9 @@ function renderGenreStats(user) {
     }
 
     let html = '';
-    sorted.forEach(([genre, count]) => {
+    sorted.forEach(([genre, count], index) => {
         const color = genreColors[genre] || '#6c5ce7';
-        html += `<span class="genre-tag" style="border-color:${color}40;background:${color}10;">${genre}<span class="count">${count}</span></span>`;
+        html += `<span class="genre-tag" style="border-color:${color}40;background:${color}10;color:${color};animation-delay:${index * 0.06}s;">${genre}<span class="count">${count}</span></span>`;
     });
 
     container.innerHTML = html;
@@ -2462,7 +2518,10 @@ function changeBanner() {
         'linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7)',
         'linear-gradient(135deg, #0c0c1e, #1a0a2e, #4a2b7a)',
         'linear-gradient(135deg, #1a0a0a, #3d1a1a, #7a2b2b)',
-        'linear-gradient(135deg, #0a1a0a, #1a3d1a, #2b7a4a)'
+        'linear-gradient(135deg, #0a1a0a, #1a3d1a, #2b7a4a)',
+        'linear-gradient(135deg, #2d1b69, #6c5ce7, #fd79a8)',
+        'linear-gradient(135deg, #001a33, #004d7a, #00f5ff)',
+        'linear-gradient(135deg, #3d1a4d, #7a2b7a, #ff2d78)'
     ];
     document.getElementById('profileBanner').style.background = colors[Math.floor(Math.random() * colors.length)];
     showToast('🎨 Баннер обновлён!', 'success');
@@ -2493,11 +2552,11 @@ function renderProfileAchievements(user) {
         return;
     }
     let html = '';
-    recent.forEach(id => {
+    recent.forEach((id, index) => {
         const ach = ACHIEVEMENTS_LIST.find(a => a.id === id);
         if (ach) {
             html += `
-                <div class="profile-ach-item">
+                <div class="profile-ach-item" style="animation-delay: ${index * 0.1}s;">
                     <span class="ach-icon">${ach.icon}</span>
                     <div class="ach-name">${ach.name}</div>
                     ${ach.title ? `<div class="ach-title">🎖️ ${ach.title}</div>` : ''}
@@ -2878,7 +2937,6 @@ function renderMyComments() {
             myCommentsAll = comments.filter(c => c.user_name === user.name);
             console.log(`✅ Моих комментариев: ${myCommentsAll.length}`);
 
-            // Сохраняем в кэш для достижений
             window._myCommentsCache = { user: user.name, count: myCommentsAll.length };
 
             updateMcStats(myCommentsAll);
@@ -3403,5 +3461,9 @@ window.renderActiveTitle = renderActiveTitle;
 window.sortAchievements = sortAchievements;
 window.renderAchCardV2 = renderAchCardV2;
 window.showAchUnlock = showAchUnlock;
+
+// ===== ПРОФИЛЬ v2.0 =====
+window.animateNumber = animateNumber;
+window.animateTimeCounter = animateTimeCounter;
 
 console.log('✅ OnikaAnime полностью загружен!');
