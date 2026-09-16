@@ -242,7 +242,7 @@
                     </section>
                 </div>
 
-                <!-- ===== ДЕТАЛЬНАЯ v2.1 ===== -->
+                <!-- ===== ДЕТАЛЬНАЯ ===== -->
                 <div id="page-detail" style="display:none;">
                     
                     <div class="detail-ambient-glow" id="detailAmbientGlow"></div>
@@ -252,7 +252,6 @@
                         Назад
                     </span>
 
-                    <!-- HERO С РАЗМЫТЫМ ПОСТЕРОМ -->
                     <div class="detail-hero">
                         <div class="detail-hero-bg" id="detailHeroBg"></div>
                         <div class="detail-hero-overlay"></div>
@@ -289,7 +288,6 @@
                         </div>
                     </div>
 
-                    <!-- ГДЕ СМОТРЕТЬ -->
                     <div class="watch-section" id="watchSection">
                         <div class="watch-header">
                             <h3>🎬 Где смотреть</h3>
@@ -345,7 +343,6 @@
                             </button>
                         </div>
 
-                        <!-- Прогресс серий -->
                         <div class="watch-episodes-info" id="watchEpisodesInfo" style="display:none;">
                             <div class="watch-episodes-header">
                                 <div class="watch-episodes-title">
@@ -366,33 +363,6 @@
                         <div id="watchEmbedContainer" class="watch-embed-container" style="display:none;"></div>
                     </div>
 
-                    <!-- ===== СКРИНШОТЫ ===== -->
-                    <div class="screenshots-section" id="screenshotsSection" style="display:none;">
-                        <div class="screenshots-header">
-                            <h3>📸 Кадры из аниме</h3>
-                            <p>Нажмите на кадр, чтобы увеличить</p>
-                        </div>
-                        
-                        <div class="screenshots-carousel">
-                            <button class="screenshots-nav screenshots-prev" onclick="slideScreenshots(-1)" aria-label="Назад">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                            
-                            <div class="screenshots-track" id="screenshotsTrack"></div>
-                            
-                            <button class="screenshots-nav screenshots-next" onclick="slideScreenshots(1)" aria-label="Вперёд">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                    <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                        </div>
-                        
-                        <div class="screenshots-dots" id="screenshotsDots"></div>
-                    </div>
-
-                    <!-- КОММЕНТАРИИ -->
                     <div class="comments-section">
                         <h3>💬 Комментарии</h3>
                         <div class="comment-form">
@@ -408,33 +378,7 @@
                     </div>
                 </div>
 
-                <!-- ЛАЙТБОКС СКРИНШОТОВ -->
-                <div class="screenshot-lightbox" id="screenshotLightbox" onclick="if(event.target === this) closeLightbox()">
-                    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Закрыть">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                    
-                    <button class="lightbox-nav lightbox-prev" onclick="event.stopPropagation(); navigateLightbox(-1)" aria-label="Предыдущий">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    
-                    <div class="lightbox-content" onclick="event.stopPropagation()">
-                        <img id="lightboxImage" src="" alt="Скриншот">
-                        <div class="lightbox-counter" id="lightboxCounter">1 / 1</div>
-                    </div>
-                    
-                    <button class="lightbox-nav lightbox-next" onclick="event.stopPropagation(); navigateLightbox(1)" aria-label="Следующий">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                            <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- ===== ИЗБРАННОЕ v2.0 ===== -->
+                <!-- ===== ИЗБРАННОЕ ===== -->
                 <div id="page-favorites" style="display:none;">
                     
                     <div class="fav-header">
@@ -518,7 +462,7 @@
 
                 </div>
 
-                <!-- ===== ДОСТИЖЕНИЯ v2.0 ===== -->
+                <!-- ===== ДОСТИЖЕНИЯ ===== -->
                 <div id="page-achievements" style="display:none;">
                     
                     <svg width="0" height="0" style="position:absolute;">
@@ -607,7 +551,6 @@
                     </div>
                 </div>
 
-                <!-- ОВЕРЛЕЙ АНИМАЦИИ ПОЛУЧЕНИЯ -->
                 <div class="ach-unlock-overlay" id="achUnlockOverlay">
                     <div class="ach-unlock-ray"></div>
                     <div class="ach-unlock-icon" id="achUnlockIcon">🏆</div>
@@ -617,7 +560,7 @@
                     <button class="ach-unlock-btn" onclick="closeAchUnlock()">Забрать! ✨</button>
                 </div>
 
-                <!-- ===== МОИ КОММЕНТАРИИ v2.0 ===== -->
+                <!-- ===== МОИ КОММЕНТАРИИ ===== -->
                 <div id="page-mycomments" style="display:none;">
                     
                     <div class="mc-header">
@@ -695,7 +638,7 @@
 
                 </div>
 
-                <!-- ===== ПРОФИЛЬ v2.0 ===== -->
+                <!-- ===== ПРОФИЛЬ ===== -->
                 <div id="page-profile" style="display:none;">
                     <div class="profile-container">
                         
