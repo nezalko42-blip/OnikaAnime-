@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0
 // ============================================
 
 const allData = {};
@@ -20,6 +20,11 @@ let heroCurrentSlide = 0;
 let heroAutoSlideTimer = null;
 
 const CATALOG_LIMIT = 12;
+
+// ===== ГЛОБАЛЬНЫЕ ФЛАГИ ДЛЯ МОИХ КОММЕНТАРИЕВ =====
+let mcMassMode = false;
+let mcGroupMode = false;
+let mcSelectedIds = new Set();
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -1131,7 +1136,7 @@ function closeWatchEmbed() {
 }
 
 // ============================================
-// 11. КОММЕНТАРИИ
+// 11. КОММЕНТАРИИ (ДЕТАЛЬНАЯ)
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
@@ -1278,7 +1283,7 @@ function renderFavorites() {
 }
 
 // ============================================
-// ФИЛЬТРЫ + СОРТИРОВКА
+// ФИЛЬТРЫ + СОРТИРОВКА ИЗБРАННОГО
 // ============================================
 function applyFavFilters() {
     const user = DB.get('currentUser');
@@ -2418,47 +2423,447 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 22. МОИ КОММЕНТАРИИ
+// 22. МОИ КОММЕНТАРИИ v2.0
 // ============================================
+let myCommentsAll = [];
+let myCommentsFiltered = [];
+
 function renderMyComments() {
     const user = DB.get('currentUser');
-    const container = document.getElementById('myCommentsList');
+    const container = document.getElementById('mcGrouped');
     if (!container) return;
-    if (!user) { container.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>'; return; }
+    
+    if (!user) {
+        container.innerHTML = `
+            <div class="mc-list">
+                <div class="mc-empty">
+                    <div class="mc-empty-icon">🔐</div>
+                    <h3 class="mc-empty-title">Войдите в аккаунт</h3>
+                    <p class="mc-empty-desc">Чтобы видеть свои комментарии</p>
+                    <button class="mc-empty-btn" onclick="showLoginModal()">🚀 Войти</button>
+                </div>
+            </div>
+        `;
+        updateMcStats([]);
+        return;
+    }
+    
+    container.innerHTML = `
+        <div style="text-align:center;padding:40px;color:#888;">
+            <div class="spinner-small"></div>
+            <br>⏳ Загрузка комментариев...
+        </div>
+    `;
     
     fetch('/api/comments/all')
         .then(res => res.json())
         .then(comments => {
-            const myComments = comments.filter(c => c.user_name === user.name);
-            document.getElementById('myCommentsCount').textContent = myComments.length + ' комментариев';
-            if (myComments.length === 0) {
-                container.innerHTML = '<div class="empty-state"><span class="empty-icon">💬</span><p>У вас нет комментариев</p></div>';
-                return;
-            }
-            let html = '';
-            myComments.forEach(c => {
-                html += `
-                    <div class="my-comment-item">
-                        <div class="my-comment-header">
-                            <span class="my-comment-anime" onclick="searchAndOpen('${c.anime}')">📺 ${c.anime}</span>
-                            <span style="font-size:11px;color:var(--text-muted);">${c.date}</span>
-                        </div>
-                        <div class="my-comment-text">${c.text}</div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
+            myCommentsAll = comments.filter(c => c.user_name === user.name);
+            updateMcStats(myCommentsAll);
+            applyMcFilters();
         })
         .catch(() => {
-            container.innerHTML = '<div class="empty-state"><span class="empty-icon">⚠️</span><p>Ошибка загрузки</p></div>';
+            container.innerHTML = `
+                <div class="mc-list">
+                    <div class="mc-empty">
+                        <div class="mc-empty-icon">⚠️</div>
+                        <h3 class="mc-empty-title">Ошибка загрузки</h3>
+                        <p class="mc-empty-desc">Не удалось загрузить комментарии</p>
+                    </div>
+                </div>
+            `;
         });
+}
+
+function updateMcStats(comments) {
+    document.getElementById('mcStatTotal').textContent = comments.length;
+    
+    const uniqueAnime = new Set(comments.map(c => c.anime));
+    document.getElementById('mcStatAnime').textContent = uniqueAnime.size;
+    
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const weekComments = comments.filter(c => {
+        if (!c.created_at) return false;
+        return new Date(c.created_at).getTime() > weekAgo;
+    });
+    document.getElementById('mcStatWeek').textContent = weekComments.length;
+    
+    const totalLength = comments.reduce((sum, c) => sum + (c.text?.length || 0), 0);
+    const avgLength = comments.length > 0 ? Math.round(totalLength / comments.length) : 0;
+    document.getElementById('mcStatAvg').textContent = avgLength;
+}
+
+function applyMcFilters() {
+    const container = document.getElementById('mcGrouped');
+    if (!container) return;
+    
+    let comments = [...myCommentsAll];
+    
+    const searchValue = document.getElementById('mcSearchInput')?.value?.trim()?.toLowerCase() || '';
+    if (searchValue) {
+        comments = comments.filter(c => 
+            c.text.toLowerCase().includes(searchValue) ||
+            c.anime.toLowerCase().includes(searchValue)
+        );
+    }
+    
+    const sortValue = document.getElementById('mcSortSelect')?.value || 'date_desc';
+    comments = sortMyComments(comments, sortValue);
+    
+    myCommentsFiltered = comments;
+    
+    if (comments.length === 0) {
+        container.innerHTML = `
+            <div class="mc-list">
+                <div class="mc-empty">
+                    <div class="mc-empty-icon">💬</div>
+                    <h3 class="mc-empty-title">${searchValue ? 'Ничего не найдено' : 'Пока нет комментариев'}</h3>
+                    <p class="mc-empty-desc">${searchValue ? 'Попробуйте изменить поиск' : 'Оставляй комментарии к аниме, и они появятся здесь'}</p>
+                    ${!searchValue ? '<button class="mc-empty-btn" onclick="navigate(\'home\')">🎬 Найти аниме</button>' : ''}
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    if (mcGroupMode) {
+        renderMcGroupedByDate(comments);
+    } else {
+        renderMcList(comments);
+    }
+    
+    updateMcMassCount();
+}
+
+function sortMyComments(comments, sortValue) {
+    const [field, order] = sortValue.split('_');
+    const dir = order === 'desc' ? -1 : 1;
+    
+    return [...comments].sort((a, b) => {
+        let valA, valB;
+        
+        switch (field) {
+            case 'date':
+                valA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                valB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                break;
+            case 'length':
+                valA = a.text?.length || 0;
+                valB = b.text?.length || 0;
+                break;
+            case 'anime':
+                valA = (a.anime || '').toLowerCase();
+                valB = (b.anime || '').toLowerCase();
+                break;
+            default:
+                valA = 0;
+                valB = 0;
+        }
+        
+        if (valA < valB) return -1 * dir;
+        if (valA > valB) return 1 * dir;
+        return 0;
+    });
+}
+
+function renderMcList(comments) {
+    const container = document.getElementById('mcGrouped');
+    if (!container) return;
+    
+    const maxLength = Math.max(...comments.map(c => c.text?.length || 0));
+    
+    let html = '<div class="mc-list">';
+    comments.forEach((c, index) => {
+        html += renderMcItem(c, index, maxLength);
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+}
+
+function renderMcGroupedByDate(comments) {
+    const container = document.getElementById('mcGrouped');
+    if (!container) return;
+    
+    const groups = {};
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 86400000;
+    const weekAgo = today - 7 * 86400000;
+    const monthAgo = today - 30 * 86400000;
+    
+    comments.forEach(c => {
+        const date = c.created_at ? new Date(c.created_at).getTime() : 0;
+        let key;
+        
+        if (date >= today) key = 'today';
+        else if (date >= yesterday) key = 'yesterday';
+        else if (date >= weekAgo) key = 'week';
+        else if (date >= monthAgo) key = 'month';
+        else key = 'older';
+        
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(c);
+    });
+    
+    const groupConfig = [
+        { key: 'today', icon: '📅', title: 'Сегодня' },
+        { key: 'yesterday', icon: '📆', title: 'Вчера' },
+        { key: 'week', icon: '🗓️', title: 'На этой неделе' },
+        { key: 'month', icon: '📅', title: 'В этом месяце' },
+        { key: 'older', icon: '📦', title: 'Ранее' }
+    ];
+    
+    const maxLength = Math.max(...comments.map(c => c.text?.length || 0));
+    
+    let html = '';
+    groupConfig.forEach(cfg => {
+        const items = groups[cfg.key];
+        if (!items || items.length === 0) return;
+        
+        html += `
+            <div class="mc-section">
+                <div class="mc-section-header">
+                    <span class="mc-section-icon">${cfg.icon}</span>
+                    <h3 class="mc-section-title">${cfg.title}</h3>
+                    <span class="mc-section-count">${items.length}</span>
+                </div>
+                <div class="mc-list">
+                    ${items.map((c, i) => renderMcItem(c, i, maxLength)).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderMcItem(comment, index, maxLength) {
+    const anime = comment.anime || 'Неизвестное аниме';
+    const text = comment.text || '';
+    const date = comment.date || (comment.created_at ? new Date(comment.created_at).toLocaleString('ru-RU') : '');
+    
+    const animeItem = findAnimeByName(anime);
+    const poster = animeItem?.images?.jpg?.image_url || '';
+    
+    const isTopComment = text.length === maxLength && maxLength > 50;
+    const isSelected = mcSelectedIds.has(comment.id);
+    
+    const posterContent = poster
+        ? `<img src="${poster}" alt="${anime}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mc-item-poster-no\\'>🎬</div>'">`
+        : `<div class="mc-item-poster-no">🎬</div>`;
+    
+    return `
+        <div class="mc-item${isTopComment ? ' top-comment' : ''}${mcMassMode ? ' mass-mode' : ''}${isSelected ? ' selected' : ''}" 
+             data-id="${comment.id}"
+             style="animation-delay: ${index * 0.03}s;">
+            <div class="mc-item-checkbox" onclick="event.stopPropagation(); toggleMcSelection(${comment.id})"></div>
+            
+            <div class="mc-item-poster" onclick="event.stopPropagation(); searchAndOpen('${anime.replace(/'/g, "\\'")}')">
+                ${posterContent}
+            </div>
+            
+            <div class="mc-item-content" onclick="event.stopPropagation(); onMcItemClick(${comment.id})">
+                <div class="mc-item-anime">📺 ${anime}</div>
+                <div class="mc-item-text">${text}</div>
+                <div class="mc-item-meta">
+                    <span class="mc-item-date">📅 ${date}</span>
+                    <span class="mc-item-length">📏 ${text.length} симв.</span>
+                </div>
+            </div>
+            
+            <div class="mc-item-actions">
+                <button class="mc-action-icon-btn" onclick="event.stopPropagation(); searchAndOpen('${anime.replace(/'/g, "\\'")}')" title="Перейти к аниме">
+                    🔗
+                </button>
+                <button class="mc-action-icon-btn danger" onclick="event.stopPropagation(); deleteMcComment(${comment.id})" title="Удалить">
+                    🗑
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function onMcItemClick(id) {
+    if (mcMassMode) {
+        toggleMcSelection(id);
+        return;
+    }
+    
+    const comment = myCommentsAll.find(c => c.id === id);
+    if (comment) {
+        searchAndOpen(comment.anime);
+    }
+}
+
+function toggleMcSelection(id) {
+    if (mcSelectedIds.has(id)) {
+        mcSelectedIds.delete(id);
+    } else {
+        mcSelectedIds.add(id);
+    }
+    
+    const item = document.querySelector(`.mc-item[data-id="${id}"]`);
+    if (item) {
+        item.classList.toggle('selected', mcSelectedIds.has(id));
+    }
+    
+    updateMcMassCount();
+}
+
+function updateMcMassCount() {
+    const countEl = document.getElementById('mcMassCount');
+    if (countEl) countEl.textContent = mcSelectedIds.size;
+}
+
+function toggleMcMassMode() {
+    const panel = document.getElementById('mcMassPanel');
+    const btn = document.getElementById('mcMassBtn');
+    
+    if (!panel || !btn) return;
+    
+    mcMassMode = !mcMassMode;
+    
+    if (mcMassMode) {
+        panel.style.display = 'flex';
+        btn.classList.add('active');
+        btn.innerHTML = '✕ Отмена';
+        mcSelectedIds.clear();
+    } else {
+        panel.style.display = 'none';
+        btn.classList.remove('active');
+        btn.innerHTML = '☑️ Выбрать';
+        mcSelectedIds.clear();
+    }
+    
+    applyMcFilters();
+}
+
+function selectAllMc() {
+    myCommentsFiltered.forEach(c => mcSelectedIds.add(c.id));
+    applyMcFilters();
+}
+
+function deselectAllMc() {
+    mcSelectedIds.clear();
+    applyMcFilters();
+}
+
+function deleteSelectedMc() {
+    if (mcSelectedIds.size === 0) {
+        showToast('Ничего не выбрано', 'warning');
+        return;
+    }
+    
+    showConfirmModal(
+        '🗑 Удалить выбранные?',
+        `Удалить ${mcSelectedIds.size} комментариев?`,
+        function() {
+            const user = DB.get('currentUser');
+            if (!user) return;
+            
+            const ids = Array.from(mcSelectedIds);
+            let deleted = 0;
+            
+            const promises = ids.map(id => {
+                return fetch('/api/comments/' + id, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_name: user.name })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) deleted++;
+                })
+                .catch(() => {});
+            });
+            
+            Promise.all(promises).then(() => {
+                showToast(`🗑 Удалено ${deleted} комментариев`, 'success');
+                mcSelectedIds.clear();
+                mcMassMode = false;
+                
+                const panel = document.getElementById('mcMassPanel');
+                const btn = document.getElementById('mcMassBtn');
+                if (panel) panel.style.display = 'none';
+                if (btn) {
+                    btn.classList.remove('active');
+                    btn.innerHTML = '☑️ Выбрать';
+                }
+                
+                renderMyComments();
+            });
+        }
+    );
+}
+
+function deleteMcComment(id) {
+    showConfirmModal('🗑 Удалить комментарий', 'Вы уверены?', function() {
+        const user = DB.get('currentUser');
+        if (!user) return;
+        
+        fetch('/api/comments/' + id, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_name: user.name })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast('🗑 Комментарий удалён', 'success');
+                renderMyComments();
+            } else {
+                showToast(data.error || 'Ошибка', 'error');
+            }
+        })
+        .catch(() => showToast('Ошибка сети', 'error'));
+    });
+}
+
+function toggleMcGroup() {
+    mcGroupMode = !mcGroupMode;
+    
+    const btn = document.getElementById('mcGroupBtn');
+    if (btn) {
+        if (mcGroupMode) {
+            btn.classList.add('active');
+            btn.innerHTML = '📅 По дате';
+        } else {
+            btn.classList.remove('active');
+            btn.innerHTML = '📅 По дате';
+        }
+    }
+    
+    applyMcFilters();
+}
+
+function filterMyComments() {
+    const searchInput = document.getElementById('mcSearchInput');
+    const clearBtn = document.getElementById('mcSearchClear');
+    
+    if (searchInput && clearBtn) {
+        clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none';
+    }
+    
+    applyMcFilters();
+}
+
+function clearMcSearch() {
+    const input = document.getElementById('mcSearchInput');
+    const clearBtn = document.getElementById('mcSearchClear');
+    if (input) {
+        input.value = '';
+        input.focus();
+        if (clearBtn) clearBtn.style.display = 'none';
+        applyMcFilters();
+    }
 }
 
 // ============================================
 // 23. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🌟 OnikaAnime (Shikimori + 3D карусель + Избранное v2.0) загружается...');
+    console.log('🌟 OnikaAnime (Shikimori + 3D карусель + Избранное v2.0 + Комментарии v2.0) загружается...');
     restoreAllData();
     updateUI();
     navigate('home');
@@ -2537,5 +2942,17 @@ window.deleteSelectedFav = deleteSelectedFav;
 window.onFavCardClick = onFavCardClick;
 window.removeFromFav = removeFromFav;
 window.openDetailFromFav = openDetailFromFav;
+
+// ===== МОИ КОММЕНТАРИИ v2.0 =====
+window.filterMyComments = filterMyComments;
+window.clearMcSearch = clearMcSearch;
+window.toggleMcGroup = toggleMcGroup;
+window.toggleMcMassMode = toggleMcMassMode;
+window.selectAllMc = selectAllMc;
+window.deselectAllMc = deselectAllMc;
+window.deleteSelectedMc = deleteSelectedMc;
+window.deleteMcComment = deleteMcComment;
+window.toggleMcSelection = toggleMcSelection;
+window.onMcItemClick = onMcItemClick;
 
 console.log('✅ OnikaAnime полностью загружен!');
