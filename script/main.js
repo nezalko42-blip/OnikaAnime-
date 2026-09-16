@@ -1,6 +1,6 @@
 // ============================================
 // ГЛАВНЫЙ ФАЙЛ ONIKAANIME
-// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0 + МЕНЮ v2.0 + АНИМЕ v2.1
+// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0 + ПРОФИЛЬ v2.0 + МЕНЮ v2.0 + АНИМЕ v2.1 + СКРИНШОТЫ v2.0
 // ============================================
 
 const allData = {};
@@ -31,6 +31,12 @@ let myCommentsFiltered = [];
 
 // ===== СОРТИРОВКА ДОСТИЖЕНИЙ =====
 let achCurrentSort = 'rarity_desc';
+
+// ===== СКРИНШОТЫ =====
+let screenshotsData = [];
+let currentScreenshotIndex = 0;
+let lightboxIndex = 0;
+let lightboxTouchStart = 0;
 
 const RARITY_ORDER = { legendary: 4, epic: 3, rare: 2, common: 1 };
 const RARITY_LABELS = {
@@ -736,7 +742,6 @@ function setGenre(genreId, btn) {
     loadCatalog(1);
 }
 
-// ✅ НОВАЯ — клик по жанру-чипсу на странице аниме
 function onGenreClick(genreName) {
     if (!genreName) return;
 
@@ -947,6 +952,10 @@ async function openDetail(id) {
     const posterEl = document.getElementById('detailPoster');
     if (posterEl) posterEl.style.display = 'none';
 
+    // ✅ Скрываем секцию скриншотов при загрузке
+    const screenshotsSection = document.getElementById('screenshotsSection');
+    if (screenshotsSection) screenshotsSection.style.display = 'none';
+
     try {
         const data = await API.getAnimeDetails(id);
         console.log('📦 Данные:', data);
@@ -976,7 +985,7 @@ async function openDetail(id) {
 }
 
 // ============================================
-// 8. ПОКАЗАТЬ ДЕТАЛИ v2.1 — ИСПРАВЛЕННАЯ
+// 8. ПОКАЗАТЬ ДЕТАЛИ v2.1
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
@@ -1058,7 +1067,6 @@ function showDetail(anime) {
             }
         }
 
-        // ✅ Фон баннера (размытый постер)
         if (heroBg && img) {
             try {
                 heroBg.style.backgroundImage = `url('${img}')`;
@@ -1067,7 +1075,6 @@ function showDetail(anime) {
             }
         }
 
-        // ✅ Фоновое свечение от постера
         const ambientGlow = document.getElementById('detailAmbientGlow');
         if (ambientGlow && img) {
             try {
@@ -1086,7 +1093,6 @@ function showDetail(anime) {
             ageBadge.className = `age-badge age-${age.replace('+', '')}`;
         }
 
-        // ✅ Жанры-чипсы
         if (tagsEl) {
             const genres = Array.isArray(anime.genres) ? anime.genres : [];
             if (genres.length > 0) {
@@ -1106,7 +1112,6 @@ function showDetail(anime) {
             }
         }
 
-        // ✅ Кнопка избранного
         const user = DB.get('currentUser');
         const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
         const isFav = favs.indexOf(displayTitle) > -1;
@@ -1130,13 +1135,19 @@ function showDetail(anime) {
             };
         }
 
-        // ✅ Прогресс просмотра
         try {
             renderWatchProgress(displayTitle, anime);
         } catch(e) {
             console.warn('Watch progress error:', e);
             const container = document.getElementById('watchEpisodesInfo');
             if (container) container.style.display = 'none';
+        }
+
+        // ✅ ЗАГРУЖАЕМ СКРИНШОТЫ
+        try {
+            loadScreenshots(anime.rawId || anime.id);
+        } catch(e) {
+            console.warn('Screenshots error:', e);
         }
 
         renderComments(displayTitle);
@@ -1343,6 +1354,240 @@ function renderWatchProgress(animeTitle, anime) {
 
     container.style.display = 'block';
 }
+
+// ============================================
+// 8.5. СКРИНШОТЫ АНИМЕ
+// ============================================
+
+// ✅ Загрузка скриншотов
+async function loadScreenshots(animeId) {
+    const section = document.getElementById('screenshotsSection');
+    const track = document.getElementById('screenshotsTrack');
+    const dots = document.getElementById('screenshotsDots');
+
+    if (!section || !track) return;
+
+    // Скрываем пока грузится
+    section.style.display = 'none';
+    track.innerHTML = '';
+    if (dots) dots.innerHTML = '';
+    screenshotsData = [];
+    currentScreenshotIndex = 0;
+
+    try {
+        const screenshots = await API.getScreenshots(animeId);
+
+        if (!screenshots || screenshots.length === 0) {
+            console.log('📸 Нет скриншотов для этого аниме');
+            return;
+        }
+
+        screenshotsData = screenshots;
+        renderScreenshots();
+        section.style.display = 'block';
+
+    } catch (e) {
+        console.warn('⚠️ Ошибка загрузки скриншотов:', e.message);
+    }
+}
+
+// ✅ Отрисовка карусели
+function renderScreenshots() {
+    const track = document.getElementById('screenshotsTrack');
+    const dots = document.getElementById('screenshotsDots');
+    if (!track) return;
+
+    // Карточки
+    let cardsHtml = '';
+    screenshotsData.forEach((s, index) => {
+        cardsHtml += `
+            <div class="screenshot-card"
+                 data-index="${index}"
+                 onclick="openLightbox(${index})"
+                 style="animation-delay: ${index * 0.08}s;">
+                <img src="${s.preview || s.original}" 
+                     alt="Скриншот ${index + 1}" 
+                     loading="lazy"
+                     onerror="this.parentElement.style.display='none'">
+                <div class="screenshot-zoom-hint">🔍</div>
+            </div>
+        `;
+    });
+    track.innerHTML = cardsHtml;
+
+    // Точки
+    if (dots) {
+        let dotsHtml = '';
+        screenshotsData.forEach((_, index) => {
+            dotsHtml += `<button class="screenshot-dot${index === 0 ? ' active' : ''}" 
+                                 onclick="goToScreenshot(${index})" 
+                                 aria-label="Кадр ${index + 1}"></button>`;
+        });
+        dots.innerHTML = dotsHtml;
+    }
+
+    updateScreenshotsCarousel();
+}
+
+// ✅ Обновление позиции карусели
+function updateScreenshotsCarousel() {
+    const track = document.getElementById('screenshotsTrack');
+    const dots = document.querySelectorAll('.screenshot-dot');
+    const prevBtn = document.querySelector('.screenshots-prev');
+    const nextBtn = document.querySelector('.screenshots-next');
+
+    if (!track) return;
+
+    const firstCard = track.querySelector('.screenshot-card');
+    if (!firstCard) return;
+
+    const cardWidth = firstCard.offsetWidth;
+    const gap = 16;
+    const offset = -currentScreenshotIndex * (cardWidth + gap);
+
+    track.style.transform = `translateX(${offset}px)`;
+
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentScreenshotIndex);
+    });
+
+    if (prevBtn) prevBtn.disabled = currentScreenshotIndex === 0;
+    if (nextBtn) nextBtn.disabled = currentScreenshotIndex >= screenshotsData.length - 1;
+}
+
+// ✅ Прокрутка карусели
+function slideScreenshots(direction) {
+    if (screenshotsData.length === 0) return;
+
+    const newIndex = currentScreenshotIndex + direction;
+
+    if (newIndex < 0 || newIndex >= screenshotsData.length) return;
+
+    currentScreenshotIndex = newIndex;
+    updateScreenshotsCarousel();
+}
+
+// ✅ Переход к конкретному скриншоту
+function goToScreenshot(index) {
+    if (index < 0 || index >= screenshotsData.length) return;
+
+    currentScreenshotIndex = index;
+    updateScreenshotsCarousel();
+}
+
+// ===== ЛАЙТБОКС =====
+function openLightbox(index) {
+    if (screenshotsData.length === 0) return;
+
+    lightboxIndex = index;
+    const lightbox = document.getElementById('screenshotLightbox');
+    const img = document.getElementById('lightboxImage');
+    const counter = document.getElementById('lightboxCounter');
+
+    if (!lightbox || !img) return;
+
+    img.classList.add('loading');
+    img.src = screenshotsData[index].original || screenshotsData[index].preview;
+
+    img.onload = function() {
+        img.classList.remove('loading');
+    };
+
+    if (counter) {
+        counter.textContent = `${index + 1} / ${screenshotsData.length}`;
+    }
+
+    updateLightboxNav();
+
+    lightbox.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    const lightbox = document.getElementById('screenshotLightbox');
+    if (lightbox) {
+        lightbox.classList.remove('show');
+    }
+    document.body.style.overflow = '';
+}
+
+function navigateLightbox(direction) {
+    if (screenshotsData.length === 0) return;
+
+    const newIndex = lightboxIndex + direction;
+
+    if (newIndex < 0 || newIndex >= screenshotsData.length) return;
+
+    lightboxIndex = newIndex;
+
+    const img = document.getElementById('lightboxImage');
+    const counter = document.getElementById('lightboxCounter');
+
+    if (img) {
+        img.classList.add('loading');
+        img.src = screenshotsData[newIndex].original || screenshotsData[newIndex].preview;
+        img.onload = function() {
+            img.classList.remove('loading');
+        };
+    }
+
+    if (counter) {
+        counter.textContent = `${newIndex + 1} / ${screenshotsData.length}`;
+    }
+
+    updateLightboxNav();
+}
+
+function updateLightboxNav() {
+    const prevBtn = document.querySelector('.lightbox-prev');
+    const nextBtn = document.querySelector('.lightbox-next');
+
+    if (prevBtn) prevBtn.disabled = lightboxIndex === 0;
+    if (nextBtn) nextBtn.disabled = lightboxIndex >= screenshotsData.length - 1;
+}
+
+// ✅ Клавиатура для лайтбокса
+document.addEventListener('keydown', function(e) {
+    const lightbox = document.getElementById('screenshotLightbox');
+    if (!lightbox || !lightbox.classList.contains('show')) return;
+
+    if (e.key === 'Escape') {
+        closeLightbox();
+    } else if (e.key === 'ArrowLeft') {
+        navigateLightbox(-1);
+    } else if (e.key === 'ArrowRight') {
+        navigateLightbox(1);
+    }
+});
+
+// ✅ Свайпы на мобилке для лайтбокса
+document.addEventListener('touchstart', function(e) {
+    const lightbox = document.getElementById('screenshotLightbox');
+    if (!lightbox || !lightbox.classList.contains('show')) return;
+    lightboxTouchStart = e.touches[0].clientX;
+}, { passive: true });
+
+document.addEventListener('touchend', function(e) {
+    const lightbox = document.getElementById('screenshotLightbox');
+    if (!lightbox || !lightbox.classList.contains('show')) return;
+
+    const diff = e.changedTouches[0].clientX - lightboxTouchStart;
+
+    if (Math.abs(diff) > 60) {
+        if (diff > 0) {
+            navigateLightbox(-1);
+        } else {
+            navigateLightbox(1);
+        }
+    }
+}, { passive: true });
+
+// ✅ Ресайз — пересчитываем позицию карусели
+window.addEventListener('resize', function() {
+    if (screenshotsData.length > 0) {
+        updateScreenshotsCarousel();
+    }
+});
 
 // ============================================
 // 9. KODI МОДАЛЬНОЕ ОКНО
@@ -3908,5 +4153,15 @@ window.renderWatchProgress = renderWatchProgress;
 window.extractDominantColor = extractDominantColor;
 window.getGenreColor = getGenreColor;
 window.onGenreClick = onGenreClick;
+
+// ===== СКРИНШОТЫ v2.0 =====
+window.loadScreenshots = loadScreenshots;
+window.renderScreenshots = renderScreenshots;
+window.slideScreenshots = slideScreenshots;
+window.goToScreenshot = goToScreenshot;
+window.openLightbox = openLightbox;
+window.closeLightbox = closeLightbox;
+window.navigateLightbox = navigateLightbox;
+window.updateScreenshotsCarousel = updateScreenshotsCarousel;
 
 console.log('✅ OnikaAnime полностью загружен!');
