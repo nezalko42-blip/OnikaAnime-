@@ -1,5 +1,6 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME — SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME
+// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0
 // ============================================
 
 const allData = {};
@@ -25,6 +26,8 @@ const CATALOG_LIMIT = 12;
 let mcMassMode = false;
 let mcGroupMode = false;
 let mcSelectedIds = new Set();
+let myCommentsAll = [];
+let myCommentsFiltered = [];
 
 // ===== ДОСТИЖЕНИЯ =====
 const ACHIEVEMENTS_LIST = [
@@ -323,7 +326,7 @@ async function loadCatalog(targetPage = null) {
     const grid = document.getElementById('grid');
     const pagination = document.getElementById('pagination');
     const stats = document.getElementById('totalCount');
-    if (!grid) return;
+    if (!grid) { isLoading = false; return; }
     
     const searchInput = document.getElementById('catalogSearchInput');
     const searchValue = searchInput ? searchInput.value.trim() : '';
@@ -1136,11 +1139,12 @@ function closeWatchEmbed() {
 }
 
 // ============================================
-// 11. КОММЕНТАРИИ (ДЕТАЛЬНАЯ)
+// 11. КОММЕНТАРИИ (ДЕТАЛЬНАЯ СТРАНИЦА)
 // ============================================
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
     if (!container) return;
+    
     fetch('/api/comments/' + encodeURIComponent(animeName))
         .then(res => res.json())
         .then(comments => {
@@ -1180,13 +1184,19 @@ function addComment() {
     const title = document.getElementById('detailTitle').textContent;
     if (!title || title === 'Загрузка...') { showToast('Ошибка: аниме не загружено', 'error'); return; }
     
+    console.log('💬 Отправка комментария:', { anime: title, user_name: user.name, text });
+    
     fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ anime: title, user_name: user.name, text: text })
     })
-    .then(res => res.json())
+    .then(res => {
+        console.log('📡 Ответ /api/comments:', res.status);
+        return res.json();
+    })
     .then(data => {
+        console.log('📦 Данные:', data);
         if (data.success) {
             input.value = '';
             renderComments(title);
@@ -1196,7 +1206,10 @@ function addComment() {
             showToast(data.error || 'Ошибка', 'error');
         }
     })
-    .catch(() => showToast('Ошибка сети', 'error'));
+    .catch(err => {
+        console.error('❌ Ошибка отправки:', err);
+        showToast('Ошибка сети', 'error');
+    });
 }
 
 function deleteComment(id) {
@@ -1282,9 +1295,6 @@ function renderFavorites() {
     applyFavFilters();
 }
 
-// ============================================
-// ФИЛЬТРЫ + СОРТИРОВКА ИЗБРАННОГО
-// ============================================
 function applyFavFilters() {
     const user = DB.get('currentUser');
     if (!user) return;
@@ -2423,15 +2433,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 22. МОИ КОММЕНТАРИИ v2.0
+// 22. ✅ МОИ КОММЕНТАРИИ v2.0 (ИСПРАВЛЕНО)
 // ============================================
-let myCommentsAll = [];
-let myCommentsFiltered = [];
-
 function renderMyComments() {
     const user = DB.get('currentUser');
     const container = document.getElementById('mcGrouped');
-    if (!container) return;
+    if (!container) {
+        console.error('❌ mcGrouped не найден');
+        return;
+    }
     
     if (!user) {
         container.innerHTML = `
@@ -2448,6 +2458,8 @@ function renderMyComments() {
         return;
     }
     
+    console.log('🔍 Загрузка комментариев для:', user.name);
+    
     container.innerHTML = `
         <div style="text-align:center;padding:40px;color:#888;">
             <div class="spinner-small"></div>
@@ -2455,20 +2467,37 @@ function renderMyComments() {
         </div>
     `;
     
+    // ✅ Используем endpoint /api/comments/all
     fetch('/api/comments/all')
-        .then(res => res.json())
+        .then(res => {
+            console.log('📡 /api/comments/all → статус:', res.status);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
         .then(comments => {
+            console.log('📦 Всего комментариев в БД:', comments.length);
+            
+            if (!Array.isArray(comments)) {
+                console.error('❌ Не массив:', comments);
+                comments = [];
+            }
+            
+            // ✅ Фильтруем по имени пользователя
             myCommentsAll = comments.filter(c => c.user_name === user.name);
+            console.log(`✅ Моих комментариев: ${myCommentsAll.length}`);
+            
             updateMcStats(myCommentsAll);
             applyMcFilters();
         })
-        .catch(() => {
+        .catch(err => {
+            console.error('❌ Ошибка загрузки комментариев:', err);
             container.innerHTML = `
                 <div class="mc-list">
                     <div class="mc-empty">
                         <div class="mc-empty-icon">⚠️</div>
                         <h3 class="mc-empty-title">Ошибка загрузки</h3>
-                        <p class="mc-empty-desc">Не удалось загрузить комментарии</p>
+                        <p class="mc-empty-desc">${err.message}</p>
+                        <button class="mc-empty-btn" onclick="renderMyComments()">🔄 Попробовать снова</button>
                     </div>
                 </div>
             `;
@@ -2476,21 +2505,27 @@ function renderMyComments() {
 }
 
 function updateMcStats(comments) {
-    document.getElementById('mcStatTotal').textContent = comments.length;
+    const totalEl = document.getElementById('mcStatTotal');
+    const animeEl = document.getElementById('mcStatAnime');
+    const weekEl = document.getElementById('mcStatWeek');
+    const avgEl = document.getElementById('mcStatAvg');
+    
+    if (totalEl) totalEl.textContent = comments.length;
     
     const uniqueAnime = new Set(comments.map(c => c.anime));
-    document.getElementById('mcStatAnime').textContent = uniqueAnime.size;
+    if (animeEl) animeEl.textContent = uniqueAnime.size;
     
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const weekComments = comments.filter(c => {
         if (!c.created_at) return false;
-        return new Date(c.created_at).getTime() > weekAgo;
+        const t = new Date(c.created_at).getTime();
+        return !isNaN(t) && t > weekAgo;
     });
-    document.getElementById('mcStatWeek').textContent = weekComments.length;
+    if (weekEl) weekEl.textContent = weekComments.length;
     
     const totalLength = comments.reduce((sum, c) => sum + (c.text?.length || 0), 0);
     const avgLength = comments.length > 0 ? Math.round(totalLength / comments.length) : 0;
-    document.getElementById('mcStatAvg').textContent = avgLength;
+    if (avgEl) avgEl.textContent = avgLength;
 }
 
 function applyMcFilters() {
@@ -2502,8 +2537,8 @@ function applyMcFilters() {
     const searchValue = document.getElementById('mcSearchInput')?.value?.trim()?.toLowerCase() || '';
     if (searchValue) {
         comments = comments.filter(c => 
-            c.text.toLowerCase().includes(searchValue) ||
-            c.anime.toLowerCase().includes(searchValue)
+            (c.text || '').toLowerCase().includes(searchValue) ||
+            (c.anime || '').toLowerCase().includes(searchValue)
         );
     }
     
@@ -2653,13 +2688,15 @@ function renderMcItem(comment, index, maxLength) {
         ? `<img src="${poster}" alt="${anime}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mc-item-poster-no\\'>🎬</div>'">`
         : `<div class="mc-item-poster-no">🎬</div>`;
     
+    const safeAnime = anime.replace(/'/g, "\\'");
+    
     return `
         <div class="mc-item${isTopComment ? ' top-comment' : ''}${mcMassMode ? ' mass-mode' : ''}${isSelected ? ' selected' : ''}" 
              data-id="${comment.id}"
              style="animation-delay: ${index * 0.03}s;">
             <div class="mc-item-checkbox" onclick="event.stopPropagation(); toggleMcSelection(${comment.id})"></div>
             
-            <div class="mc-item-poster" onclick="event.stopPropagation(); searchAndOpen('${anime.replace(/'/g, "\\'")}')">
+            <div class="mc-item-poster" onclick="event.stopPropagation(); searchAndOpen('${safeAnime}')">
                 ${posterContent}
             </div>
             
@@ -2673,7 +2710,7 @@ function renderMcItem(comment, index, maxLength) {
             </div>
             
             <div class="mc-item-actions">
-                <button class="mc-action-icon-btn" onclick="event.stopPropagation(); searchAndOpen('${anime.replace(/'/g, "\\'")}')" title="Перейти к аниме">
+                <button class="mc-action-icon-btn" onclick="event.stopPropagation(); searchAndOpen('${safeAnime}')" title="Перейти к аниме">
                     🔗
                 </button>
                 <button class="mc-action-icon-btn danger" onclick="event.stopPropagation(); deleteMcComment(${comment.id})" title="Удалить">
@@ -2728,7 +2765,6 @@ function toggleMcMassMode() {
         panel.style.display = 'flex';
         btn.classList.add('active');
         btn.innerHTML = '✕ Отмена';
-        mcSelectedIds.clear();
     } else {
         panel.style.display = 'none';
         btn.classList.remove('active');
@@ -2827,10 +2863,8 @@ function toggleMcGroup() {
     if (btn) {
         if (mcGroupMode) {
             btn.classList.add('active');
-            btn.innerHTML = '📅 По дате';
         } else {
             btn.classList.remove('active');
-            btn.innerHTML = '📅 По дате';
         }
     }
     
@@ -2863,7 +2897,7 @@ function clearMcSearch() {
 // 23. ЗАПУСК
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🌟 OnikaAnime (Shikimori + 3D карусель + Избранное v2.0 + Комментарии v2.0) загружается...');
+    console.log('🌟 OnikaAnime загружается...');
     restoreAllData();
     updateUI();
     navigate('home');
@@ -2895,7 +2929,6 @@ window.renderProfile = renderProfile;
 window.renderMyComments = renderMyComments;
 window.loadCatalog = loadCatalog;
 window.renderSkeletons = renderSkeletons;
-window.loadRecommendations = loadRecommendations;
 window.randomAnime = randomAnime;
 window.renderRandomCard = renderRandomCard;
 window.applyCatalogFilters = applyCatalogFilters;
@@ -2954,5 +2987,11 @@ window.deleteSelectedMc = deleteSelectedMc;
 window.deleteMcComment = deleteMcComment;
 window.toggleMcSelection = toggleMcSelection;
 window.onMcItemClick = onMcItemClick;
+
+// ===== ФУНКЦИЯ SCROLL TO TOP =====
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.scrollToTop = scrollToTop;
 
 console.log('✅ OnikaAnime полностью загружен!');
