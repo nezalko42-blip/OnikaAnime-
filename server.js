@@ -1,5 +1,5 @@
 // ============================================
-// ONIKAANIME — СЕРВЕР (SHIKIMORI PROXY + REST + SCREENSHOTS + IMAGE PROXY)
+// ONIKAANIME — СЕРВЕР (SHIKIMORI PROXY + REST)
 // ============================================
 
 require('dotenv').config();
@@ -36,7 +36,7 @@ pool.connect((err, client, release) => {
 });
 
 // ============================================
-// ПРОКСИ SHIKIMORI GraphQL (каталог, поиск)
+// ПРОКСИ SHIKIMORI GraphQL
 // ============================================
 app.post('/api/shikimori', async (req, res) => {
     try {
@@ -81,7 +81,7 @@ app.post('/api/shikimori', async (req, res) => {
 });
 
 // ============================================
-// ПРОКСИ SHIKIMORI REST API (детали с описанием)
+// ПРОКСИ SHIKIMORI REST API
 // ============================================
 app.get('/api/shikimori-rest/:id', async (req, res) => {
     try {
@@ -111,116 +111,6 @@ app.get('/api/shikimori-rest/:id', async (req, res) => {
     } catch (err) {
         console.error('❌ Shikimori REST ошибка:', err.message);
         res.status(500).json({ error: err.message });
-    }
-});
-
-// ============================================
-// ✅ ПРОКСИ SHIKIMORI — СКРИНШОТЫ (КАДРЫ ИЗ АНИМЕ)
-// ============================================
-app.get('/api/screenshots/:id', async (req, res) => {
-    try {
-        const id = req.params.id;
-        if (!id || !/^\d+$/.test(id)) {
-            return res.status(400).json({ error: 'Неверный ID', screenshots: [] });
-        }
-
-        console.log('📸 Запрос скриншотов для ID:', id);
-
-        const response = await fetch(`https://shikimori.one/api/animes/${id}/screenshots`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'OnikaAnime/1.0 (https://onikaanime.relaxdev.ru)'
-            }
-        });
-
-        if (!response.ok) {
-            console.error('❌ Shikimori screenshots HTTP', response.status);
-            return res.status(response.status).json({
-                error: 'Shikimori: ' + response.status,
-                screenshots: []
-            });
-        }
-
-        const data = await response.json();
-
-        // ✅ Преобразуем в удобный формат + проксируем через наш сервер
-        const screenshots = (Array.isArray(data) ? data : []).map(s => {
-            let original = s.original || s.preview || '';
-            if (original.startsWith('//')) {
-                original = 'https:' + original;
-            }
-
-            let preview = s.preview || original;
-            if (preview.startsWith('//')) {
-                preview = 'https:' + preview;
-            }
-
-            // ✅ Проксируем через наш сервер чтобы обойти hotlink-защиту
-            const proxyOriginal = original ? `/api/proxy-image?url=${encodeURIComponent(original)}` : '';
-            const proxyPreview = preview ? `/api/proxy-image?url=${encodeURIComponent(preview)}` : '';
-
-            return {
-                original: proxyOriginal,
-                preview: proxyPreview,
-                _originalUrl: original,
-                _previewUrl: preview
-            };
-        });
-
-        console.log(`✅ Возвращено скриншотов: ${screenshots.length}`);
-        res.json({ screenshots });
-
-    } catch (err) {
-        console.error('❌ Ошибка скриншотов:', err.message);
-        res.status(500).json({ error: err.message, screenshots: [] });
-    }
-});
-
-// ============================================
-// ✅ ПРОКСИ КАРТИНОК SHIKIMORI (обход hotlink-защиты)
-// ============================================
-app.get('/api/proxy-image', async (req, res) => {
-    try {
-        const imageUrl = req.query.url;
-
-        if (!imageUrl) {
-            return res.status(400).send('URL обязателен');
-        }
-
-        // ✅ Защита от SSRF — разрешаем только Shikimori
-        const decodedUrl = decodeURIComponent(imageUrl);
-        if (!decodedUrl.includes('shikimori.one') &&
-            !decodedUrl.includes('shikimori.org') &&
-            !decodedUrl.includes('shikimori.me')) {
-            console.warn('⚠️ Заблокирован URL не от Shikimori:', decodedUrl.slice(0, 100));
-            return res.status(403).send('Разрешены только Shikimori URL');
-        }
-
-        const response = await fetch(decodedUrl, {
-            headers: {
-                'User-Agent': 'OnikaAnime/1.0 (https://onikaanime.relaxdev.ru)',
-                'Referer': 'https://shikimori.one/',
-                'Accept': 'image/*,*/*;q=0.8'
-            }
-        });
-
-        if (!response.ok) {
-            console.error('❌ Proxy image HTTP', response.status, decodedUrl.slice(0, 100));
-            return res.status(response.status).send('Ошибка загрузки картинки');
-        }
-
-        const contentType = response.headers.get('content-type') || 'image/jpeg';
-        const buffer = Buffer.from(await response.arrayBuffer());
-
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 дней
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.send(buffer);
-
-    } catch (err) {
-        console.error('❌ Ошибка прокси картинки:', err.message);
-        res.status(500).send('Ошибка прокси');
     }
 });
 
@@ -576,10 +466,9 @@ app.post('/api/active-title', async (req, res, next) => {
 });
 
 // ============================================
-// ✅ КОММЕНТАРИИ — порядок важен!
+// КОММЕНТАРИИ
 // ============================================
 
-// ✅ 1. Все комментарии (ДОЛЖЕН быть ПЕРВЫМ!)
 app.get('/api/comments/all', async (req, res, next) => {
     try {
         console.log('📤 Запрос: /api/comments/all');
@@ -592,7 +481,6 @@ app.get('/api/comments/all', async (req, res, next) => {
     }
 });
 
-// ✅ 2. Комментарии конкретного пользователя
 app.get('/api/comments/user/:userName', async (req, res, next) => {
     try {
         const userName = decodeURIComponent(req.params.userName);
@@ -604,7 +492,6 @@ app.get('/api/comments/user/:userName', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
-// ✅ 3. Добавить комментарий
 app.post('/api/comments', async (req, res, next) => {
     try {
         const { error, value } = schemas.comment.validate(req.body);
@@ -628,7 +515,6 @@ app.post('/api/comments', async (req, res, next) => {
     }
 });
 
-// ✅ 4. Комментарии к конкретному аниме
 app.get('/api/comments/:anime', async (req, res, next) => {
     try {
         const anime = decodeURIComponent(req.params.anime);
@@ -640,7 +526,6 @@ app.get('/api/comments/:anime', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
-// ✅ 5. Удалить комментарий
 app.delete('/api/comments/:id', async (req, res, next) => {
     try {
         const id = parseInt(req.params.id);
