@@ -131,23 +131,34 @@
                 <!-- ===== ГЛАВНАЯ ===== -->
                 <div id="page-home">
 
-                    <section class="hero-3d-section">
-                        <div class="hero-3d-container">
-                            <div class="hero-3d-track" id="heroSlider"></div>
+                    <!-- ===== COVERFLOW КАРУСЕЛЬ РЕКОМЕНДАЦИЙ ===== -->
+                    <section class="coverflow-section">
+                        <div class="coverflow-header">
+                            <h2>🎬 Рекомендации для тебя</h2>
+                            <p>Прокрути и выбери что-нибудь интересное</p>
+                        </div>
+                        
+                        <div class="coverflow-container" id="coverflowContainer">
+                            <div class="coverflow-counter" id="coverflowCounter">
+                                <strong id="coverflowCurrent">1</strong> / <span id="coverflowTotal">0</span>
+                            </div>
                             
-                            <button class="hero-3d-nav hero-3d-prev" onclick="slideHero(-1)" aria-label="Назад">
+                            <button class="coverflow-nav coverflow-prev" onclick="coverflowPrev()" aria-label="Назад">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                     <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
-                            <button class="hero-3d-nav hero-3d-next" onclick="slideHero(1)" aria-label="Вперёд">
+                            
+                            <div class="coverflow-track" id="coverflowTrack"></div>
+                            
+                            <button class="coverflow-nav coverflow-next" onclick="coverflowNext()" aria-label="Вперёд">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                     <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
                         </div>
                         
-                        <div class="hero-3d-dots" id="heroDots"></div>
+                        <div class="coverflow-dots" id="coverflowDots"></div>
                     </section>
 
                     <section class="random-section">
