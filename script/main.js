@@ -1,6 +1,6 @@
 // ============================================
 // ГЛАВНЫЙ ФАЙЛ ONIKAANIME
-// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0
+// SHIKIMORI + 3D КАРУСЕЛЬ + ИЗБРАННОЕ v2.0 + КОММЕНТАРИИ v2.0 + ДОСТИЖЕНИЯ v2.0
 // ============================================
 
 const allData = {};
@@ -29,23 +29,55 @@ let mcSelectedIds = new Set();
 let myCommentsAll = [];
 let myCommentsFiltered = [];
 
-// ===== ДОСТИЖЕНИЯ =====
+// ===== ФИЛЬТР И СОРТИРОВКА ДОСТИЖЕНИЙ =====
+let achCurrentFilter = 'all';
+let achCurrentSort = 'rarity_desc';
+
+const RARITY_ORDER = { legendary: 4, epic: 3, rare: 2, common: 1 };
+const RARITY_LABELS = {
+    common: '⚪ Обычное',
+    rare: '🔵 Редкое',
+    epic: '🟣 Эпическое',
+    legendary: '🟡 Легендарное'
+};
+
+// ===== ДОСТИЖЕНИЯ С РЕДКОСТЬЮ v2.0 =====
 const ACHIEVEMENTS_LIST = [
-    { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель' },
-    { id: 'ep200', name: '🎬 Зритель 2 уровня', desc: 'Посмотреть 200 серий', icon: '🎥', title: 'Любопытный' },
-    { id: 'ep500', name: '🎬 Зритель 3 уровня', desc: 'Посмотреть 500 серий', icon: '📺', title: 'Заядлый' },
-    { id: 'ep750', name: '🎬 Зритель 4 уровня', desc: 'Посмотреть 750 серий', icon: '🌟', title: 'Эксперт' },
-    { id: 'ep1000', name: '🎬 Зритель 5 уровня', desc: 'Посмотреть 1000 серий', icon: '🏆', title: 'Легенда' },
-    { id: 'cm100', name: '💬 Комментатор 1 уровня', desc: 'Оставить 100 комментариев', icon: '💬', title: 'Говорун' },
-    { id: 'cm200', name: '💬 Комментатор 2 уровня', desc: 'Оставить 200 комментариев', icon: '🗣️', title: 'Собеседник' },
-    { id: 'cm500', name: '💬 Комментатор 3 уровня', desc: 'Оставить 500 комментариев', icon: '🎙️', title: 'Оратор' },
-    { id: 'cm750', name: '💬 Комментатор 4 уровня', desc: 'Оставить 750 комментариев', icon: '📢', title: 'Мастер слова' },
-    { id: 'cm1000', name: '💬 Комментатор 5 уровня', desc: 'Оставить 1000 комментариев', icon: '👑', title: 'Глашатай' },
-    { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме в избранное', icon: '❤️', title: 'Коллекционер' },
-    { id: 'fv200', name: '❤️ Коллекционер 2 уровня', desc: 'Добавить 200 аниме в избранное', icon: '💝', title: 'Ценитель' },
-    { id: 'fv500', name: '❤️ Коллекционер 3 уровня', desc: 'Добавить 500 аниме в избранное', icon: '💎', title: 'Знаток' },
-    { id: 'fv750', name: '❤️ Коллекционер 4 уровня', desc: 'Добавить 750 аниме в избранное', icon: '👑', title: 'Библиофил' },
-    { id: 'fv1000', name: '❤️ Коллекционер 5 уровня', desc: 'Добавить 1000 аниме в избранное', icon: '🏆', title: 'Хранитель' }
+    // ===== ЗРИТЕЛЬ =====
+    { id: 'ep100', name: '🎬 Зритель 1 уровня', desc: 'Посмотреть 100 серий', icon: '🎬', title: 'Зритель',
+      rarity: 'common', category: 'viewer', target: 100, metric: 'episodes' },
+    { id: 'ep200', name: '🎬 Зритель 2 уровня', desc: 'Посмотреть 200 серий', icon: '🎥', title: 'Любопытный',
+      rarity: 'common', category: 'viewer', target: 200, metric: 'episodes' },
+    { id: 'ep500', name: '🎬 Зритель 3 уровня', desc: 'Посмотреть 500 серий', icon: '📺', title: 'Заядлый',
+      rarity: 'rare', category: 'viewer', target: 500, metric: 'episodes' },
+    { id: 'ep750', name: '🎬 Зритель 4 уровня', desc: 'Посмотреть 750 серий', icon: '🌟', title: 'Эксперт',
+      rarity: 'epic', category: 'viewer', target: 750, metric: 'episodes' },
+    { id: 'ep1000', name: '🎬 Зритель 5 уровня', desc: 'Посмотреть 1000 серий', icon: '🏆', title: 'Легенда',
+      rarity: 'legendary', category: 'viewer', target: 1000, metric: 'episodes' },
+
+    // ===== КОММЕНТАТОР =====
+    { id: 'cm100', name: '💬 Комментатор 1 уровня', desc: 'Оставить 100 комментариев', icon: '💬', title: 'Говорун',
+      rarity: 'common', category: 'commenter', target: 100, metric: 'comments' },
+    { id: 'cm200', name: '💬 Комментатор 2 уровня', desc: 'Оставить 200 комментариев', icon: '🗣️', title: 'Собеседник',
+      rarity: 'common', category: 'commenter', target: 200, metric: 'comments' },
+    { id: 'cm500', name: '💬 Комментатор 3 уровня', desc: 'Оставить 500 комментариев', icon: '🎙️', title: 'Оратор',
+      rarity: 'rare', category: 'commenter', target: 500, metric: 'comments' },
+    { id: 'cm750', name: '💬 Комментатор 4 уровня', desc: 'Оставить 750 комментариев', icon: '📢', title: 'Мастер слова',
+      rarity: 'epic', category: 'commenter', target: 750, metric: 'comments' },
+    { id: 'cm1000', name: '💬 Комментатор 5 уровня', desc: 'Оставить 1000 комментариев', icon: '👑', title: 'Глашатай',
+      rarity: 'legendary', category: 'commenter', target: 1000, metric: 'comments' },
+
+    // ===== КОЛЛЕКЦИОНЕР =====
+    { id: 'fv100', name: '❤️ Коллекционер 1 уровня', desc: 'Добавить 100 аниме в избранное', icon: '❤️', title: 'Коллекционер',
+      rarity: 'common', category: 'collector', target: 100, metric: 'favorites' },
+    { id: 'fv200', name: '❤️ Коллекционер 2 уровня', desc: 'Добавить 200 аниме в избранное', icon: '💝', title: 'Ценитель',
+      rarity: 'common', category: 'collector', target: 200, metric: 'favorites' },
+    { id: 'fv500', name: '❤️ Коллекционер 3 уровня', desc: 'Добавить 500 аниме в избранное', icon: '💎', title: 'Знаток',
+      rarity: 'rare', category: 'collector', target: 500, metric: 'favorites' },
+    { id: 'fv750', name: '❤️ Коллекционер 4 уровня', desc: 'Добавить 750 аниме в избранное', icon: '👑', title: 'Библиофил',
+      rarity: 'epic', category: 'collector', target: 750, metric: 'favorites' },
+    { id: 'fv1000', name: '❤️ Коллекционер 5 уровня', desc: 'Добавить 1000 аниме в избранное', icon: '🏆', title: 'Хранитель',
+      rarity: 'legendary', category: 'collector', target: 1000, metric: 'favorites' }
 ];
 
 // ============================================
@@ -54,12 +86,12 @@ const ACHIEVEMENTS_LIST = [
 function navigate(pageName) {
     currentPage = pageName;
     const pages = ['home', 'detail', 'favorites', 'achievements', 'mycomments', 'profile', 'settings'];
-    
+
     pages.forEach(p => {
         const el = document.getElementById(`page-${p}`);
         if (el) el.style.display = p === pageName ? 'block' : 'none';
     });
-    
+
     if (pageName === 'home') {
         loadRecommendationsForHero();
         loadCatalog();
@@ -69,7 +101,7 @@ function navigate(pageName) {
     if (pageName === 'profile') renderProfile();
     if (pageName === 'achievements') renderAchievements();
     if (pageName === 'mycomments') renderMyComments();
-    
+
     closeMenu();
 }
 
@@ -89,9 +121,9 @@ function updateUI() {
     const user = DB.get('currentUser');
     const nav = document.getElementById('sidebarNav');
     const footer = document.getElementById('sidebarFooter');
-    
+
     if (!nav || !footer) return;
-    
+
     if (user) {
         nav.innerHTML = `
             <a class="active" data-page="home" onclick="navigate('home'); closeMenu();">
@@ -180,7 +212,7 @@ window.addEventListener('beforeunload', function() {
 async function loadRecommendationsForHero() {
     try {
         const recs = await API.getRecommended(7);
-        
+
         if (recs && recs.length > 0) {
             heroSliderData = recs;
             renderHeroSlider(recs);
@@ -196,12 +228,12 @@ function renderHeroSlider(items) {
     const track = document.getElementById('heroSlider');
     const dots = document.getElementById('heroDots');
     if (!track) return;
-    
+
     const limitedItems = items.slice(0, 7);
-    
+
     heroSliderData = limitedItems;
     heroCurrentSlide = 0;
-    
+
     let cardsHtml = '';
     limitedItems.forEach((item, index) => {
         const img = item.images?.jpg?.image_url || '';
@@ -210,7 +242,7 @@ function renderHeroSlider(items) {
         const episodes = item.episodes || '?';
         const age = item.age_rating || '0+';
         const id = item.id;
-        
+
         cardsHtml += `
             <div class="hero-3d-card initial" data-index="${index}" onclick="openDetail('${id}')">
                 <div class="hero-3d-card-poster" style="background-image: url('${img}');"></div>
@@ -225,19 +257,19 @@ function renderHeroSlider(items) {
             </div>
         `;
     });
-    
+
     let dotsHtml = '';
     limitedItems.forEach((_, index) => {
         dotsHtml += `<button class="hero-3d-dot${index === 0 ? ' active' : ''}" onclick="goToHeroSlide(${index})" aria-label="Слайд ${index + 1}"></button>`;
     });
-    
+
     track.innerHTML = cardsHtml;
     if (dots) dots.innerHTML = dotsHtml;
-    
+
     setTimeout(() => {
         document.querySelectorAll('.hero-3d-card.initial').forEach(c => c.classList.remove('initial'));
     }, 1500);
-    
+
     updateHeroCards();
 }
 
@@ -246,21 +278,21 @@ function updateHeroCards() {
     const dots = document.querySelectorAll('.hero-3d-dot');
     const total = cards.length;
     if (!total) return;
-    
+
     cards.forEach((card, i) => {
         card.classList.remove('active', 'prev', 'next', 'far-prev', 'far-next', 'hidden');
-        
+
         let position = 'hidden';
-        
+
         if (i === heroCurrentSlide) position = 'active';
         else if (i === (heroCurrentSlide + 1) % total) position = 'next';
         else if (i === (heroCurrentSlide - 1 + total) % total) position = 'prev';
         else if (i === (heroCurrentSlide + 2) % total) position = 'far-next';
         else if (i === (heroCurrentSlide - 2 + total) % total) position = 'far-prev';
-        
+
         card.classList.add(position);
     });
-    
+
     dots.forEach((dot, i) => {
         dot.classList.toggle('active', i === heroCurrentSlide);
     });
@@ -274,10 +306,10 @@ function startHeroAutoSlide() {
 function slideHero(direction) {
     const cards = document.querySelectorAll('.hero-3d-card');
     if (!cards.length) return;
-    
+
     heroCurrentSlide = (heroCurrentSlide + direction + cards.length) % cards.length;
     updateHeroCards();
-    
+
     if (heroAutoSlideTimer) {
         clearInterval(heroAutoSlideTimer);
         startHeroAutoSlide();
@@ -287,10 +319,10 @@ function slideHero(direction) {
 function goToHeroSlide(index) {
     const cards = document.querySelectorAll('.hero-3d-card');
     if (!cards.length || index === heroCurrentSlide) return;
-    
+
     heroCurrentSlide = index;
     updateHeroCards();
-    
+
     if (heroAutoSlideTimer) {
         clearInterval(heroAutoSlideTimer);
         startHeroAutoSlide();
@@ -320,31 +352,31 @@ function renderSkeletons(count = 12) {
 async function loadCatalog(targetPage = null) {
     if (isLoading) return;
     isLoading = true;
-    
+
     if (targetPage !== null) page = targetPage;
-    
+
     const grid = document.getElementById('grid');
     const pagination = document.getElementById('pagination');
     const stats = document.getElementById('totalCount');
     if (!grid) { isLoading = false; return; }
-    
+
     const searchInput = document.getElementById('catalogSearchInput');
     const searchValue = searchInput ? searchInput.value.trim() : '';
-    
+
     const hasOldContent = grid.querySelector('.card');
     if (hasOldContent) {
         grid.classList.add('fade-out');
         await new Promise(r => setTimeout(r, 200));
     }
-    
+
     if (!allItems.length) {
         grid.innerHTML = renderSkeletons(CATALOG_LIMIT);
     }
-    
+
     grid.classList.remove('fade-out');
-    
+
     if (pagination) pagination.style.display = 'none';
-    
+
     try {
         let result;
         if (searchValue && searchValue.length > 0) {
@@ -356,16 +388,16 @@ async function loadCatalog(targetPage = null) {
         } else {
             result = await API.getCatalog(page, CATALOG_LIMIT, 'popularity');
         }
-        
+
         if (result && result.items && result.items.length > 0) {
             allItems = result.items;
             totalCount = result.totalCount || 0;
             allItems.forEach(item => { allData[item.mal_id] = item; });
-            
+
             grid.classList.add('fade-in');
             renderCatalog(allItems);
             setTimeout(() => grid.classList.remove('fade-in'), 400);
-            
+
             if (!searchValue && !genre && page === 1) {
                 try {
                     sessionStorage.setItem('onika_catalog_cache', JSON.stringify({
@@ -374,14 +406,14 @@ async function loadCatalog(targetPage = null) {
                     }));
                 } catch(e) {}
             }
-            
+
             if (stats) {
                 const searchText = searchValue ? `по запросу "${searchValue}"` : '';
-                stats.textContent = searchText 
-                    ? `${searchText} — стр. ${page}` 
+                stats.textContent = searchText
+                    ? `${searchText} — стр. ${page}`
                     : `📄 Страница ${page}`;
             }
-            
+
             renderPagination(page, result.items.length);
             isAllLoaded = result.items.length < CATALOG_LIMIT;
         } else {
@@ -390,7 +422,7 @@ async function loadCatalog(targetPage = null) {
                 isLoading = false;
                 return loadCatalog();
             }
-            
+
             const searchText = searchValue ? ` "${searchValue}"` : '';
             grid.innerHTML = `
                 <div style="text-align:center;padding:60px 20px;color:var(--text-muted);grid-column:1/-1;">
@@ -428,39 +460,39 @@ function renderPagination(currentPageNum, itemsCount) {
     const prevBtn = document.getElementById('prevPageBtn');
     const nextBtn = document.getElementById('nextPageBtn');
     if (!pagination || !pagesContainer) return;
-    
+
     const hasPrev = currentPageNum > 1;
     const hasNext = itemsCount >= CATALOG_LIMIT;
-    
+
     if (!hasPrev && !hasNext) {
         pagination.style.display = 'none';
         return;
     }
-    
+
     pagination.style.display = 'flex';
-    
+
     if (prevBtn) prevBtn.disabled = !hasPrev;
     if (nextBtn) nextBtn.disabled = !hasNext;
-    
+
     let pagesHtml = '';
     const startPage = Math.max(1, currentPageNum - 3);
     const endPage = currentPageNum + 3;
-    
+
     if (startPage > 1) {
         pagesHtml += `<button class="pagination-page" onclick="goToPage(1)">1</button>`;
         if (startPage > 2) {
             pagesHtml += `<span class="pagination-dots">...</span>`;
         }
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
         if (i < 1) continue;
         if (!hasNext && i > currentPageNum) break;
-        
+
         const activeClass = i === currentPageNum ? ' active' : '';
         pagesHtml += `<button class="pagination-page${activeClass}" onclick="goToPage(${i})">${i}</button>`;
     }
-    
+
     if (hasNext) {
         const nextPageNum = endPage + 1;
         if (nextPageNum > endPage + 1) {
@@ -468,18 +500,18 @@ function renderPagination(currentPageNum, itemsCount) {
         }
         pagesHtml += `<button class="pagination-page" onclick="goToPage(${nextPageNum})">${nextPageNum}</button>`;
     }
-    
+
     pagesContainer.innerHTML = pagesHtml;
 }
 
 function goToPage(pageNum) {
     if (pageNum < 1 || pageNum === page) return;
-    
+
     page = pageNum;
     allItems = [];
     isAllLoaded = false;
     loadCatalog(pageNum);
-    
+
     const catalogSection = document.querySelector('.catalog-section');
     if (catalogSection) {
         const offset = catalogSection.offsetTop - 80;
@@ -515,13 +547,13 @@ function resetCatalogFiltersSilent() {
         const clearBtn = document.getElementById('catalogSearchClear');
         if (clearBtn) clearBtn.style.display = 'none';
     }
-    
+
     if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }
-    
+
     if (genre && genre !== 'latest') {
         genre = '';
     }
-    
+
     allItems = [];
     isAllLoaded = false;
     page = 1;
@@ -539,7 +571,7 @@ function resetCatalogFilters() {
 function renderCatalog(list) {
     const grid = document.getElementById('grid');
     if (!grid) return;
-    
+
     if (!list || list.length === 0) {
         grid.innerHTML = `
             <div style="text-align:center;padding:60px 20px;color:var(--text-muted);grid-column:1/-1;">
@@ -549,10 +581,10 @@ function renderCatalog(list) {
         `;
         return;
     }
-    
+
     const colors = ['#6c5ce7', '#fd79a8', '#00b894', '#0984e3', '#fdcb6e', '#e17055', '#00cec9', '#a29bfe'];
     const htmlParts = [];
-    
+
     for (let index = 0; index < list.length; index++) {
         const a = list[index];
         const img = a.images?.jpg?.image_url || '';
@@ -562,7 +594,7 @@ function renderCatalog(list) {
         const color = colors[index % colors.length];
         const id = a.mal_id || a.id;
         const age = a.age_rating || '0+';
-        
+
         htmlParts.push(`
             <div class="card" onclick="openDetail('${id}')" style="--card-index:${index};">
                 <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:48px;' : ''}">
@@ -577,7 +609,7 @@ function renderCatalog(list) {
             </div>
         `);
     }
-    
+
     grid.innerHTML = htmlParts.join('');
 }
 
@@ -587,20 +619,20 @@ function renderCatalog(list) {
 function setGenre(genreId, btn) {
     document.querySelectorAll('.genres a').forEach(el => el.classList.remove('active'));
     if (btn) btn.classList.add('active');
-    
+
     genre = genreId;
     page = 1;
-    
+
     const searchInput = document.getElementById('catalogSearchInput');
     if (searchInput) searchInput.value = '';
-    
+
     const titleEl = document.getElementById('catalogTitle');
     if (titleEl) {
         if (genreId === 'latest') titleEl.textContent = '🔥 НОВИНКИ АНИМЕ';
         else if (genreId) titleEl.textContent = '🎭 ' + (btn ? btn.textContent : 'Жанр');
         else titleEl.textContent = '📚 ВСЕ АНИМЕ';
     }
-    
+
     allItems = [];
     isAllLoaded = false;
     loadCatalog(1);
@@ -613,16 +645,16 @@ async function randomAnime() {
     const resultContainer = document.getElementById('randomResult');
     const triggerBtn = document.querySelector('.random-trigger-btn');
     if (!resultContainer) return;
-    
+
     if (triggerBtn) triggerBtn.classList.add('loading');
-    
+
     resultContainer.innerHTML = `
         <div class="random-loading">
             <div class="random-spinner-new"></div>
             <span class="random-loading-text">🌀 Подбираем идеальное аниме...</span>
         </div>
     `;
-    
+
     try {
         const items = await API.getRandom(1);
         if (!items || !items.length) {
@@ -635,14 +667,14 @@ async function randomAnime() {
             if (triggerBtn) triggerBtn.classList.remove('loading');
             return;
         }
-        
+
         const anime = items[0];
-        
+
         setTimeout(() => {
             resultContainer.innerHTML = renderRandomCard(anime);
             if (triggerBtn) triggerBtn.classList.remove('loading');
         }, 400);
-        
+
     } catch (e) {
         console.error('Ошибка получения случайного аниме:', e);
         resultContainer.innerHTML = `
@@ -663,29 +695,29 @@ function renderRandomCard(anime) {
     const age = anime.age_rating || '0+';
     const id = anime.id;
     const ageColor = getAgeColor(age);
-    
+
     return `
         <div class="random-anime-card" onclick="openDetail('${id}')">
             <div class="random-anime-poster">
-                ${img 
-                    ? `<img src="${img}" alt="${title}" loading="lazy">` 
+                ${img
+                    ? `<img src="${img}" alt="${title}" loading="lazy">`
                     : '<div class="random-anime-no-poster">🎬</div>'
                 }
                 <div class="random-anime-age" style="background:${ageColor}aa;">${age}</div>
             </div>
-            
+
             <div class="random-anime-info">
                 <h3 class="random-anime-title">${title}</h3>
-                
+
                 ${year && year !== '--' ? `<span class="random-anime-year">📅 ${year}</span>` : ''}
-                
+
                 <div class="random-anime-meta">
                     <div class="random-anime-meta-item">
                         <span class="emoji">📺</span>
                         <span>${episodes} ${episodes === '?' ? 'эпизод' : 'эп.'}</span>
                     </div>
                 </div>
-                
+
                 <div class="random-anime-actions">
                     <button class="random-action-btn watch" onclick="event.stopPropagation(); openDetail('${id}')">
                         <span class="btn-icon">▶️</span>
@@ -712,7 +744,7 @@ function getAgeColor(age) {
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('catalogSearchInput');
     if (!searchInput) return;
-    
+
     const autocompleteContainer = document.createElement('div');
     autocompleteContainer.className = 'search-autocomplete';
     autocompleteContainer.style.cssText = `
@@ -723,21 +755,21 @@ document.addEventListener('DOMContentLoaded', function() {
         backdrop-filter: blur(20px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         margin-top: 4px;
     `;
-    
+
     const wrapper = searchInput.closest('.catalog-search-wrapper');
     if (wrapper) {
         wrapper.style.position = 'relative';
         wrapper.appendChild(autocompleteContainer);
     }
-    
+
     let autocompleteTimeout = null;
-    
+
     searchInput.addEventListener('input', function() {
         const value = this.value.trim();
         clearTimeout(autocompleteTimeout);
         autocompleteContainer.style.display = 'none';
         if (value.length < 2) return;
-        
+
         autocompleteTimeout = setTimeout(async () => {
             try {
                 const suggestions = await API.searchAutocomplete(value, 8);
@@ -745,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     autocompleteContainer.style.display = 'none';
                     return;
                 }
-                
+
                 let html = '';
                 suggestions.forEach(item => {
                     html += `
@@ -763,7 +795,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch(e) {}
         }, 300);
     });
-    
+
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.catalog-search-wrapper')) {
             autocompleteContainer.style.display = 'none';
@@ -782,25 +814,25 @@ function selectSearchSuggestion(id) {
 // ============================================
 async function openDetail(id) {
     console.log('📖 Открываем детали:', id);
-    
+
     if (!id) {
         showToast('Ошибка ID', 'error');
         return;
     }
-    
+
     previousPage = currentPage;
     navigate('detail');
-    
+
     const titleEl = document.getElementById('detailTitle');
     if (titleEl) titleEl.textContent = 'Загрузка...';
-    
+
     const posterEl = document.getElementById('detailPoster');
     if (posterEl) posterEl.style.display = 'none';
-    
+
     try {
         const data = await API.getAnimeDetails(id);
         console.log('📦 Данные:', data);
-        
+
         if (!data) {
             showToast('❌ Аниме не найдено', 'error');
             const descEl = document.getElementById('detailDesc');
@@ -808,13 +840,13 @@ async function openDetail(id) {
             if (titleEl) titleEl.textContent = 'Ошибка загрузки';
             return;
         }
-        
+
         allData[id] = data;
         showDetail(data);
     } catch (e) {
         console.error('❌ Ошибка:', e);
         showToast('❌ Ошибка загрузки', 'error');
-        
+
         if (allData[id]) {
             showDetail(allData[id]);
         } else {
@@ -830,7 +862,7 @@ async function openDetail(id) {
 // ============================================
 function showDetail(anime) {
     if (!anime) return;
-    
+
     const titleEl = document.getElementById('detailTitle');
     const engEl = document.getElementById('detailEng');
     const metaEl = document.getElementById('detailMeta');
@@ -839,19 +871,19 @@ function showDetail(anime) {
     const ageBadge = document.querySelector('.age-badge');
     const tagsEl = document.getElementById('detailTags');
     const favBtn = document.getElementById('favBtn');
-    
+
     const displayTitle = anime.title || anime.title_russian || 'Без названия';
     const engTitle = anime.title_english || '';
-    
+
     if (titleEl) titleEl.textContent = displayTitle;
     if (engEl) engEl.textContent = engTitle;
-    
+
     const year = anime.year || '--';
     const episodes = anime.episodes || '?';
     if (metaEl) metaEl.textContent = `${year} | ${episodes} эп.`;
-    
+
     if (descEl) descEl.textContent = anime.synopsis || anime.description || 'Описание отсутствует';
-    
+
     const img = anime.images?.jpg?.image_url || '';
     if (posterEl) {
         if (img) {
@@ -861,28 +893,28 @@ function showDetail(anime) {
             posterEl.style.display = 'none';
         }
     }
-    
+
     if (ageBadge) {
         const age = anime.age_rating || '0+';
         ageBadge.textContent = age;
         ageBadge.className = `age-badge age-${age.replace('+', '')}`;
     }
-    
+
     if (tagsEl) {
         const genres = anime.genres || [];
         tagsEl.innerHTML = genres.map(g => `<span class="detail-tag">${g}</span>`).join('');
     }
-    
+
     const user = DB.get('currentUser');
     const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
     const isFav = favs.indexOf(displayTitle) > -1;
-    
+
     if (favBtn) {
         favBtn.textContent = isFav ? '❤️ В избранном' : '🤍 В избранное';
         favBtn.className = 'fav-btn' + (isFav ? ' active' : '');
         favBtn.onclick = () => toggleFav(displayTitle);
     }
-    
+
     renderComments(displayTitle);
     closeWatchEmbed();
 }
@@ -892,7 +924,7 @@ function showDetail(anime) {
 // ============================================
 function openKodiModal() {
     let modal = document.getElementById('kodiModal');
-    
+
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'kodiModal';
@@ -908,7 +940,7 @@ function openKodiModal() {
                 <div class="modal-icon">🎞️</div>
                 <h2>Kodi плеер</h2>
                 <p>Смотрите аниме через бесплатное приложение Kodi с аддоном для аниме.</p>
-                
+
                 <div class="kodi-instruction">
                     <h3>📥 Как установить:</h3>
                     <ol>
@@ -919,7 +951,7 @@ function openKodiModal() {
                         <li>Наслаждайтесь просмотром!</li>
                     </ol>
                 </div>
-                
+
                 <div class="btn-row">
                     <a href="https://kodi.tv/download" target="_blank" rel="noopener" class="btn-primary" style="text-decoration:none;text-align:center;display:block;flex:1;padding:12px;">
                         📥 Скачать Kodi
@@ -932,7 +964,7 @@ function openKodiModal() {
         `;
         document.body.appendChild(modal);
     }
-    
+
     modal.style.display = 'flex';
 }
 
@@ -950,15 +982,15 @@ function getCurrentAnimeTitle() {
 async function watchOnVK() {
     const title = getCurrentAnimeTitle();
     if (!title) { showToast('Название не найдено', 'error'); return; }
-    
+
     const container = document.getElementById('watchEmbedContainer');
     container.style.display = 'block';
     container.innerHTML = '<div class="watch-embed-error"><span class="icon">⏳</span><p>Ищем в базе...</p></div>';
-    
+
     try {
         const response = await fetch('/api/sources/' + encodeURIComponent(title));
         const data = await response.json();
-        
+
         if (data.success && data.sources && data.sources.vk && data.sources.vk.length > 0) {
             renderSourceEpisodes('vk', data.sources.vk, title);
         } else {
@@ -972,15 +1004,15 @@ async function watchOnVK() {
 async function watchOnDeep() {
     const title = getCurrentAnimeTitle();
     if (!title) { showToast('Название не найдено', 'error'); return; }
-    
+
     const container = document.getElementById('watchEmbedContainer');
     container.style.display = 'block';
     container.innerHTML = '<div class="watch-embed-error"><span class="icon">⏳</span><p>Ищем в базе...</p></div>';
-    
+
     try {
         const response = await fetch('/api/sources/' + encodeURIComponent(title));
         const data = await response.json();
-        
+
         if (data.success && data.sources && data.sources.deep && data.sources.deep.length > 0) {
             renderSourceEpisodes('deep', data.sources.deep, title);
         } else {
@@ -995,13 +1027,13 @@ function renderSourceEpisodes(source, episodes, title) {
     const container = document.getElementById('watchEmbedContainer');
     const sourceNames = { vk: 'VK Video', deep: 'Deep-ent.ru', kodi: 'Kodi' };
     const sourceIcons = { vk: '📺', deep: '🎬', kodi: '🎞️' };
-    
+
     const firstEp = episodes[0];
-    
+
     let episodesListHtml = '';
     episodes.forEach((ep, index) => {
         episodesListHtml += `
-            <button onclick="playSourceEpisode('${source}', ${index}, '${title.replace(/'/g, "\\'")}')" 
+            <button onclick="playSourceEpisode('${source}', ${index}, '${title.replace(/'/g, "\\'")}')"
                 class="source-episode-btn"
                 data-index="${index}"
                 style="padding:8px 14px;border-radius:8px;border:1px solid ${index === 0 ? 'var(--neon-cyan)' : 'rgba(0,245,255,0.1)'};
@@ -1012,13 +1044,13 @@ function renderSourceEpisodes(source, episodes, title) {
             </button>
         `;
     });
-    
+
     container.innerHTML = `
         <div class="watch-embed-header">
             <h4><span>${sourceIcons[source]}</span> ${sourceNames[source]} — ${title}</h4>
             <button class="watch-embed-close" onclick="closeWatchEmbed()">✕ Закрыть</button>
         </div>
-        
+
         <div style="margin-bottom:16px;">
             <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
                 📺 Доступно серий: ${episodes.length}
@@ -1027,42 +1059,42 @@ function renderSourceEpisodes(source, episodes, title) {
                 ${episodesListHtml}
             </div>
         </div>
-        
+
         <div id="sourcePlayerArea" class="watch-embed-wrapper">
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888;flex-direction:column;gap:12px;background:rgba(0,0,0,0.7);">
                 <span style="font-size:48px;">${sourceIcons[source]}</span>
                 <span>Нажмите на серию выше</span>
             </div>
         </div>
-        
+
         <div style="margin-top:12px;text-align:center;">
             <a href="${firstEp.url}" target="_blank" rel="noopener" style="color:var(--neon-cyan);font-size:13px;text-decoration:none;">
                 🔗 Открыть в новой вкладке
             </a>
         </div>
     `;
-    
+
     playSourceEpisode(source, 0, title);
     container.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function playSourceEpisode(source, index, title) {
     const container = document.getElementById('watchEmbedContainer');
-    
+
     container.querySelectorAll('.source-episode-btn').forEach((btn, i) => {
         btn.style.background = i === index ? 'rgba(0,245,255,0.1)' : 'rgba(0,245,255,0.02)';
         btn.style.borderColor = i === index ? 'var(--neon-cyan)' : 'rgba(0,245,255,0.1)';
         btn.style.color = i === index ? 'var(--neon-cyan)' : 'var(--text-primary)';
     });
-    
+
     try {
         const response = await fetch('/api/sources/' + encodeURIComponent(title));
         const data = await response.json();
         const episode = data.sources[source][index];
         const playerArea = document.getElementById('sourcePlayerArea');
-        
+
         const canEmbed = source === 'vk' && episode.url.includes('vkvideo.ru');
-        
+
         if (canEmbed) {
             let embedUrl = episode.url;
             const match = episode.url.match(/video(-?\d+)_(\d+)/);
@@ -1071,11 +1103,11 @@ async function playSourceEpisode(source, index, title) {
                 const vid = match[2];
                 embedUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${vid}&hd=2&autoplay=1`;
             }
-            
+
             playerArea.innerHTML = `
-                <iframe src="${embedUrl}" 
-                    frameborder="0" 
-                    allowfullscreen 
+                <iframe src="${embedUrl}"
+                    frameborder="0"
+                    allowfullscreen
                     allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                     style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;">
                 </iframe>
@@ -1086,7 +1118,7 @@ async function playSourceEpisode(source, index, title) {
                     <span style="font-size:56px;">🎬</span>
                     <span style="font-size:16px;font-weight:600;color:#fff;">Серия ${episode.episode}</span>
                     <span style="font-size:13px;color:#888;">Откройте источник в новой вкладке</span>
-                    <a href="${episode.url}" target="_blank" rel="noopener" 
+                    <a href="${episode.url}" target="_blank" rel="noopener"
                        style="padding:12px 32px;border-radius:50px;background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));color:#fff;text-decoration:none;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,245,255,0.2);">
                         ▶️ Открыть серию ${episode.episode}
                     </a>
@@ -1105,18 +1137,18 @@ function renderNoSources(source, title) {
         vk: `https://vk.com/videos-201142575?q=${encodeURIComponent(title)}`,
         deep: `https://deep-ent.ru/search?q=${encodeURIComponent(title)}`
     };
-    
+
     container.innerHTML = `
         <div class="watch-embed-header">
             <h4>🔍 ${sourceNames[source]} — ${title}</h4>
             <button class="watch-embed-close" onclick="closeWatchEmbed()">✕ Закрыть</button>
         </div>
-        
+
         <div class="watch-embed-notice">
             <strong>⚠️ Пока нет ссылок в базе</strong><br>
             Мы ищем видео вручную. Попробуйте найти через поиск источника.
         </div>
-        
+
         <div class="watch-search-links">
             <a href="${sourceUrls[source]}" target="_blank" rel="noopener" class="watch-search-link">
                 🔍 Найти «${title}» вручную
@@ -1144,7 +1176,7 @@ function closeWatchEmbed() {
 function renderComments(animeName) {
     const container = document.getElementById('commentsList');
     if (!container) return;
-    
+
     fetch('/api/comments/' + encodeURIComponent(animeName))
         .then(res => res.json())
         .then(comments => {
@@ -1175,17 +1207,17 @@ function renderComments(animeName) {
 function addComment() {
     const user = DB.get('currentUser');
     if (!user) { showToast('Войдите в аккаунт!', 'error'); return; }
-    
+
     const input = document.getElementById('commentInput');
     if (!input) return;
     const text = input.value.trim();
     if (!text) { showToast('Напишите что-нибудь!', 'warning'); return; }
-    
+
     const title = document.getElementById('detailTitle').textContent;
     if (!title || title === 'Загрузка...') { showToast('Ошибка: аниме не загружено', 'error'); return; }
-    
+
     console.log('💬 Отправка комментария:', { anime: title, user_name: user.name, text });
-    
+
     fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1238,7 +1270,7 @@ function deleteComment(id) {
 function toggleFav(name) {
     const user = DB.get('currentUser');
     if (!user) { showToast('Войдите в аккаунт!', 'error'); return; }
-    
+
     const favs = DB.getUserData(user.name, 'favorites', []);
     const idx = favs.indexOf(name);
     if (idx > -1) {
@@ -1258,7 +1290,7 @@ function renderFavorites() {
     const user = DB.get('currentUser');
     const container = document.getElementById('favGrouped');
     if (!container) return;
-    
+
     if (!user) {
         container.innerHTML = `
             <div class="fav-grid">
@@ -1273,9 +1305,9 @@ function renderFavorites() {
         updateFavStats([]);
         return;
     }
-    
+
     const favs = DB.getUserData(user.name, 'favorites', []);
-    
+
     if (favs.length === 0) {
         container.innerHTML = `
             <div class="fav-grid">
@@ -1290,7 +1322,7 @@ function renderFavorites() {
         updateFavStats([]);
         return;
     }
-    
+
     updateFavStats(favs);
     applyFavFilters();
 }
@@ -1298,37 +1330,37 @@ function renderFavorites() {
 function applyFavFilters() {
     const user = DB.get('currentUser');
     if (!user) return;
-    
+
     const container = document.getElementById('favGrouped');
     if (!container) return;
-    
+
     let favs = DB.getUserData(user.name, 'favorites', []);
-    
+
     const searchValue = document.getElementById('favSearchInput')?.value?.trim()?.toLowerCase() || '';
     if (searchValue) {
         favs = favs.filter(name => name.toLowerCase().includes(searchValue));
     }
-    
+
     const sortValue = document.getElementById('favSortSelect')?.value || 'added_desc';
     favs = sortFavorites(favs, sortValue);
-    
+
     const grouped = groupFavoritesByStatus(favs);
-    
+
     const isListView = document.getElementById('favViewBtn')?.classList.contains('active');
-    
+
     let html = '';
-    
+
     const sectionConfig = [
         { key: 'watching', icon: '▶️', title: 'Смотрю' },
         { key: 'planned', icon: '📅', title: 'В планах' },
         { key: 'completed', icon: '✅', title: 'Просмотрено' },
         { key: 'other', icon: '📌', title: 'Другое' }
     ];
-    
+
     sectionConfig.forEach(cfg => {
         const sectionItems = grouped[cfg.key] || [];
         if (sectionItems.length === 0) return;
-        
+
         html += `
             <div class="fav-section">
                 <div class="fav-section-header">
@@ -1342,7 +1374,7 @@ function applyFavFilters() {
             </div>
         `;
     });
-    
+
     if (!html) {
         html = `
             <div class="fav-grid">
@@ -1354,7 +1386,7 @@ function applyFavFilters() {
             </div>
         `;
     }
-    
+
     container.innerHTML = html;
     updateMassCount();
 }
@@ -1362,13 +1394,13 @@ function applyFavFilters() {
 function sortFavorites(favs, sortValue) {
     const [field, order] = sortValue.split('_');
     const dir = order === 'desc' ? -1 : 1;
-    
+
     return [...favs].sort((a, b) => {
         const itemA = findAnimeByName(a);
         const itemB = findAnimeByName(b);
-        
+
         let valA, valB;
-        
+
         switch (field) {
             case 'title':
                 valA = a.toLowerCase();
@@ -1388,7 +1420,7 @@ function sortFavorites(favs, sortValue) {
                 const idxB = favs.indexOf(b);
                 return (idxA - idxB) * dir;
         }
-        
+
         if (valA < valB) return -1 * dir;
         if (valA > valB) return 1 * dir;
         return 0;
@@ -1402,11 +1434,11 @@ function groupFavoritesByStatus(favs) {
         completed: [],
         other: []
     };
-    
+
     favs.forEach(name => {
         const item = findAnimeByName(name);
         const status = item?.status || '';
-        
+
         if (status.includes('Онгоинг') || status.includes('ongoing')) {
             groups.watching.push(name);
         } else if (status.includes('Завершено') || status.includes('released')) {
@@ -1417,7 +1449,7 @@ function groupFavoritesByStatus(favs) {
             groups.other.push(name);
         }
     });
-    
+
     return groups;
 }
 
@@ -1433,21 +1465,21 @@ function findAnimeByName(name) {
 
 function renderFavCard(name, index) {
     const item = findAnimeByName(name);
-    
+
     const img = item?.images?.jpg?.image_url || '';
     const age = item?.age_rating || '0+';
     const score = item?.score || 0;
-    
-    const posterContent = img 
+
+    const posterContent = img
         ? `<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none';">`
         : '<div style="width:100%;height:100%;background:linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);display:flex;align-items:center;justify-content:center;font-size:48px;">🎬</div>';
-    
+
     const scoreHtml = score > 0 ? `<div class="fav-card-score">⭐ ${score.toFixed(1)}</div>` : '';
-    
+
     return `
-        <div class="fav-card" 
+        <div class="fav-card"
              data-name="${name.replace(/"/g, '&quot;')}"
-             onclick="onFavCardClick(event, '${name.replace(/'/g, "\\'")}')" 
+             onclick="onFavCardClick(event, '${name.replace(/'/g, "\\'")}')"
              style="animation-delay: ${index * 0.04}s;">
             <div class="fav-card-img">
                 ${posterContent}
@@ -1466,40 +1498,40 @@ function renderFavCard(name, index) {
 
 function onFavCardClick(event, name) {
     const card = event.currentTarget;
-    
+
     if (card.classList.contains('mass-mode')) {
         card.classList.toggle('selected');
         updateMassCount();
         return;
     }
-    
+
     openDetailFromFav(name);
 }
 
 function removeFromFav(name) {
     const user = DB.get('currentUser');
     if (!user) return;
-    
+
     const favs = DB.getUserData(user.name, 'favorites', []);
     const idx = favs.indexOf(name);
     if (idx > -1) {
         favs.splice(idx, 1);
         DB.setUserData(user.name, 'favorites', favs);
         DB.save();
-        
+
         const cards = document.querySelectorAll('.fav-card');
-        
+
         cards.forEach(card => {
             const cardName = card.getAttribute('data-name');
             if (cardName === name) {
                 card.style.transition = 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
                 card.style.transform = 'scale(0.5) rotate(-15deg) translateY(-50px)';
                 card.style.opacity = '0';
-                
+
                 setTimeout(() => {
                     card.remove();
                     updateFavStats(favs);
-                    
+
                     const remaining = document.querySelectorAll('.fav-card').length;
                     if (remaining === 0) {
                         renderFavorites();
@@ -1519,14 +1551,14 @@ function removeFromFav(name) {
                 }, 500);
             }
         });
-        
+
         showToast('Удалено из избранного 💔', 'info');
     }
 }
 
 function openDetailFromFav(name) {
     if (!name) return;
-    
+
     const item = findAnimeByName(name);
     if (item) {
         openDetail(item.mal_id || item.id);
@@ -1537,19 +1569,19 @@ function openDetailFromFav(name) {
 
 function updateFavStats(favs) {
     document.getElementById('favStatTotal').textContent = favs.length;
-    
+
     if (favs.length === 0) {
         document.getElementById('favStatGenres').textContent = '0';
         document.getElementById('favStatEpisodes').textContent = '0';
         document.getElementById('favStatScore').textContent = '—';
         return;
     }
-    
+
     const genres = new Set();
     let totalEpisodes = 0;
     let totalScore = 0;
     let scoreCount = 0;
-    
+
     favs.forEach(name => {
         const item = findAnimeByName(name);
         if (item) {
@@ -1562,22 +1594,22 @@ function updateFavStats(favs) {
             }
         }
     });
-    
+
     document.getElementById('favStatGenres').textContent = genres.size;
     document.getElementById('favStatEpisodes').textContent = totalEpisodes;
-    document.getElementById('favStatScore').textContent = scoreCount > 0 
-        ? (totalScore / scoreCount).toFixed(1) 
+    document.getElementById('favStatScore').textContent = scoreCount > 0
+        ? (totalScore / scoreCount).toFixed(1)
         : '—';
 }
 
 function filterFavorites() {
     const searchInput = document.getElementById('favSearchInput');
     const clearBtn = document.getElementById('favSearchClear');
-    
+
     if (searchInput && clearBtn) {
         clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none';
     }
-    
+
     applyFavFilters();
 }
 
@@ -1595,31 +1627,31 @@ function clearFavSearch() {
 function toggleFavView() {
     const btn = document.getElementById('favViewBtn');
     if (!btn) return;
-    
+
     btn.classList.toggle('active');
-    
+
     if (btn.classList.contains('active')) {
         btn.textContent = '🔲 Сетка';
     } else {
         btn.textContent = '📋 Список';
     }
-    
+
     applyFavFilters();
 }
 
 function randomFromFav() {
     const user = DB.get('currentUser');
     if (!user) { showToast('Войдите в аккаунт!', 'error'); return; }
-    
+
     const favs = DB.getUserData(user.name, 'favorites', []);
     if (favs.length === 0) {
         showToast('Избранное пусто!', 'warning');
         return;
     }
-    
+
     const randomName = favs[Math.floor(Math.random() * favs.length)];
     const item = findAnimeByName(randomName);
-    
+
     if (item) {
         showToast(`🎲 Выбрано: ${randomName}`, 'success');
         openDetail(item.mal_id || item.id);
@@ -1632,11 +1664,11 @@ function toggleMassMode() {
     const panel = document.getElementById('favMassPanel');
     const btn = document.getElementById('favMassBtn');
     const cards = document.querySelectorAll('.fav-card');
-    
+
     if (!panel || !btn) return;
-    
+
     const isActive = panel.style.display !== 'none';
-    
+
     if (isActive) {
         panel.style.display = 'none';
         btn.classList.remove('active');
@@ -1648,7 +1680,7 @@ function toggleMassMode() {
         btn.innerHTML = '✕ Отмена';
         cards.forEach(c => c.classList.add('mass-mode'));
     }
-    
+
     updateMassCount();
 }
 
@@ -1673,29 +1705,29 @@ function deselectAllFav() {
 function deleteSelectedFav() {
     const user = DB.get('currentUser');
     if (!user) return;
-    
+
     const selected = document.querySelectorAll('.fav-card.selected');
     if (selected.length === 0) {
         showToast('Ничего не выбрано', 'warning');
         return;
     }
-    
+
     showConfirmModal(
-        '🗑 Удалить выбранные?', 
-        `Удалить ${selected.length} аниме из избранного?`, 
+        '🗑 Удалить выбранные?',
+        `Удалить ${selected.length} аниме из избранного?`,
         function() {
             const favs = DB.getUserData(user.name, 'favorites', []);
-            
+
             const namesToRemove = [];
             selected.forEach(card => {
                 const name = card.getAttribute('data-name');
                 if (name) namesToRemove.push(name);
             });
-            
+
             const newFavs = favs.filter(name => !namesToRemove.includes(name));
             DB.setUserData(user.name, 'favorites', newFavs);
             DB.save();
-            
+
             selected.forEach((card, i) => {
                 setTimeout(() => {
                     card.style.transition = 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
@@ -1704,11 +1736,11 @@ function deleteSelectedFav() {
                     setTimeout(() => card.remove(), 400);
                 }, i * 30);
             });
-            
+
             setTimeout(() => {
                 updateFavStats(newFavs);
                 updateMassCount();
-                
+
                 const remaining = document.querySelectorAll('.fav-card').length;
                 if (remaining === 0) {
                     renderFavorites();
@@ -1725,7 +1757,7 @@ function deleteSelectedFav() {
                     });
                 }
             }, 600);
-            
+
             showToast(`🗑 Удалено ${namesToRemove.length} аниме`, 'success');
         }
     );
@@ -1744,56 +1776,454 @@ function searchAndOpen(name) {
 }
 
 // ============================================
-// 13. ДОСТИЖЕНИЯ
+// 13. ДОСТИЖЕНИЯ v2.0 — ЭПИЧНАЯ ВЕРСИЯ
 // ============================================
-function renderAchievements() {
+function getUserMetrics(user) {
+    const favs = DB.getUserData(user, 'favorites', []);
+
+    let commentsCount = 0;
+    if (window._myCommentsCache && window._myCommentsCache.user === user) {
+        commentsCount = window._myCommentsCache.count;
+    }
+
+    const watching = DB.getUserData(user, 'continueWatching', {});
+    let episodesWatched = 0;
+    for (const anime in watching) {
+        episodesWatched += watching[anime].episode || 0;
+    }
+
+    return {
+        favorites: favs.length,
+        comments: commentsCount,
+        episodes: episodesWatched
+    };
+}
+
+async function renderAchievements() {
     const user = DB.get('currentUser');
     const grid = document.getElementById('achievementsGrid');
     if (!grid) return;
+
     if (!user) {
-        grid.innerHTML = '<div class="empty-state"><p>🔐 Войдите в аккаунт</p></div>';
-        updateAchievementStats([], ACHIEVEMENTS_LIST.length);
-        return;
-    }
-    const earned = DB.getAchievements(user.name);
-    const total = ACHIEVEMENTS_LIST.length;
-    const activeTitle = DB.getActiveTitle(user.name);
-    updateAchievementStats(earned, total);
-    
-    let html = '';
-    ACHIEVEMENTS_LIST.forEach(ach => {
-        const isEarned = earned.indexOf(ach.id) !== -1;
-        const isActive = activeTitle === ach.id;
-        html += `
-            <div class="ach-card ${isEarned ? 'earned' : 'locked'}">
-                <div class="ach-icon">${ach.icon}</div>
-                <div class="ach-name">${ach.name}</div>
-                <div class="ach-desc">${ach.desc}</div>
-                ${ach.title ? `<div class="ach-title">🎖️ Титул: ${ach.title}</div>` : ''}
-                <div class="ach-status">${isEarned ? '✅ Получено' : '🔒 Закрыто'}</div>
-                ${isEarned ? `<button class="ach-btn ${isActive ? 'active' : ''}" onclick="setActiveTitle('${ach.id}')">${isActive ? '✅ Активен' : '👑 Установить титул'}</button>` : ''}
+        grid.innerHTML = `
+            <div class="ach-empty-v2">
+                <span class="ach-empty-icon-v2">🔐</span>
+                <h3 class="ach-empty-title-v2">Войдите в аккаунт</h3>
+                <p class="ach-empty-desc-v2">Чтобы видеть свои достижения и прогресс</p>
+                <button class="ach-empty-btn-v2" onclick="showLoginModal()">🚀 Войти</button>
             </div>
         `;
+        updateAchievementStats([], ACHIEVEMENTS_LIST.length, {});
+        return;
+    }
+
+    // Загружаем комментарии (для метрики)
+    try {
+        const res = await fetch('/api/comments/all');
+        const comments = await res.json();
+        const myComments = comments.filter(c => c.user_name === user.name);
+        window._myCommentsCache = { user: user.name, count: myComments.length };
+    } catch(e) {
+        window._myCommentsCache = { user: user.name, count: 0 };
+    }
+
+    const earned = DB.getAchievements(user.name);
+    const activeTitle = DB.getActiveTitle(user.name);
+    const metrics = getUserMetrics(user.name);
+
+    // Считаем прогресс + автовыдача
+    const achievementsWithProgress = ACHIEVEMENTS_LIST.map(ach => {
+        const current = metrics[ach.metric] || 0;
+        const progress = Math.min(100, Math.round((current / ach.target) * 100));
+        const isEarned = earned.indexOf(ach.id) !== -1;
+
+        // ✅ Автовыдача
+        if (!isEarned && current >= ach.target) {
+            DB.addAchievement(user.name, ach.id);
+            setTimeout(() => showAchUnlock(ach), 500);
+        }
+
+        return { ...ach, current, progress, isEarned };
+    });
+
+    const finalEarned = DB.getAchievements(user.name);
+
+    updateAchievementStats(finalEarned, ACHIEVEMENTS_LIST.length, metrics);
+    updateAchTabCounts(achievementsWithProgress, finalEarned);
+    renderActiveTitle(activeTitle);
+
+    // Фильтрация
+    let filtered = [...achievementsWithProgress];
+
+    if (achCurrentFilter === 'earned') {
+        filtered = filtered.filter(a => a.isEarned);
+    } else if (achCurrentFilter === 'locked') {
+        filtered = filtered.filter(a => !a.isEarned && a.progress === 0);
+    } else if (achCurrentFilter === 'progress') {
+        filtered = filtered.filter(a => !a.isEarned && a.progress > 0 && a.progress < 100);
+    }
+
+    // Сортировка
+    const sortValue = document.getElementById('achSortSelect')?.value || 'rarity_desc';
+    achCurrentSort = sortValue;
+    filtered = sortAchievements(filtered, sortValue);
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div class="ach-empty-v2">
+                <span class="ach-empty-icon-v2">🔍</span>
+                <h3 class="ach-empty-title-v2">Ничего не найдено</h3>
+                <p class="ach-empty-desc-v2">Попробуйте выбрать другой фильтр</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    filtered.forEach((ach, index) => {
+        html += renderAchCardV2(ach, index, activeTitle);
     });
     grid.innerHTML = html;
 }
 
-function updateAchievementStats(earned, total) {
-    document.getElementById('achEarnedCount').textContent = earned.length;
-    document.getElementById('achTotalCount').textContent = total;
-    document.getElementById('achProgress').textContent = total > 0 ? Math.round((earned.length / total) * 100) + '%' : '0%';
-    document.getElementById('achProgressFill').style.width = total > 0 ? (earned.length / total) * 100 + '%' : '0%';
+function sortAchievements(list, sortValue) {
+    const [field, order] = sortValue.split('_');
+    const dir = order === 'desc' ? -1 : 1;
+
+    return [...list].sort((a, b) => {
+        let valA, valB;
+
+        switch (field) {
+            case 'rarity':
+                valA = RARITY_ORDER[a.rarity] || 0;
+                valB = RARITY_ORDER[b.rarity] || 0;
+                break;
+            case 'earned':
+                valA = a.isEarned ? 1 : 0;
+                valB = b.isEarned ? 1 : 0;
+                break;
+            case 'locked':
+                valA = a.isEarned ? 0 : 1;
+                valB = b.isEarned ? 0 : 1;
+                break;
+            case 'progress':
+                valA = a.progress;
+                valB = b.progress;
+                break;
+            case 'name':
+                valA = a.name.toLowerCase();
+                valB = b.name.toLowerCase();
+                break;
+            default:
+                valA = 0;
+                valB = 0;
+        }
+
+        if (valA < valB) return -1 * dir;
+        if (valA > valB) return 1 * dir;
+        return 0;
+    });
+}
+
+function renderAchCardV2(ach, index, activeTitle) {
+    const isActive = activeTitle === ach.id;
+    const rarityLabel = RARITY_LABELS[ach.rarity] || 'Обычное';
+
+    const progressText = ach.isEarned
+        ? `✅ Получено`
+        : `${ach.current} / ${ach.target}`;
+
+    const footerHtml = ach.isEarned
+        ? `
+            <div class="ach-title-info">
+                🎖️ <strong>${ach.title}</strong>
+            </div>
+            <button class="ach-btn-v2 ${isActive ? 'active' : 'set'}"
+                    onclick="event.stopPropagation(); setActiveTitle('${ach.id}')">
+                ${isActive ? '👑 Активен' : '⭐ Установить'}
+            </button>
+        `
+        : `
+            <div class="ach-title-info">
+                🔒 <span>Закрыто</span>
+            </div>
+            <button class="ach-btn-v2 locked" disabled>
+                🔒 ${ach.progress}%
+            </button>
+        `;
+
+    return `
+        <div class="ach-card-v2 ${ach.isEarned ? 'earned' : 'locked'} rarity-${ach.rarity}"
+             data-index="${index}"
+             onclick="openAchModal('${ach.id}')"
+             style="animation-delay: ${index * 0.05}s;">
+
+            <div class="ach-shine"></div>
+
+            ${ach.isEarned ? `<div class="ach-earned-check">✓</div>` : ''}
+
+            <div class="ach-card-header">
+                <div class="ach-icon-wrap">
+                    <span class="ach-icon-v2">${ach.icon}</span>
+                </div>
+                <div class="ach-rarity-badge ${ach.rarity}">
+                    ${rarityLabel}
+                </div>
+            </div>
+
+            <div class="ach-card-body">
+                <h3 class="ach-card-name">${ach.name}</h3>
+                <p class="ach-card-desc">${ach.desc}</p>
+
+                <div class="ach-progress-v2">
+                    <div class="ach-progress-header">
+                        <span class="ach-progress-label">Прогресс</span>
+                        <span class="ach-progress-value">${progressText}</span>
+                    </div>
+                    <div class="ach-progress-bar-v2">
+                        <div class="ach-progress-fill-v2" style="width: ${ach.progress}%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ach-card-footer">
+                ${footerHtml}
+            </div>
+        </div>
+    `;
+}
+
+function updateAchievementStats(earned, total, metrics) {
+    const percent = total > 0 ? Math.round((earned.length / total) * 100) : 0;
+
+    const earnedEl = document.getElementById('achEarnedCount');
+    const totalEl = document.getElementById('achTotalCount');
+    const remainingEl = document.getElementById('achRemainingCount');
+
+    if (earnedEl) earnedEl.textContent = earned.length;
+    if (totalEl) totalEl.textContent = total;
+    if (remainingEl) remainingEl.textContent = total - earned.length;
+
+    const ring = document.getElementById('achRingFill');
+    const percentEl = document.getElementById('achRingPercent');
+
+    if (ring) {
+        const circumference = 2 * Math.PI * 52;
+        const offset = circumference - (percent / 100) * circumference;
+        ring.style.strokeDashoffset = offset;
+    }
+
+    if (percentEl) percentEl.textContent = percent + '%';
+}
+
+function renderActiveTitle(activeTitle) {
+    const container = document.getElementById('achActiveTitleContainer');
+    if (!container) return;
+
+    if (!activeTitle) {
+        container.innerHTML = `<div class="ach-no-title">🎖️ Титул не установлен</div>`;
+        return;
+    }
+
+    const ach = ACHIEVEMENTS_LIST.find(a => a.id === activeTitle);
+    if (!ach) {
+        container.innerHTML = `<div class="ach-no-title">🎖️ Титул не установлен</div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="ach-active-title">
+            <span class="ach-active-title-icon">🎖️</span>
+            <span>Титул: ${ach.title}</span>
+        </div>
+    `;
+}
+
+function updateAchTabCounts(achievements, earned) {
+    const allCount = achievements.length;
+    const earnedCount = achievements.filter(a => a.isEarned).length;
+    const progressCount = achievements.filter(a => !a.isEarned && a.progress > 0 && a.progress < 100).length;
+    const lockedCount = achievements.filter(a => !a.isEarned && a.progress === 0).length;
+
+    const el1 = document.getElementById('achTabAllCount');
+    const el2 = document.getElementById('achTabEarnedCount');
+    const el3 = document.getElementById('achTabProgressCount');
+    const el4 = document.getElementById('achTabLockedCount');
+
+    if (el1) el1.textContent = allCount;
+    if (el2) el2.textContent = earnedCount;
+    if (el3) el3.textContent = progressCount;
+    if (el4) el4.textContent = lockedCount;
+}
+
+function setAchFilter(filter, btn) {
+    achCurrentFilter = filter;
+
+    document.querySelectorAll('.ach-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    renderAchievements();
 }
 
 function setActiveTitle(achId) {
     const user = DB.get('currentUser');
     if (!user) return;
+
     const earned = DB.getAchievements(user.name);
-    if (earned.indexOf(achId) === -1) { showToast('❌ Достижение не получено!', 'error'); return; }
-    DB.setActiveTitle(user.name, achId);
+    if (earned.indexOf(achId) === -1) {
+        showToast('❌ Достижение не получено!', 'error');
+        return;
+    }
+
+    const currentTitle = DB.getActiveTitle(user.name);
+
+    if (currentTitle === achId) {
+        DB.setActiveTitle(user.name, null);
+        showToast('👑 Титул снят', 'info');
+    } else {
+        DB.setActiveTitle(user.name, achId);
+        const ach = ACHIEVEMENTS_LIST.find(a => a.id === achId);
+        showToast(`👑 Титул "${ach?.title}" установлен!`, 'success');
+        spawnTitleConfetti();
+    }
+
     renderAchievements();
-    renderProfile();
-    showToast('👑 Титул установлен!', 'success');
+    if (typeof renderProfile === 'function') renderProfile();
+}
+
+function openAchModal(achId) {
+    const user = DB.get('currentUser');
+    if (!user) return;
+
+    const ach = ACHIEVEMENTS_LIST.find(a => a.id === achId);
+    if (!ach) return;
+
+    const earned = DB.getAchievements(user.name);
+    const isEarned = earned.indexOf(achId) !== -1;
+    const activeTitle = DB.getActiveTitle(user.name);
+    const isActive = activeTitle === achId;
+
+    const metrics = getUserMetrics(user.name);
+    const current = metrics[ach.metric] || 0;
+    const progress = Math.min(100, Math.round((current / ach.target) * 100));
+
+    const rarityLabel = RARITY_LABELS[ach.rarity] || 'Обычное';
+
+    let modal = document.getElementById('achDetailModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'achDetailModal';
+        modal.className = 'modal';
+        modal.onclick = function(e) {
+            if (e.target === modal) modal.style.display = 'none';
+        };
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:460px;">
+            <button class="modal-close" onclick="closeModal('achDetailModal')">
+                <svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg>
+            </button>
+
+            <div class="ach-modal-content">
+                <div class="ach-modal-icon ${ach.rarity}">${ach.icon}</div>
+                <div class="ach-modal-rarity ${ach.rarity}">${rarityLabel}</div>
+                <h2 class="ach-modal-name">${ach.name}</h2>
+                <p class="ach-modal-desc">${ach.desc}</p>
+
+                <div class="ach-modal-progress">
+                    <div class="ach-modal-progress-bar">
+                        <div class="ach-modal-progress-fill" style="width: ${progress}%;"></div>
+                    </div>
+                    <div class="ach-modal-progress-text">
+                        Прогресс: <strong>${current} / ${ach.target}</strong> (${progress}%)
+                    </div>
+                </div>
+
+                ${isEarned ? `
+                    <button class="btn-primary"
+                            onclick="setActiveTitle('${achId}'); closeModal('achDetailModal');"
+                            style="width:100%; padding:14px; font-size:15px;">
+                        ${isActive ? '👑 Снять титул' : '⭐ Установить титул'}
+                    </button>
+                ` : `
+                    <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:12px; font-size:13px; color:var(--text-muted);">
+                        🔒 ${progress > 0 ? 'Продолжай в том же духе!' : 'Начни путь к этому достижению'}
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function showAchUnlock(ach) {
+    const overlay = document.getElementById('achUnlockOverlay');
+    if (!overlay) return;
+
+    const iconEl = document.getElementById('achUnlockIcon');
+    const nameEl = document.getElementById('achUnlockName');
+    const descEl = document.getElementById('achUnlockDesc');
+
+    if (iconEl) {
+        iconEl.textContent = ach.icon;
+        iconEl.className = 'ach-unlock-icon' + (ach.rarity === 'legendary' ? ' legendary' : '');
+    }
+    if (nameEl) nameEl.textContent = ach.name;
+    if (descEl) descEl.textContent = ach.desc;
+
+    overlay.classList.add('show');
+
+    if (ach.rarity === 'legendary' || ach.rarity === 'epic') {
+        spawnBigConfetti(ach.rarity);
+    }
+}
+
+function closeAchUnlock() {
+    const overlay = document.getElementById('achUnlockOverlay');
+    if (overlay) overlay.classList.remove('show');
+
+    renderAchievements();
+}
+
+function spawnTitleConfetti() {
+    const colors = ['#ffd700', '#ffed4e', '#f39c12', '#ff6b6b'];
+    let html = '';
+    for (let i = 0; i < 40; i++) {
+        const x = Math.random() * 100;
+        const size = 6 + Math.random() * 8;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const duration = 1.5 + Math.random() * 2;
+        const delay = Math.random() * 0.5;
+        html += `<div style="position:fixed;left:${x}vw;top:-20px;width:${size}px;height:${size}px;background:${color};border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation:confettiFall ${duration}s ease-out forwards;animation-delay:${delay}s;z-index:99999;pointer-events:none;"></div>`;
+    }
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    document.body.appendChild(temp);
+    setTimeout(() => temp.remove(), 4000);
+}
+
+function spawnBigConfetti(rarity) {
+    const colors = rarity === 'legendary'
+        ? ['#ffd700', '#ffed4e', '#f39c12', '#ff2d78', '#b44aff']
+        : ['#b44aff', '#a29bfe', '#6c5ce7', '#fd79a8'];
+
+    let html = '';
+    for (let i = 0; i < 80; i++) {
+        const x = Math.random() * 100;
+        const size = 6 + Math.random() * 10;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const duration = 2 + Math.random() * 3;
+        const delay = Math.random() * 1;
+        const rotate = Math.random() * 720;
+        html += `<div style="position:fixed;left:${x}vw;top:-20px;width:${size}px;height:${size}px;background:${color};border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation:confettiFall ${duration}s ease-out forwards;animation-delay:${delay}s;z-index:99999;pointer-events:none;transform:rotate(${rotate}deg);"></div>`;
+    }
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    document.body.appendChild(temp);
+    setTimeout(() => temp.remove(), 6000);
 }
 
 function showAchievementPopup(ach) {
@@ -1842,38 +2272,38 @@ function renderProfile() {
     const onlineTime = DB.getUserData(user.name, 'onlineTime', 0);
     const favs = DB.getUserData(user.name, 'favorites', []);
     const earned = DB.getAchievements(user.name);
-    
+
     document.getElementById('profileName').textContent = user.name;
     document.getElementById('profileEmail').textContent = '📧 ' + user.email;
     document.getElementById('profileBio').textContent = profile.bio || 'Нажмите чтобы добавить описание';
     document.getElementById('profileJoinDate').textContent = 'Присоединился: ' + (user.created_at || 'недавно');
-    
+
     const xp = calculateXP(user.name);
     const level = Math.floor(xp / 100);
     const nextLevelXp = (level + 1) * 100;
     const progress = Math.min((xp % 100) / 100 * 100, 100);
-    
+
     document.getElementById('profileLevelBadge').textContent = 'Lv.' + level;
     document.getElementById('profileXpFill').style.width = progress + '%';
     document.getElementById('profileXpText').textContent = Math.floor(xp % 100) + ' / ' + nextLevelXp + ' XP';
-    
+
     const lastSeen = DB.getUserData(user.name, 'lastSeen', 0);
     const isOnline = (Date.now() - lastSeen) < 300000;
     const dot = document.getElementById('profileStatusDot');
     if (dot) dot.className = 'avatar-status ' + (isOnline ? 'online' : 'offline');
     document.getElementById('profileStatus').textContent = isOnline ? '🟢 В сети' : '🔴 Не в сети';
-    
+
     const img = document.getElementById('avatarImg');
     const letter = document.getElementById('avatarLetter');
     let avatarFound = false;
-    
+
     if (profile.avatar && profile.avatar.length > 100) {
         img.src = profile.avatar;
         img.style.display = 'block';
         if (letter) letter.style.display = 'none';
         avatarFound = true;
     }
-    
+
     if (!avatarFound) {
         const backupAvatar = localStorage.getItem('avatar_' + user.name);
         if (backupAvatar && backupAvatar.length > 100) {
@@ -1886,7 +2316,7 @@ function renderProfile() {
             avatarFound = true;
         }
     }
-    
+
     if (!avatarFound) {
         img.style.display = 'none';
         if (letter) {
@@ -1894,12 +2324,12 @@ function renderProfile() {
             letter.textContent = user.name[0].toUpperCase();
         }
     }
-    
+
     document.getElementById('statFav').textContent = favs.length;
     document.getElementById('statComments').textContent = getCommentCount(user.name);
     document.getElementById('statAchievements').textContent = earned.length;
     document.getElementById('statTime').textContent = formatTime(onlineTime);
-    
+
     const activeTitle = DB.getActiveTitle(user.name);
     const titleBadge = document.getElementById('profileTitle');
     if (titleBadge && activeTitle) {
@@ -1913,7 +2343,7 @@ function renderProfile() {
     } else if (titleBadge) {
         titleBadge.style.display = 'none';
     }
-    
+
     renderProfileAchievements(user.name);
     renderContinueWatching(user.name);
     renderActivityFeed(user.name);
@@ -1944,22 +2374,22 @@ function renderContinueWatching(user) {
     const grid = document.getElementById('continueGrid');
     const count = document.getElementById('continueCount');
     if (!grid) return;
-    
+
     const watching = DB.getUserData(user, 'continueWatching', {});
     const entries = Object.entries(watching);
-    
+
     if (count) count.textContent = entries.length;
-    
+
     if (entries.length === 0) {
         grid.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;width:100%;">Нет сохранённых серий</div>';
         return;
     }
-    
+
     let html = '';
     entries.slice(0, 6).forEach(([anime, data]) => {
         const progress = data.episode ? (data.episode / (data.total || 1)) * 100 : 0;
         const img = getPosterForAnime(anime);
-        
+
         html += `
             <div class="continue-card" onclick="searchAndOpen('${anime}')">
                 ${img ? `<img src="${img}" alt="${anime}">` : `<div style="width:60px;height:80px;background:#333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎬</div>`}
@@ -1974,23 +2404,23 @@ function renderContinueWatching(user) {
             </div>
         `;
     });
-    
+
     grid.innerHTML = html;
 }
 
 function renderActivityFeed(user) {
     const feed = document.getElementById('activityFeed');
     if (!feed) return;
-    
+
     const activities = DB.getUserData(user, 'activities', []);
-    
+
     if (activities.length === 0) {
         feed.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Активность появится здесь</div>';
         return;
     }
-    
+
     const icons = { 'watch': '▶️', 'favorite': '❤️', 'comment': '💬', 'achievement': '🏆', 'login': '🌐' };
-    
+
     let html = '';
     activities.slice(0, 10).forEach(act => {
         const icon = icons[act.type] || '📌';
@@ -2003,14 +2433,14 @@ function renderActivityFeed(user) {
             </div>
         `;
     });
-    
+
     feed.innerHTML = html;
 }
 
 function renderGenreStats(user) {
     const container = document.getElementById('genreStats');
     if (!container) return;
-    
+
     const favs = DB.getUserData(user, 'favorites', []);
     const genreCount = {};
     const genreColors = {
@@ -2018,7 +2448,7 @@ function renderGenreStats(user) {
         'Драма': '#8e44ad', 'Фэнтези': '#3498db', 'Романтика': '#e84393',
         'Фантастика': '#00b894', 'Повседневность': '#636e72'
     };
-    
+
     favs.forEach(name => {
         for (const id in allData) {
             if (allData[id] && allData[id].title === name) {
@@ -2028,20 +2458,20 @@ function renderGenreStats(user) {
             }
         }
     });
-    
+
     const sorted = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
-    
+
     if (sorted.length === 0) {
         container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;">Нет данных</div>';
         return;
     }
-    
+
     let html = '';
     sorted.forEach(([genre, count]) => {
         const color = genreColors[genre] || '#6c5ce7';
         html += `<span class="genre-tag" style="border-color:${color}40;background:${color}10;">${genre}<span class="count">${count}</span></span>`;
     });
-    
+
     container.innerHTML = html;
 }
 
@@ -2131,13 +2561,13 @@ function renderTopUsers() {
         const comments = getCommentCount(u);
         const earned = DB.getAchievements(u);
         const activeTitle = DB.getActiveTitle(u);
-        
+
         let titleName = '';
         if (activeTitle) {
             const ach = ACHIEVEMENTS_LIST.find(function(a) { return a.id === activeTitle; });
             if (ach) titleName = ach.title;
         }
-        
+
         const xp = favs.length * 10 + comments * 5 + earned.length * 20 + Math.floor(onlineTime / 60);
         data[u] = {
             name: u, favs: favs.length, comments, achievements: earned.length,
@@ -2154,7 +2584,7 @@ function renderTopUsers() {
     }
 
     const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-    const avatarGradients = ['avatar-gradient-1', 'avatar-gradient-2', 'avatar-gradient-3', 
+    const avatarGradients = ['avatar-gradient-1', 'avatar-gradient-2', 'avatar-gradient-3',
                            'avatar-gradient-4', 'avatar-gradient-5', 'avatar-gradient-6',
                            'avatar-gradient-7', 'avatar-gradient-8', 'avatar-gradient-9', 'avatar-gradient-10'];
 
@@ -2176,7 +2606,7 @@ function renderTopUsers() {
         const medal = index < 10 ? medals[index] : '#' + (index + 1);
         const avatarGrad = avatarGradients[index % avatarGradients.length];
         const xpPercent = Math.min((user.xp / maxXP) * 100, 100);
-        
+
         html += `
             <tr class="${rankClass}">
                 <td class="rank-cell">${medal}</td>
@@ -2355,7 +2785,7 @@ function saveEdit() {
     const type = window._editType || 'bio';
     const val = type === 'bio' ? textarea.value.trim() : input.value.trim();
     if (!val) { showToast('Поле не может быть пустым!', 'error'); return; }
-    
+
     if (type === 'name') {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/update-name');
@@ -2433,7 +2863,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 22. ✅ МОИ КОММЕНТАРИИ v2.0 (ИСПРАВЛЕНО)
+// 22. МОИ КОММЕНТАРИИ v2.0
 // ============================================
 function renderMyComments() {
     const user = DB.get('currentUser');
@@ -2442,7 +2872,7 @@ function renderMyComments() {
         console.error('❌ mcGrouped не найден');
         return;
     }
-    
+
     if (!user) {
         container.innerHTML = `
             <div class="mc-list">
@@ -2457,17 +2887,16 @@ function renderMyComments() {
         updateMcStats([]);
         return;
     }
-    
+
     console.log('🔍 Загрузка комментариев для:', user.name);
-    
+
     container.innerHTML = `
         <div style="text-align:center;padding:40px;color:#888;">
             <div class="spinner-small"></div>
             <br>⏳ Загрузка комментариев...
         </div>
     `;
-    
-    // ✅ Используем endpoint /api/comments/all
+
     fetch('/api/comments/all')
         .then(res => {
             console.log('📡 /api/comments/all → статус:', res.status);
@@ -2476,16 +2905,18 @@ function renderMyComments() {
         })
         .then(comments => {
             console.log('📦 Всего комментариев в БД:', comments.length);
-            
+
             if (!Array.isArray(comments)) {
                 console.error('❌ Не массив:', comments);
                 comments = [];
             }
-            
-            // ✅ Фильтруем по имени пользователя
+
             myCommentsAll = comments.filter(c => c.user_name === user.name);
             console.log(`✅ Моих комментариев: ${myCommentsAll.length}`);
-            
+
+            // Сохраняем в кэш для достижений
+            window._myCommentsCache = { user: user.name, count: myCommentsAll.length };
+
             updateMcStats(myCommentsAll);
             applyMcFilters();
         })
@@ -2509,12 +2940,12 @@ function updateMcStats(comments) {
     const animeEl = document.getElementById('mcStatAnime');
     const weekEl = document.getElementById('mcStatWeek');
     const avgEl = document.getElementById('mcStatAvg');
-    
+
     if (totalEl) totalEl.textContent = comments.length;
-    
+
     const uniqueAnime = new Set(comments.map(c => c.anime));
     if (animeEl) animeEl.textContent = uniqueAnime.size;
-    
+
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const weekComments = comments.filter(c => {
         if (!c.created_at) return false;
@@ -2522,7 +2953,7 @@ function updateMcStats(comments) {
         return !isNaN(t) && t > weekAgo;
     });
     if (weekEl) weekEl.textContent = weekComments.length;
-    
+
     const totalLength = comments.reduce((sum, c) => sum + (c.text?.length || 0), 0);
     const avgLength = comments.length > 0 ? Math.round(totalLength / comments.length) : 0;
     if (avgEl) avgEl.textContent = avgLength;
@@ -2531,22 +2962,22 @@ function updateMcStats(comments) {
 function applyMcFilters() {
     const container = document.getElementById('mcGrouped');
     if (!container) return;
-    
+
     let comments = [...myCommentsAll];
-    
+
     const searchValue = document.getElementById('mcSearchInput')?.value?.trim()?.toLowerCase() || '';
     if (searchValue) {
-        comments = comments.filter(c => 
+        comments = comments.filter(c =>
             (c.text || '').toLowerCase().includes(searchValue) ||
             (c.anime || '').toLowerCase().includes(searchValue)
         );
     }
-    
+
     const sortValue = document.getElementById('mcSortSelect')?.value || 'date_desc';
     comments = sortMyComments(comments, sortValue);
-    
+
     myCommentsFiltered = comments;
-    
+
     if (comments.length === 0) {
         container.innerHTML = `
             <div class="mc-list">
@@ -2560,23 +2991,23 @@ function applyMcFilters() {
         `;
         return;
     }
-    
+
     if (mcGroupMode) {
         renderMcGroupedByDate(comments);
     } else {
         renderMcList(comments);
     }
-    
+
     updateMcMassCount();
 }
 
 function sortMyComments(comments, sortValue) {
     const [field, order] = sortValue.split('_');
     const dir = order === 'desc' ? -1 : 1;
-    
+
     return [...comments].sort((a, b) => {
         let valA, valB;
-        
+
         switch (field) {
             case 'date':
                 valA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -2594,7 +3025,7 @@ function sortMyComments(comments, sortValue) {
                 valA = 0;
                 valB = 0;
         }
-        
+
         if (valA < valB) return -1 * dir;
         if (valA > valB) return 1 * dir;
         return 0;
@@ -2604,43 +3035,43 @@ function sortMyComments(comments, sortValue) {
 function renderMcList(comments) {
     const container = document.getElementById('mcGrouped');
     if (!container) return;
-    
+
     const maxLength = Math.max(...comments.map(c => c.text?.length || 0));
-    
+
     let html = '<div class="mc-list">';
     comments.forEach((c, index) => {
         html += renderMcItem(c, index, maxLength);
     });
     html += '</div>';
-    
+
     container.innerHTML = html;
 }
 
 function renderMcGroupedByDate(comments) {
     const container = document.getElementById('mcGrouped');
     if (!container) return;
-    
+
     const groups = {};
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const yesterday = today - 86400000;
     const weekAgo = today - 7 * 86400000;
     const monthAgo = today - 30 * 86400000;
-    
+
     comments.forEach(c => {
         const date = c.created_at ? new Date(c.created_at).getTime() : 0;
         let key;
-        
+
         if (date >= today) key = 'today';
         else if (date >= yesterday) key = 'yesterday';
         else if (date >= weekAgo) key = 'week';
         else if (date >= monthAgo) key = 'month';
         else key = 'older';
-        
+
         if (!groups[key]) groups[key] = [];
         groups[key].push(c);
     });
-    
+
     const groupConfig = [
         { key: 'today', icon: '📅', title: 'Сегодня' },
         { key: 'yesterday', icon: '📆', title: 'Вчера' },
@@ -2648,14 +3079,14 @@ function renderMcGroupedByDate(comments) {
         { key: 'month', icon: '📅', title: 'В этом месяце' },
         { key: 'older', icon: '📦', title: 'Ранее' }
     ];
-    
+
     const maxLength = Math.max(...comments.map(c => c.text?.length || 0));
-    
+
     let html = '';
     groupConfig.forEach(cfg => {
         const items = groups[cfg.key];
         if (!items || items.length === 0) return;
-        
+
         html += `
             <div class="mc-section">
                 <div class="mc-section-header">
@@ -2669,7 +3100,7 @@ function renderMcGroupedByDate(comments) {
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
@@ -2677,29 +3108,29 @@ function renderMcItem(comment, index, maxLength) {
     const anime = comment.anime || 'Неизвестное аниме';
     const text = comment.text || '';
     const date = comment.date || (comment.created_at ? new Date(comment.created_at).toLocaleString('ru-RU') : '');
-    
+
     const animeItem = findAnimeByName(anime);
     const poster = animeItem?.images?.jpg?.image_url || '';
-    
+
     const isTopComment = text.length === maxLength && maxLength > 50;
     const isSelected = mcSelectedIds.has(comment.id);
-    
+
     const posterContent = poster
         ? `<img src="${poster}" alt="${anime}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mc-item-poster-no\\'>🎬</div>'">`
         : `<div class="mc-item-poster-no">🎬</div>`;
-    
+
     const safeAnime = anime.replace(/'/g, "\\'");
-    
+
     return `
-        <div class="mc-item${isTopComment ? ' top-comment' : ''}${mcMassMode ? ' mass-mode' : ''}${isSelected ? ' selected' : ''}" 
+        <div class="mc-item${isTopComment ? ' top-comment' : ''}${mcMassMode ? ' mass-mode' : ''}${isSelected ? ' selected' : ''}"
              data-id="${comment.id}"
              style="animation-delay: ${index * 0.03}s;">
             <div class="mc-item-checkbox" onclick="event.stopPropagation(); toggleMcSelection(${comment.id})"></div>
-            
+
             <div class="mc-item-poster" onclick="event.stopPropagation(); searchAndOpen('${safeAnime}')">
                 ${posterContent}
             </div>
-            
+
             <div class="mc-item-content" onclick="event.stopPropagation(); onMcItemClick(${comment.id})">
                 <div class="mc-item-anime">📺 ${anime}</div>
                 <div class="mc-item-text">${text}</div>
@@ -2708,7 +3139,7 @@ function renderMcItem(comment, index, maxLength) {
                     <span class="mc-item-length">📏 ${text.length} симв.</span>
                 </div>
             </div>
-            
+
             <div class="mc-item-actions">
                 <button class="mc-action-icon-btn" onclick="event.stopPropagation(); searchAndOpen('${safeAnime}')" title="Перейти к аниме">
                     🔗
@@ -2726,7 +3157,7 @@ function onMcItemClick(id) {
         toggleMcSelection(id);
         return;
     }
-    
+
     const comment = myCommentsAll.find(c => c.id === id);
     if (comment) {
         searchAndOpen(comment.anime);
@@ -2739,12 +3170,12 @@ function toggleMcSelection(id) {
     } else {
         mcSelectedIds.add(id);
     }
-    
+
     const item = document.querySelector(`.mc-item[data-id="${id}"]`);
     if (item) {
         item.classList.toggle('selected', mcSelectedIds.has(id));
     }
-    
+
     updateMcMassCount();
 }
 
@@ -2756,11 +3187,11 @@ function updateMcMassCount() {
 function toggleMcMassMode() {
     const panel = document.getElementById('mcMassPanel');
     const btn = document.getElementById('mcMassBtn');
-    
+
     if (!panel || !btn) return;
-    
+
     mcMassMode = !mcMassMode;
-    
+
     if (mcMassMode) {
         panel.style.display = 'flex';
         btn.classList.add('active');
@@ -2771,7 +3202,7 @@ function toggleMcMassMode() {
         btn.innerHTML = '☑️ Выбрать';
         mcSelectedIds.clear();
     }
-    
+
     applyMcFilters();
 }
 
@@ -2790,17 +3221,17 @@ function deleteSelectedMc() {
         showToast('Ничего не выбрано', 'warning');
         return;
     }
-    
+
     showConfirmModal(
         '🗑 Удалить выбранные?',
         `Удалить ${mcSelectedIds.size} комментариев?`,
         function() {
             const user = DB.get('currentUser');
             if (!user) return;
-            
+
             const ids = Array.from(mcSelectedIds);
             let deleted = 0;
-            
+
             const promises = ids.map(id => {
                 return fetch('/api/comments/' + id, {
                     method: 'DELETE',
@@ -2813,12 +3244,12 @@ function deleteSelectedMc() {
                 })
                 .catch(() => {});
             });
-            
+
             Promise.all(promises).then(() => {
                 showToast(`🗑 Удалено ${deleted} комментариев`, 'success');
                 mcSelectedIds.clear();
                 mcMassMode = false;
-                
+
                 const panel = document.getElementById('mcMassPanel');
                 const btn = document.getElementById('mcMassBtn');
                 if (panel) panel.style.display = 'none';
@@ -2826,7 +3257,7 @@ function deleteSelectedMc() {
                     btn.classList.remove('active');
                     btn.innerHTML = '☑️ Выбрать';
                 }
-                
+
                 renderMyComments();
             });
         }
@@ -2837,7 +3268,7 @@ function deleteMcComment(id) {
     showConfirmModal('🗑 Удалить комментарий', 'Вы уверены?', function() {
         const user = DB.get('currentUser');
         if (!user) return;
-        
+
         fetch('/api/comments/' + id, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -2858,7 +3289,7 @@ function deleteMcComment(id) {
 
 function toggleMcGroup() {
     mcGroupMode = !mcGroupMode;
-    
+
     const btn = document.getElementById('mcGroupBtn');
     if (btn) {
         if (mcGroupMode) {
@@ -2867,18 +3298,18 @@ function toggleMcGroup() {
             btn.classList.remove('active');
         }
     }
-    
+
     applyMcFilters();
 }
 
 function filterMyComments() {
     const searchInput = document.getElementById('mcSearchInput');
     const clearBtn = document.getElementById('mcSearchClear');
-    
+
     if (searchInput && clearBtn) {
         clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none';
     }
-    
+
     applyMcFilters();
 }
 
@@ -2901,14 +3332,21 @@ document.addEventListener('DOMContentLoaded', function() {
     restoreAllData();
     updateUI();
     navigate('home');
-    
+
     const user = DB.get('currentUser');
     if (user) startOnlineTracking();
     console.log('✅ OnikaAnime готов!');
 });
 
 // ============================================
-// 24. ЭКСПОРТ
+// 24. ФУНКЦИЯ SCROLL TO TOP
+// ============================================
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================
+// 25. ЭКСПОРТ
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2988,10 +3426,20 @@ window.deleteMcComment = deleteMcComment;
 window.toggleMcSelection = toggleMcSelection;
 window.onMcItemClick = onMcItemClick;
 
-// ===== ФУНКЦИЯ SCROLL TO TOP =====
-function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-window.scrollToTop = scrollToTop;
+// ===== ДОСТИЖЕНИЯ v2.0 =====
+window.setAchFilter = setAchFilter;
+window.openAchModal = openAchModal;
+window.closeAchUnlock = closeAchUnlock;
+window.setActiveTitle = setActiveTitle;
+window.showAchievementPopup = showAchievementPopup;
+window.hidePopup = hidePopup;
+window.spawnConfetti = spawnConfetti;
+window.spawnTitleConfetti = spawnTitleConfetti;
+window.spawnBigConfetti = spawnBigConfetti;
+window.renderActiveTitle = renderActiveTitle;
+window.updateAchTabCounts = updateAchTabCounts;
+window.sortAchievements = sortAchievements;
+window.renderAchCardV2 = renderAchCardV2;
+window.showAchUnlock = showAchUnlock;
 
 console.log('✅ OnikaAnime полностью загружен!');
