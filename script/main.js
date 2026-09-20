@@ -1,5 +1,5 @@
 // ============================================
-// ГЛАВНЫЙ ФАЙЛ ONIKAANIME (БЕЗ СКРИНШОТОВ)
+// ГЛАВНЫЙ ФАЙЛ ONIKAANIME
 // ============================================
 
 const allData = {};
@@ -15,9 +15,10 @@ let startTime = Date.now();
 let isLoading = false;
 let isAllLoaded = false;
 let searchTimeout = null;
-let heroSliderData = [];
-let heroCurrentSlide = 0;
-let heroAutoSlideTimer = null;
+
+// Coverflow
+let coverflowItems = [];
+let coverflowIndex = 0;
 
 const CATALOG_LIMIT = 12;
 
@@ -240,45 +241,45 @@ window.addEventListener('scroll', function() {
 });
 
 // ============================================
-// 1. КАРУСЕЛЬ РЕКОМЕНДАЦИЙ (3D)
+// 1. COVERFLOW КАРУСЕЛЬ РЕКОМЕНДАЦИЙ
 // ============================================
 async function loadRecommendationsForHero() {
     try {
         const recs = await API.getRecommended(7);
         if (recs && recs.length > 0) {
-            heroSliderData = recs;
-            renderHeroSlider(recs);
-            startHeroAutoSlide();
+            coverflowItems = recs;
+            coverflowIndex = Math.floor(recs.length / 2);
+            renderCoverflow(recs);
             console.log('🎲 Загружено', recs.length, 'рекомендаций');
         }
     } catch (e) { console.error('Ошибка загрузки рекомендаций:', e); }
 }
 
-function renderHeroSlider(items) {
-    const track = document.getElementById('heroSlider');
-    const dots = document.getElementById('heroDots');
+function renderCoverflow(items) {
+    const track = document.getElementById('coverflowTrack');
+    const dots = document.getElementById('coverflowDots');
+    const currentEl = document.getElementById('coverflowCurrent');
+    const totalEl = document.getElementById('coverflowTotal');
     if (!track) return;
 
-    const limitedItems = items.slice(0, 7);
-    heroSliderData = limitedItems;
-    heroCurrentSlide = 0;
+    const limited = items.slice(0, 7);
+    coverflowItems = limited;
 
-    let cardsHtml = '';
-    limitedItems.forEach((item, index) => {
+    let html = '';
+    limited.forEach((item, i) => {
         const img = item.images?.jpg?.image_url || '';
         const title = item.title || 'Без названия';
         const year = item.year || '';
         const episodes = item.episodes || '?';
         const age = item.age_rating || '0+';
         const id = item.id;
-
-        cardsHtml += `
-            <div class="hero-3d-card initial" data-index="${index}" onclick="openDetail('${id}')">
-                <div class="hero-3d-card-poster" style="background-image: url('${img}');"></div>
-                <div class="hero-3d-card-age">${age}</div>
-                <div class="hero-3d-card-content">
-                    <h3 class="hero-3d-card-title">${title}</h3>
-                    <div class="hero-3d-card-info">
+        html += `
+            <div class="coverflow-slide" data-index="${i}" onclick="openDetail('${id}')">
+                <div class="coverflow-slide-poster" style="background-image:url('${img}')"></div>
+                <div class="coverflow-slide-age">${age}</div>
+                <div class="coverflow-slide-content">
+                    <h3 class="coverflow-slide-title">${title}</h3>
+                    <div class="coverflow-slide-info">
                         ${year && year !== '--' ? `<span>📅 ${year}</span>` : ''}
                         <span>📺 ${episodes}</span>
                     </div>
@@ -286,62 +287,84 @@ function renderHeroSlider(items) {
             </div>
         `;
     });
+    track.innerHTML = html;
 
     let dotsHtml = '';
-    limitedItems.forEach((_, index) => {
-        dotsHtml += `<button class="hero-3d-dot${index === 0 ? ' active' : ''}" onclick="goToHeroSlide(${index})" aria-label="Слайд ${index + 1}"></button>`;
+    limited.forEach((_, i) => {
+        dotsHtml += `<button class="coverflow-dot${i === coverflowIndex ? ' active' : ''}" onclick="goToCoverflow(${i})" aria-label="Слайд ${i + 1}"></button>`;
     });
-
-    track.innerHTML = cardsHtml;
     if (dots) dots.innerHTML = dotsHtml;
+    if (currentEl) currentEl.textContent = coverflowIndex + 1;
+    if (totalEl) totalEl.textContent = limited.length;
 
-    setTimeout(() => {
-        document.querySelectorAll('.hero-3d-card.initial').forEach(c => c.classList.remove('initial'));
-    }, 1500);
-
-    updateHeroCards();
+    updateCoverflow();
 }
 
-function updateHeroCards() {
-    const cards = document.querySelectorAll('.hero-3d-card');
-    const dots = document.querySelectorAll('.hero-3d-dot');
-    const total = cards.length;
+function updateCoverflow() {
+    const slides = document.querySelectorAll('.coverflow-slide');
+    const dots = document.querySelectorAll('.coverflow-dot');
+    const total = slides.length;
     if (!total) return;
 
-    cards.forEach((card, i) => {
-        card.classList.remove('active', 'prev', 'next', 'far-prev', 'far-next', 'hidden');
-        let position = 'hidden';
-        if (i === heroCurrentSlide) position = 'active';
-        else if (i === (heroCurrentSlide + 1) % total) position = 'next';
-        else if (i === (heroCurrentSlide - 1 + total) % total) position = 'prev';
-        else if (i === (heroCurrentSlide + 2) % total) position = 'far-next';
-        else if (i === (heroCurrentSlide - 2 + total) % total) position = 'far-prev';
-        card.classList.add(position);
+    slides.forEach((slide, i) => {
+        slide.classList.remove('is-active', 'is-prev', 'is-next', 'is-far-prev', 'is-far-next', 'is-hidden');
+        if (i === coverflowIndex) slide.classList.add('is-active');
+        else if (i === coverflowIndex - 1) slide.classList.add('is-prev');
+        else if (i === coverflowIndex + 1) slide.classList.add('is-next');
+        else if (i === coverflowIndex - 2) slide.classList.add('is-far-prev');
+        else if (i === coverflowIndex + 2) slide.classList.add('is-far-next');
+        else slide.classList.add('is-hidden');
     });
 
-    dots.forEach((dot, i) => dot.classList.toggle('active', i === heroCurrentSlide));
+    dots.forEach((dot, i) => dot.classList.toggle('active', i === coverflowIndex));
+
+    const currentEl = document.getElementById('coverflowCurrent');
+    if (currentEl) currentEl.textContent = coverflowIndex + 1;
 }
 
-function startHeroAutoSlide() {
-    if (heroAutoSlideTimer) clearInterval(heroAutoSlideTimer);
-    heroAutoSlideTimer = setInterval(() => slideHero(1), 5000);
+function coverflowPrev() {
+    if (coverflowIndex > 0) { coverflowIndex--; updateCoverflow(); scrollCoverflowToActive(); }
 }
 
-function slideHero(direction) {
-    const cards = document.querySelectorAll('.hero-3d-card');
-    if (!cards.length) return;
-    heroCurrentSlide = (heroCurrentSlide + direction + cards.length) % cards.length;
-    updateHeroCards();
-    if (heroAutoSlideTimer) { clearInterval(heroAutoSlideTimer); startHeroAutoSlide(); }
+function coverflowNext() {
+    if (coverflowIndex < coverflowItems.length - 1) { coverflowIndex++; updateCoverflow(); scrollCoverflowToActive(); }
 }
 
-function goToHeroSlide(index) {
-    const cards = document.querySelectorAll('.hero-3d-card');
-    if (!cards.length || index === heroCurrentSlide) return;
-    heroCurrentSlide = index;
-    updateHeroCards();
-    if (heroAutoSlideTimer) { clearInterval(heroAutoSlideTimer); startHeroAutoSlide(); }
+function goToCoverflow(index) {
+    if (index >= 0 && index < coverflowItems.length) {
+        coverflowIndex = index;
+        updateCoverflow();
+        scrollCoverflowToActive();
+    }
 }
+
+function scrollCoverflowToActive() {
+    const track = document.getElementById('coverflowTrack');
+    const active = track?.querySelector('.coverflow-slide.is-active');
+    if (track && active) {
+        active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+}
+
+// ===== СВАЙП ДЛЯ COVERFLOW =====
+document.addEventListener('DOMContentLoaded', function() {
+    const track = document.getElementById('coverflowTrack');
+    if (!track) return;
+    let startX = 0, isDown = false;
+    track.addEventListener('mousedown', e => { isDown = true; startX = e.pageX; });
+    track.addEventListener('mouseup', e => {
+        if (!isDown) return;
+        isDown = false;
+        const diff = e.pageX - startX;
+        if (Math.abs(diff) > 50) diff > 0 ? coverflowPrev() : coverflowNext();
+    });
+    track.addEventListener('mouseleave', () => { isDown = false; });
+    track.addEventListener('touchstart', e => { startX = e.touches[0].pageX; }, { passive: true });
+    track.addEventListener('touchend', e => {
+        const diff = e.changedTouches[0].pageX - startX;
+        if (Math.abs(diff) > 50) diff > 0 ? coverflowPrev() : coverflowNext();
+    }, { passive: true });
+});
 
 // ============================================
 // 2. СКЕЛЕТОНЫ
@@ -1721,21 +1744,6 @@ function spawnBigConfetti(rarity) {
     setTimeout(() => temp.remove(), 6000);
 }
 
-function showAchievementPopup(ach) {
-    const popup = document.getElementById('achievementPopup');
-    if (!popup) return;
-    document.getElementById('popupIcon').textContent = ach.icon;
-    document.getElementById('popupName').textContent = ach.name;
-    document.getElementById('popupDesc').textContent = ach.desc;
-    document.getElementById('popupBadge').textContent = '🎖️ ' + (ach.title || 'Новое достижение!');
-    popup.classList.add('show');
-    spawnConfetti();
-    clearTimeout(window._popupTimer);
-    window._popupTimer = setTimeout(() => { popup.classList.remove('show'); }, 5000);
-}
-
-function hidePopup() { document.getElementById('achievementPopup').classList.remove('show'); }
-
 function spawnConfetti() {
     const container = document.getElementById('confetti');
     if (!container) return;
@@ -2140,10 +2148,10 @@ function saveEdit() {
                     user.name = val;
                     localStorage.setItem('onika_currentUser', JSON.stringify(user));
                     DB._data.currentUser = user;
-                    if (DB._data.favorites[oldName]) { DB._data.favorites[val] = DB._data.favorites[oldName]; delete DB._data.favorites[oldName]; }
-                    if (DB._data.achievements[oldName]) { DB._data.achievements[val] = DB._data.achievements[oldName]; delete DB._data.achievements[oldName]; }
-                    if (DB._data.activeTitle[oldName]) { DB._data.activeTitle[val] = DB._data.activeTitle[oldName]; delete DB._data.activeTitle[oldName]; }
-                    if (DB._data.profiles[oldName]) { DB._data.profiles[val] = DB._data.profiles[oldName]; delete DB._data.profiles[oldName]; }
+                    if (DB._data.favorites && DB._data.favorites[oldName]) { DB._data.favorites[val] = DB._data.favorites[oldName]; delete DB._data.favorites[oldName]; }
+                    if (DB._data.achievements && DB._data.achievements[oldName]) { DB._data.achievements[val] = DB._data.achievements[oldName]; delete DB._data.achievements[oldName]; }
+                    if (DB._data.activeTitle && DB._data.activeTitle[oldName]) { DB._data.activeTitle[val] = DB._data.activeTitle[oldName]; delete DB._data.activeTitle[oldName]; }
+                    if (DB._data.profiles && DB._data.profiles[oldName]) { DB._data.profiles[val] = DB._data.profiles[oldName]; delete DB._data.profiles[oldName]; }
                     DB.save();
                     closeModal('editModal');
                     renderProfile();
@@ -2500,9 +2508,6 @@ window.updateSocialStats = updateSocialStats;
 window.searchAndOpen = searchAndOpen;
 window.clearCatalogSearch = clearCatalogSearch;
 window.setGenre = setGenre;
-window.slideHero = slideHero;
-window.goToHeroSlide = goToHeroSlide;
-window.updateHeroCards = updateHeroCards;
 window.changeBanner = changeBanner;
 window.addActivity = addActivity;
 window.saveContinueWatching = saveContinueWatching;
@@ -2563,5 +2568,12 @@ window.renderWatchProgress = renderWatchProgress;
 window.extractDominantColor = extractDominantColor;
 window.getGenreColor = getGenreColor;
 window.onGenreClick = onGenreClick;
+
+window.selectSearchSuggestion = selectSearchSuggestion;
+
+// ===== COVERFLOW =====
+window.coverflowPrev = coverflowPrev;
+window.coverflowNext = coverflowNext;
+window.goToCoverflow = goToCoverflow;
 
 console.log('✅ OnikaAnime полностью загружен!');
