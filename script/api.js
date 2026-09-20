@@ -178,12 +178,14 @@ const API = {
     },
 
     // ============================================
-    // 5. СЛУЧАЙНОЕ
+    // 5. СЛУЧАЙНОЕ (УЛУЧШЕННОЕ)
     // ============================================
     async getRandom(limit = 1) {
+        // Берём случайную страницу из топ-50 (там точно хорошие аниме)
         const randomPage = Math.floor(Math.random() * 50) + 1;
+
         const query = `{
-            animes(page: ${randomPage}, limit: ${limit}, order: popularity) {
+            animes(page: ${randomPage}, limit: 50, order: ranked) {
                 id
                 name
                 russian
@@ -195,6 +197,7 @@ const API = {
                 episodesAired
                 duration
                 rating
+                description
                 year: airedOn { year }
                 poster { originalUrl mainUrl }
                 genres { id name russian kind }
@@ -202,9 +205,49 @@ const API = {
         }`;
 
         const data = await this._graphql(query, false);
-        if (!data || !data.animes) return [];
+        if (!data || !data.animes || !data.animes.length) return [];
 
-        return data.animes.map(a => this._convertAnime(a));
+        // Фильтруем: только с постером и рейтингом >= 6
+        const valid = data.animes
+            .filter(a => (a.poster?.originalUrl || a.poster?.mainUrl) && (a.score || 0) >= 6)
+            .map(a => this._convertAnime(a));
+
+        if (!valid.length) return [];
+
+        // Перемешиваем и берём limit
+        const shuffled = valid.sort(() => Math.random() - 0.5);
+        const result = shuffled.slice(0, limit);
+
+        // Для каждого результата подгружаем описание через REST
+        for (const item of result) {
+            if (!item.synopsis && item.rawId) {
+                try {
+                    const desc = await this._getDescription(item.rawId);
+                    if (desc) {
+                        item.synopsis = desc;
+                        item.description = desc;
+                    }
+                } catch (e) {
+                    // игнорируем
+                }
+            }
+        }
+
+        return result;
+    },
+
+    // ===== ВСПОМОГАТЕЛЬНЫЙ: описание через REST =====
+    async _getDescription(id) {
+        try {
+            const response = await fetch(this.SHIKIMORI_REST + '/' + id);
+            if (!response.ok) return '';
+            const data = await response.json();
+            let desc = data.description || '';
+            desc = desc.replace(/<[^>]*>/g, '').trim();
+            return desc;
+        } catch (e) {
+            return '';
+        }
     },
 
     // ============================================
@@ -283,65 +326,52 @@ const API = {
     },
 
     // ============================================
-    // 7. РЕКОМЕНДАЦИИ — СЛУЧАЙНЫЕ ИЗ ТОПА
+    // 7. РЕКОМЕНДАЦИИ — ОДИН ЗАПРОС + КЭШ
     // ============================================
     async getRecommended(limit = 7) {
-        const fetchLimit = Math.max(limit * 5, 35);
-
-        const [topData, popularData] = await Promise.all([
-            this._graphql(`{
-                animes(page: 1, limit: ${fetchLimit}, order: ranked) {
-                    id
-                    name
-                    russian
-                    english
-                    kind
-                    score
-                    status
-                    episodes
-                    rating
-                    year: airedOn { year }
-                    poster { originalUrl mainUrl }
-                    genres { id name russian kind }
-                }
-            }`, false),
-            this._graphql(`{
-                animes(page: 1, limit: ${fetchLimit}, order: popularity) {
-                    id
-                    name
-                    russian
-                    english
-                    kind
-                    score
-                    status
-                    episodes
-                    rating
-                    year: airedOn { year }
-                    poster { originalUrl mainUrl }
-                    genres { id name russian kind }
-                }
-            }`, false)
-        ]);
-
-        const top = (topData?.animes || []).map(a => this._convertAnime(a));
-        const popular = (popularData?.animes || []).map(a => this._convertAnime(a));
-
-        const combined = [...top, ...popular];
-        const unique = [];
-        const seen = new Set();
-
-        for (const item of combined) {
-            if (!seen.has(item.id) && item.title && item.title !== 'Без названия') {
-                seen.add(item.id);
-                unique.push(item);
+        const cacheKey = `recommended_${limit}`;
+        if (this._cache.has(cacheKey)) {
+            const cached = this._cache.get(cacheKey);
+            if (Date.now() - cached.time < 10 * 60 * 1000) {
+                console.log('⚡ Рекомендации из кэша');
+                return cached.data;
             }
         }
 
-        const shuffled = unique.sort(() => Math.random() - 0.5);
+        const fetchLimit = Math.max(limit * 6, 42);
+
+        const data = await this._graphql(`{
+            animes(page: 1, limit: ${fetchLimit}, order: ranked) {
+                id
+                name
+                russian
+                english
+                kind
+                score
+                status
+                episodes
+                rating
+                year: airedOn { year }
+                poster { originalUrl mainUrl }
+                genres { id name russian kind }
+            }
+        }`, false);
+
+        if (!data || !data.animes) {
+            console.warn('⚠️ Рекомендации: пустой ответ');
+            return [];
+        }
+
+        const items = data.animes
+            .map(a => this._convertAnime(a))
+            .filter(item => item.title && item.title !== 'Без названия' && item.images?.jpg?.image_url);
+
+        const shuffled = items.sort(() => Math.random() - 0.5);
         const result = shuffled.slice(0, limit);
 
-        console.log(`🎲 Рекомендации: ${result.length} из ${unique.length} уникальных`);
+        this._cache.set(cacheKey, { data: result, time: Date.now() });
 
+        console.log(`🎲 Рекомендации: ${result.length} из ${items.length} уникальных`);
         return result;
     },
 
@@ -448,6 +478,9 @@ const API = {
             status = statusMap[a.status] || a.status;
         }
 
+        let description = a.description || '';
+        description = description.replace(/<[^>]*>/g, '').trim();
+
         return {
             mal_id: 'shikimori_' + a.id,
             id: 'shikimori_' + a.id,
@@ -458,8 +491,8 @@ const API = {
             year: a.year?.year || '--',
             episodes: a.episodes || a.episodesAired || '?',
             images: { jpg: { image_url: poster } },
-            synopsis: '',
-            description: '',
+            synopsis: description || '',
+            description: description,
             genres: genres,
             score: a.score || 0,
             age_rating: ageRating,
