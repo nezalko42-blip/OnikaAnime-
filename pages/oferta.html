@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Публичная оферта - OnikaAnime</title>
-    <link rel="stylesheet" href="style/main.css">
+    <link rel="stylesheet" href="../style/main.css">
     <style>
         .legal-content {
             max-width: 800px;
@@ -26,10 +26,41 @@
             color: var(--text-secondary);
             line-height: 1.8;
         }
+        .legal-content ul {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            padding-left: 24px;
+            margin: 10px 0;
+        }
+        .legal-content a {
+            color: var(--accent-glow);
+        }
         .back-to-site {
             display: inline-block;
             margin-top: 20px;
             color: var(--accent-glow);
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: rgba(108,92,231,0.1);
+            border: 1px solid rgba(108,92,231,0.2);
+            transition: all 0.3s ease;
+        }
+        .back-to-site:hover {
+            background: rgba(108,92,231,0.2);
+            transform: translateX(-4px);
+        }
+        @media (max-width: 600px) {
+            .legal-content {
+                margin: 20px 12px;
+                padding: 20px;
+            }
+            .legal-content h1 {
+                font-size: 22px;
+            }
+            .legal-content h2 {
+                font-size: 16px;
+            }
         }
     </style>
 </head>
@@ -82,7 +113,7 @@
             <strong>Дата публикации:</strong> 10 августа 2026 г.
         </p>
         
-        <a href="index.html" class="back-to-site">← Вернуться на сайт</a>
+        <a href="../index.html" class="back-to-site">← Вернуться на сайт</a>
     </div>
 </body>
 </html>
