@@ -34,7 +34,6 @@
     
     <title>OnikaAnime - Смотри аниме онлайн бесплатно</title>
     <link rel="stylesheet" href="style/main.css">
-    <link rel="stylesheet" href="style/pet-styles.css">
     
     <style>
         #preloader {
@@ -87,7 +86,7 @@
 
     <div class="video-bg">
         <video autoplay muted loop playsinline>
-            <source src="bg.mp4" type="video/mp4">
+            <source src="bg.mp4" type="video/mp4" media="(min-width: 768px)">
         </video>
     </div>
 
@@ -784,16 +783,6 @@
         <svg width="24" height="24"><use href="icons/icons.svg#icon-arrow-up"/></svg>
     </button>
 
-    <div class="achievement-popup" id="achievementPopup">
-        <div class="popup-inner">
-            <button class="popup-close" onclick="hidePopup()"><svg width="20" height="20"><use href="icons/icons.svg#icon-close"/></svg></button>
-            <span class="popup-icon" id="popupIcon">🏆</span>
-            <div class="popup-label">🎉 Новое достижение!</div>
-            <div class="popup-name" id="popupName"></div>
-            <div class="popup-desc" id="popupDesc"></div>
-            <div class="popup-badge" id="popupBadge"></div>
-        </div>
-    </div>
     <div class="confetti" id="confetti"></div>
 
     <div class="modal" id="loginModal">
@@ -843,34 +832,6 @@
         </div>
     </div>
 
-    <div class="modal" id="petModal">
-        <div class="modal-box pet-modal-box">
-            <button class="modal-close" onclick="closePetModal()"><svg width="24" height="24"><use href="icons/icons.svg#icon-close"/></svg></button>
-            <div class="pet-modal-content">
-                <div class="pet-modal-header">
-                    <span class="pet-modal-avatar" id="petModalAvatar">🐱</span>
-                    <div class="pet-modal-title">
-                        <h2 onclick="changePetName()">Серийчик ✏️</h2>
-                        <div class="pet-modal-skin" id="petModalSkin">🥚 Яйцо</div>
-                    </div>
-                </div>
-                <div class="pet-modal-progress">
-                    <div class="pet-modal-progress-info">
-                        <span id="petModalProgressText">0 / 50 очков</span>
-                        <span id="petModalProgressPercent">0%</span>
-                    </div>
-                    <div class="pet-modal-progress-bar">
-                        <div class="pet-modal-progress-fill" id="petModalProgressFill" style="width:0%"></div>
-                    </div>
-                </div>
-                <div class="pet-modal-actions">
-                    <button class="pet-modal-btn daily" onclick="claimDailyBonusPet()" id="petDailyBtn">📅 Ежедневный бонус</button>
-                    <button class="pet-modal-btn" onclick="watchAnimeForPet()">🎬 Смотреть аниме</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <footer class="site-footer">
         <div class="footer-content">
             <div class="footer-column">
@@ -900,10 +861,10 @@
             <div class="footer-column">
                 <h4>📋 Информация</h4>
                 <ul>
-                    <li><a href="oferta.html">Оферта</a></li>
-                    <li><a href="policy.html">Политика</a></li>
-                    <li><a href="agreement.html">Соглашение</a></li>
-                    <li><a href="copyright.html">Для правообладателей</a></li>
+                    <li><a href="pages/oferta.html">Оферта</a></li>
+                    <li><a href="pages/policy.html">Политика</a></li>
+                    <li><a href="pages/agreement.html">Соглашение</a></li>
+                    <li><a href="pages/copyright.html">Для правообладателей</a></li>
                 </ul>
             </div>
         </div>
@@ -917,7 +878,6 @@
     <script src="script/api.js"></script>
     <script src="script/utils.js"></script>
     <script src="script/auth.js"></script>
-    <script src="script/pet.js"></script>
     <script src="script/main.js"></script>
 
     <script>
@@ -937,7 +897,6 @@
             const user = DB.get('currentUser');
             if (user) {
                 if (typeof startOnlineTracking === 'function') startOnlineTracking();
-                if (typeof initPet === 'function') initPet();
             }
             
             window.addEventListener('scroll', function() {
