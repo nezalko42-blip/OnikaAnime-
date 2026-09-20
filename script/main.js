@@ -19,6 +19,7 @@ let searchTimeout = null;
 // Coverflow
 let coverflowItems = [];
 let coverflowIndex = 0;
+let _recommendationsLoaded = false;
 
 const CATALOG_LIMIT = 12;
 
@@ -244,15 +245,33 @@ window.addEventListener('scroll', function() {
 // 1. COVERFLOW КАРУСЕЛЬ РЕКОМЕНДАЦИЙ
 // ============================================
 async function loadRecommendationsForHero() {
+    if (_recommendationsLoaded && coverflowItems.length > 0) {
+        console.log('⚡ Рекомендации уже загружены');
+        return;
+    }
+
+    const track = document.getElementById('coverflowTrack');
+    if (track && !track.children.length) {
+        track.innerHTML = `
+            <div style="width:100%;text-align:center;padding:60px 20px;color:var(--text-muted);">
+                <div class="spinner-small" style="margin:0 auto 12px;"></div>
+                <div>Загрузка рекомендаций...</div>
+            </div>
+        `;
+    }
+
     try {
         const recs = await API.getRecommended(7);
         if (recs && recs.length > 0) {
             coverflowItems = recs;
             coverflowIndex = Math.floor(recs.length / 2);
             renderCoverflow(recs);
+            _recommendationsLoaded = true;
             console.log('🎲 Загружено', recs.length, 'рекомендаций');
         }
-    } catch (e) { console.error('Ошибка загрузки рекомендаций:', e); }
+    } catch (e) {
+        console.error('Ошибка загрузки рекомендаций:', e);
+    }
 }
 
 function renderCoverflow(items) {
@@ -664,20 +683,57 @@ function renderRandomCard(anime) {
     const episodes = anime.episodes || '?';
     const age = anime.age_rating || '0+';
     const id = anime.id;
+    const score = parseFloat(anime.score) || 0;
+    const status = anime.status || '';
+    const genres = (anime.genres || []).slice(0, 3);
+    const description = (anime.synopsis || anime.description || '').slice(0, 220);
     const ageColor = getAgeColor(age);
+
+    let scoreClass = 'low';
+    if (score >= 9) scoreClass = 'high';
+    else if (score >= 7) scoreClass = 'medium';
+
+    let scoreHtml = '';
+    if (score > 0) {
+        scoreHtml = `<div class="random-anime-score ${scoreClass}"><span class="star">⭐</span>${score.toFixed(1)}</div>`;
+    }
+
+    let genresHtml = '';
+    if (genres.length > 0) {
+        genresHtml = '<div class="random-anime-genres">' +
+            genres.map(g => {
+                const color = getGenreColor(g);
+                return `<span class="random-anime-genre" style="--gc:${color};">${g}</span>`;
+            }).join('') +
+        '</div>';
+    }
+
+    let descHtml = '';
+    if (description) {
+        descHtml = `<p class="random-anime-desc">${description}${anime.synopsis && anime.synopsis.length > 220 ? '...' : ''}</p>`;
+    }
+
+    let statusHtml = '';
+    if (status) {
+        statusHtml = `<div class="random-anime-status">${status}</div>`;
+    }
 
     return `
         <div class="random-anime-card" onclick="openDetail('${id}')">
             <div class="random-anime-poster">
                 ${img ? `<img src="${img}" alt="${title}" loading="lazy">` : '<div class="random-anime-no-poster">🎬</div>'}
-                <div class="random-anime-age" style="background:${ageColor}aa;">${age}</div>
+                <div class="random-anime-age" style="background:${ageColor};">${age}</div>
+                ${scoreHtml}
             </div>
             <div class="random-anime-info">
                 <h3 class="random-anime-title">${title}</h3>
-                ${year && year !== '--' ? `<span class="random-anime-year">📅 ${year}</span>` : ''}
+                ${statusHtml}
                 <div class="random-anime-meta">
-                    <div class="random-anime-meta-item"><span class="emoji">📺</span><span>${episodes} ${episodes === '?' ? 'эпизод' : 'эп.'}</span></div>
+                    ${year && year !== '--' ? `<div class="random-anime-meta-item"><span class="emoji">📅</span><span>${year}</span></div>` : ''}
+                    <div class="random-anime-meta-item"><span class="emoji">📺</span><span>${episodes} эп.</span></div>
                 </div>
+                ${genresHtml}
+                ${descHtml}
                 <div class="random-anime-actions">
                     <button class="random-action-btn watch" onclick="event.stopPropagation(); openDetail('${id}')"><span class="btn-icon">▶️</span><span>Смотреть</span></button>
                     <button class="random-action-btn retry" onclick="event.stopPropagation(); randomAnime()"><span class="btn-icon">🔄</span><span>Другое</span></button>
@@ -2460,6 +2516,10 @@ document.addEventListener('DOMContentLoaded', function() {
     restoreAllData();
     updateUI();
     navigate('home');
+
+    // Загружаем рекомендации сразу, не дожидаясь каталога
+    loadRecommendationsForHero();
+
     const user = DB.get('currentUser');
     if (user) startOnlineTracking();
     console.log('✅ OnikaAnime готов!');
