@@ -4252,3 +4252,11 @@ h3 {
         transition: none !important;
     }
 }
+
+/* ===== АНИМАЦИЯ УСПЕШНОЙ ЗАГРУЗКИ АВАТАРА ===== */
+@keyframes avatarSuccessPop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.15); box-shadow: 0 0 60px rgba(0, 245, 255, 0.8); }
+    60% { transform: scale(0.95); }
+    100% { transform: scale(1); box-shadow: 0 0 40px rgba(0, 245, 255, 0.4); }
+}
