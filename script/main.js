@@ -3,6 +3,7 @@
 // ============================================
 
 const allData = {};
+let currentAnimeId = null;
 let currentPage = 'home';
 let previousPage = null;
 let page = 1;
@@ -28,11 +29,11 @@ const COVERFLOW_AUTOPLAY_MS = 5000;
 const CATALOG_LIMIT = 12;
 
 // ===== АВАТАР =====
-const AVATAR_MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50 MB
+const AVATAR_MAX_UPLOAD_SIZE = 50 * 1024 * 1024;
 const AVATAR_MAX_WIDTH = 500;
 const AVATAR_MAX_HEIGHT = 500;
 const AVATAR_QUALITY = 0.85;
-const AVATAR_MAX_STORED = 800 * 1024; // 800 KB
+const AVATAR_MAX_STORED = 800 * 1024;
 
 // ===== ГЛОБАЛЬНЫЕ ФЛАГИ ДЛЯ МОИХ КОММЕНТАРИЕВ =====
 let mcMassMode = false;
@@ -243,7 +244,7 @@ window.addEventListener('beforeunload', function() {
         const totalTimeExit = DB.getUserData(userExit.name, 'onlineTime', 0);
         DB.setUserData(userExit.name, 'onlineTime', totalTimeExit + elapsedExit);
         DB.setUserData(userExit.name, 'lastSeen', Date.now());
-        DB.forceSync(); // ✅ Мгновенно, без блокировки
+        DB.forceSync();
     }
 });
 
@@ -358,7 +359,6 @@ function renderCoverflow(items) {
         const age = item.age_rating || '0+';
         const id = item.id;
 
-        // ✅ ФИКС: referrerpolicy + fallback
         const posterHtml = img
             ? `<img class="coverflow-slide-poster-img" src="${img}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'coverflow-slide-poster-fallback\\'>🎬</div>');">`
             : '<div class="coverflow-slide-poster-fallback">🎬</div>';
@@ -467,7 +467,6 @@ function pauseCoverflowAutoScroll(ms = 10000) {
     _coverflowPauseUntil = Date.now() + ms;
 }
 
-// ===== СВАЙП ДЛЯ COVERFLOW =====
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('coverflowContainer');
     const track = document.getElementById('coverflowTrack');
@@ -982,6 +981,7 @@ function showDetail(anime) {
         const tagsEl = document.getElementById('detailTags');
         const favBtn = document.getElementById('favBtn');
 
+        currentAnimeId = anime.id || anime.rawId || null;
         const displayTitle = anime.title || anime.title_russian || 'Без названия';
         const engTitle = anime.title_english || '';
 
@@ -1008,7 +1008,6 @@ function showDetail(anime) {
         if (descEl) descEl.textContent = anime.synopsis || anime.description || 'Описание отсутствует';
 
         const img = anime.images?.jpg?.image_url || '';
-        // ✅ ФИКС: referrerpolicy СТАВИМ ДО src!
         if (posterEl) {
             if (img) {
                 posterEl.setAttribute('referrerpolicy', 'no-referrer');
@@ -1258,6 +1257,70 @@ async function watchOnDeep() {
             renderSourceEpisodes('deep', data.sources.deep, title);
         } else renderNoSources('deep', title);
     } catch (e) { renderNoSources('deep', title); }
+}
+
+// ============================================
+// VEOVEO PLAYER
+// ============================================
+async function watchOnVeoveo() {
+    const anime = allData[currentAnimeId];
+    const title = getCurrentAnimeTitle();
+    
+    if (!title) {
+        showToast('Название не найдено', 'error');
+        return;
+    }
+    
+    let shikimoriId = null;
+    if (anime && anime.rawId) {
+        shikimoriId = anime.rawId;
+    } else if (anime && anime.id) {
+        shikimoriId = String(anime.id).replace('shikimori_', '');
+    } else if (currentAnimeId) {
+        shikimoriId = String(currentAnimeId).replace('shikimori_', '');
+    }
+    
+    if (!shikimoriId) {
+        showToast('❌ Не удалось получить Shikimori ID', 'error');
+        console.warn('⚠️ allData[currentAnimeId]:', anime, 'currentAnimeId:', currentAnimeId);
+        return;
+    }
+    
+    console.log('🎥 Veoveo: ID =', shikimoriId);
+    showToast('🎥 Загружаем Veoveo...', 'info');
+    
+    const url = API.getVeoveoUrl(shikimoriId, 1);
+    
+    const container = document.getElementById('watchEmbedContainer');
+    container.style.display = 'block';
+    
+    container.innerHTML = `
+        <div class="watch-embed-header">
+            <h4><span>🎥</span> Veoveo — ${title}</h4>
+            <button class="watch-embed-close" onclick="closeWatchEmbed()">✕ Закрыть</button>
+        </div>
+        <div class="watch-embed-wrapper" style="position:relative;padding-bottom:56.25%;height:0;background:#000;">
+            <div class="player-loader" id="veoveoLoader">
+                <div class="player-loader-ring"></div>
+                <div class="player-loader-text">Загрузка Veoveo...</div>
+            </div>
+            <iframe 
+                src="${url}" 
+                frameborder="0" 
+                allowfullscreen 
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                referrerpolicy="no-referrer"
+                style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;z-index:2;"
+                onload="var l=document.getElementById('veoveoLoader'); if(l) l.style.display='none';"
+                onerror="var l=document.getElementById('veoveoLoader'); if(l) l.innerHTML='<div style=\\'color:#ff2d78;text-align:center;padding:20px;\\'>❌ Не удалось загрузить<br><small style=\\'color:#888;\\'>Возможно, нужен прокси или другой URL</small></div>';">
+            </iframe>
+        </div>
+        <div style="margin-top:12px;text-align:center;padding:0 16px 16px;">
+            <a href="${url}" target="_blank" rel="noopener" style="color:var(--neon-cyan);font-size:13px;text-decoration:none;">🔗 Открыть в новой вкладке</a>
+        </div>
+    `;
+    
+    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function renderSourceEpisodes(source, episodes, title) {
@@ -2858,6 +2921,7 @@ window.saveContinueWatching = saveContinueWatching;
 window.openKodiModal = openKodiModal;
 window.watchOnVK = watchOnVK;
 window.watchOnDeep = watchOnDeep;
+window.watchOnVeoveo = watchOnVeoveo;
 window.playSourceEpisode = playSourceEpisode;
 window.closeWatchEmbed = closeWatchEmbed;
 window.openUserFromComment = openUserFromComment;
