@@ -27,6 +27,13 @@ const COVERFLOW_AUTOPLAY_MS = 5000;
 
 const CATALOG_LIMIT = 12;
 
+// ===== АВАТАР =====
+const AVATAR_MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50 MB
+const AVATAR_MAX_WIDTH = 500;
+const AVATAR_MAX_HEIGHT = 500;
+const AVATAR_QUALITY = 0.85;
+const AVATAR_MAX_STORED = 800 * 1024; // 800 KB
+
 // ===== ГЛОБАЛЬНЫЕ ФЛАГИ ДЛЯ МОИХ КОММЕНТАРИЕВ =====
 let mcMassMode = false;
 let mcGroupMode = false;
@@ -2168,32 +2175,158 @@ function renderTopUsers() {
 }
 
 // ============================================
-// 16. АВАТАР
+// 16. ЗАГРУЗКА АВАТАРА С СЖАТИЕМ (до 50MB → ~200KB)
 // ============================================
 function uploadAvatar(input) {
-    if (!input || !input.files || input.files.length === 0) { showToast('Выберите файл!', 'error'); return; }
+    if (!input || !input.files || input.files.length === 0) {
+        showToast('Выберите файл!', 'error');
+        return;
+    }
+
     const user = DB.get('currentUser');
-    if (!user) { showToast('Войдите в аккаунт!', 'error'); return; }
+    if (!user) {
+        showToast('Войдите в аккаунт!', 'error');
+        return;
+    }
+
     const file = input.files[0];
-    if (file.size > 20 * 1024 * 1024) { showToast('Файл слишком большой! Максимум 20MB', 'error'); return; }
-    showToast('⏳ Загрузка...', 'info');
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const avatarData = e.target.result;
-        const profiles = DB.get('profiles', {});
-        if (!profiles[user.name]) profiles[user.name] = {};
-        profiles[user.name].avatar = avatarData;
-        DB.set('profiles', profiles);
-        localStorage.setItem('avatar_' + user.name, avatarData);
-        DB.save();
-        const img = document.getElementById('avatarImg');
-        const letter = document.getElementById('avatarLetter');
-        if (img) { img.src = avatarData; img.style.display = 'block'; }
-        if (letter) letter.style.display = 'none';
-        updateUI();
-        showToast('✅ Аватар обновлен!', 'success');
-    };
-    reader.readAsDataURL(file);
+
+    if (!file.type || !file.type.startsWith('image/')) {
+        showToast('Только изображения!', 'error');
+        input.value = '';
+        return;
+    }
+
+    if (file.size > AVATAR_MAX_UPLOAD_SIZE) {
+        const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+        showToast(`Файл ${sizeMB}MB — максимум 50MB!`, 'error');
+        input.value = '';
+        return;
+    }
+
+    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    console.log(`📷 Загружаем аватар: ${file.name} (${sizeMB}MB)`);
+    showToast(`⏳ Обработка ${sizeMB}MB...`, 'info');
+
+    compressImage(file, AVATAR_MAX_WIDTH, AVATAR_MAX_HEIGHT, AVATAR_QUALITY)
+        .then(function(compressedData) {
+            const compressedKB = Math.round(compressedData.length / 1024);
+            console.log(`✅ Сжато: ${sizeMB}MB → ${compressedKB}KB`);
+
+            const profiles = DB.get('profiles', {});
+            if (!profiles[user.name]) profiles[user.name] = {};
+            profiles[user.name].avatar = compressedData;
+            DB.set('profiles', profiles);
+
+            try {
+                localStorage.setItem('avatar_' + user.name, compressedData);
+            } catch (e) {
+                console.warn('⚠️ localStorage переполнен:', e.message);
+            }
+
+            DB.save();
+
+            const img = document.getElementById('avatarImg');
+            const letter = document.getElementById('avatarLetter');
+            if (img) { img.src = compressedData; img.style.display = 'block'; }
+            if (letter) letter.style.display = 'none';
+
+            const wrapper = img ? img.parentElement : null;
+            if (wrapper) {
+                wrapper.style.animation = 'none';
+                void wrapper.offsetWidth;
+                wrapper.style.animation = 'avatarSuccessPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            }
+
+            updateUI();
+            showToast(`✅ Аватар обновлён! (${compressedKB} KB)`, 'success');
+        })
+        .catch(function(err) {
+            console.error('❌ Ошибка сжатия:', err);
+            showToast('Ошибка обработки файла', 'error');
+        })
+        .finally(function() {
+            input.value = '';
+        });
+}
+
+// ===== Сжатие изображения через Canvas =====
+function compressImage(file, maxWidth, maxHeight, quality) {
+    return new Promise(function(resolve, reject) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const img = new Image();
+
+            img.onload = function() {
+                try {
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width <= maxWidth && height <= maxHeight && file.size < 300 * 1024) {
+                        resolve(e.target.result);
+                        return;
+                    }
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round(height * maxWidth / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round(width * maxHeight / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    let result = '';
+                    try {
+                        result = canvas.toDataURL('image/webp', quality);
+                        if (result.indexOf('data:image/webp') !== 0) {
+                            result = canvas.toDataURL('image/jpeg', quality);
+                        }
+                    } catch (err) {
+                        result = canvas.toDataURL('image/jpeg', quality);
+                    }
+
+                    if (result.length > AVATAR_MAX_STORED) {
+                        console.log('🔄 Результат большой, сжимаем сильнее...');
+                        let q = quality;
+                        while (result.length > AVATAR_MAX_STORED && q > 0.4) {
+                            q -= 0.1;
+                            result = canvas.toDataURL('image/jpeg', q);
+                        }
+                    }
+
+                    resolve(result);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+
+            img.onerror = function() {
+                reject(new Error('Не удалось загрузить изображение'));
+            };
+
+            img.src = e.target.result;
+        };
+
+        reader.onerror = function() {
+            reject(new Error('Ошибка чтения файла'));
+        };
+
+        reader.readAsDataURL(file);
+    });
 }
 
 // ============================================
@@ -2743,6 +2876,9 @@ window.getGenresFromFavorites = getGenresFromFavorites;
 window.startCoverflowAutoScroll = startCoverflowAutoScroll;
 window.stopCoverflowAutoScroll = stopCoverflowAutoScroll;
 window.pauseCoverflowAutoScroll = pauseCoverflowAutoScroll;
+
+// ===== АВАТАР =====
+window.compressImage = compressImage;
 
 // ===== ЗАГЛУШКИ =====
 window.showAchievementPopup = function() {};
