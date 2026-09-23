@@ -243,7 +243,7 @@ window.addEventListener('beforeunload', function() {
         const totalTimeExit = DB.getUserData(userExit.name, 'onlineTime', 0);
         DB.setUserData(userExit.name, 'onlineTime', totalTimeExit + elapsedExit);
         DB.setUserData(userExit.name, 'lastSeen', Date.now());
-        DB.save();
+        DB.forceSync(); // ✅ Мгновенно, без блокировки
     }
 });
 
@@ -316,7 +316,6 @@ async function loadRecommendationsForHero() {
     }
 }
 
-// ===== Собрать топ-3 жанра из избранного =====
 function getGenresFromFavorites(favTitles) {
     if (!favTitles || favTitles.length === 0) return [];
 
@@ -359,7 +358,7 @@ function renderCoverflow(items) {
         const age = item.age_rating || '0+';
         const id = item.id;
 
-        // ✅ ФИКС: используем <img> с referrerpolicy вместо background-image
+        // ✅ ФИКС: referrerpolicy + fallback
         const posterHtml = img
             ? `<img class="coverflow-slide-poster-img" src="${img}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'coverflow-slide-poster-fallback\\'>🎬</div>');">`
             : '<div class="coverflow-slide-poster-fallback">🎬</div>';
@@ -442,7 +441,7 @@ function scrollCoverflowToActive() {
 }
 
 // ============================================
-// АВТО-ПРОКРУТКА COVERFLOW (каждые 5 секунд)
+// АВТО-ПРОКРУТКА COVERFLOW
 // ============================================
 function startCoverflowAutoScroll() {
     stopCoverflowAutoScroll();
@@ -495,7 +494,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, { passive: true });
 });
 
-// ===== ОСТАНОВКА АВТО-ПРОКРУТКИ ПРИ УХОДЕ СО ВКЛАДКИ =====
 document.addEventListener('visibilitychange', function() {
     if (document.hidden) {
         stopCoverflowAutoScroll();
@@ -711,7 +709,6 @@ function renderCatalog(list) {
         const id = a.mal_id || a.id;
         const age = a.age_rating || '0+';
 
-        // ✅ ФИКС: referrerpolicy="no-referrer" + fallback
         const imgHtml = img
             ? `<img src="${img}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<span style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:48px;\\'>🎬</span>');">`
             : '🎬';
@@ -842,7 +839,6 @@ function renderRandomCard(anime) {
         statusHtml = `<div class="random-anime-status">${status}</div>`;
     }
 
-    // ✅ ФИКС: referrerpolicy + fallback
     const imgHtml = img
         ? `<img src="${img}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'random-anime-no-poster\\'>🎬</div>');">`
         : '<div class="random-anime-no-poster">🎬</div>';
@@ -1012,16 +1008,16 @@ function showDetail(anime) {
         if (descEl) descEl.textContent = anime.synopsis || anime.description || 'Описание отсутствует';
 
         const img = anime.images?.jpg?.image_url || '';
-        // ✅ ФИКС: referrerpolicy + fallback
+        // ✅ ФИКС: referrerpolicy СТАВИМ ДО src!
         if (posterEl) {
             if (img) {
-                posterEl.src = img;
                 posterEl.setAttribute('referrerpolicy', 'no-referrer');
+                posterEl.style.display = 'block';
                 posterEl.onerror = function() {
                     posterEl.onerror = null;
-                    posterEl.style.display = 'none';
+                    posterEl.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect fill="%231a1a3e" width="200" height="300"/><text x="100" y="165" font-size="80" text-anchor="middle">🎬</text></svg>';
                 };
-                posterEl.style.display = 'block';
+                posterEl.src = img;
             } else {
                 posterEl.style.display = 'none';
             }
@@ -1029,7 +1025,6 @@ function showDetail(anime) {
 
         if (heroBg && img) {
             try {
-                // ✅ Используем <img> вместо background-image тоже для heroBg
                 heroBg.style.backgroundImage = `url('${img}')`;
             } catch(e) {}
         }
@@ -1448,14 +1443,29 @@ function deleteComment(id) {
 function toggleFav(name) {
     const user = DB.get('currentUser');
     if (!user) { showToast('Войдите в аккаунт!', 'error'); return; }
+
     const favs = DB.getUserData(user.name, 'favorites', []);
     const idx = favs.indexOf(name);
-    if (idx > -1) { favs.splice(idx, 1); showToast('Удалено из избранного', 'info'); }
-    else { favs.push(name); addActivity(user.name, 'favorite', 'Добавил в избранное «' + name + '»'); showToast('Добавлено в избранное ❤️', 'success'); }
+    let added = false;
+    if (idx > -1) {
+        favs.splice(idx, 1);
+    } else {
+        favs.push(name);
+        added = true;
+    }
     DB.setUserData(user.name, 'favorites', favs);
-    DB.save();
-    updateUI();
-    if (currentPage === 'favorites') renderFavorites();
+
+    if (added) {
+        showToast('Добавлено в избранное ❤️', 'success');
+        addActivity(user.name, 'favorite', 'Добавил в избранное «' + name + '»');
+    } else {
+        showToast('Удалено из избранного', 'info');
+    }
+
+    requestAnimationFrame(() => {
+        updateUI();
+        if (currentPage === 'favorites') renderFavorites();
+    });
 }
 
 function renderFavorites() {
@@ -1563,7 +1573,6 @@ function renderFavCard(name, index) {
     const age = item?.age_rating || '0+';
     const score = item?.score || 0;
 
-    // ✅ ФИКС: referrerpolicy + fallback
     const posterContent = img
         ? `<img src="${img}" alt="${name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div style=\\'width:100%;height:100%;background:linear-gradient(135deg,#1a1a3e,#2d1b69,#6c5ce7);display:flex;align-items:center;justify-content:center;font-size:48px;\\'>🎬</div>');">`
         : '<div style="width:100%;height:100%;background:linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);display:flex;align-items:center;justify-content:center;font-size:48px;">🎬</div>';
@@ -1587,7 +1596,6 @@ function removeFromFav(name) {
     if (idx > -1) {
         favs.splice(idx, 1);
         DB.setUserData(user.name, 'favorites', favs);
-        DB.save();
         updateUI();
         const cards = document.querySelectorAll('.fav-card');
         cards.forEach(card => {
@@ -1712,7 +1720,6 @@ function deleteSelectedFav() {
         selected.forEach(card => { const name = card.getAttribute('data-name'); if (name) namesToRemove.push(name); });
         const newFavs = favs.filter(name => !namesToRemove.includes(name));
         DB.setUserData(user.name, 'favorites', newFavs);
-        DB.save();
         updateUI();
         selected.forEach((card, i) => {
             setTimeout(() => {
@@ -2290,7 +2297,6 @@ function uploadAvatar(input) {
         });
 }
 
-// ===== Сжатие изображения через Canvas =====
 function compressImage(file, maxWidth, maxHeight, quality) {
     return new Promise(function(resolve, reject) {
         const reader = new FileReader();
