@@ -41,23 +41,36 @@ function _apiAuthRequest(url, body) {
     });
 }
 
-// ===== ОБРАБОТКА УСПЕШНОГО ВХОДА =====
+// ============================================
+// ✅ ОБРАБОТКА УСПЕШНОГО ВХОДА (НЕ БЛОКИРУЕТ UI)
+// ============================================
 function _onAuthSuccess(user, message) {
+    // 1. Сохраняем пользователя МГНОВЕННО
     DB._data.currentUser = user;
     localStorage.setItem('onika_currentUser', JSON.stringify(user));
     localStorage.removeItem('onika_data');
-    
+
+    // 2. Закрываем модалку СРАЗУ (без ожидания)
     closeLoginModal();
-    updateUI();
-    navigate('catalog');
+
+    // 3. Показываем toast СРАЗУ (пользователь видит отклик мгновенно)
     showToast(message, 'success');
-    
-    if (typeof DB._loadUserDataFromServer === 'function') {
-        DB._loadUserDataFromServer(user.id);
-    }
-    if (typeof startOnlineTracking === 'function') {
-        startOnlineTracking();
-    }
+
+    // 4. Обновляем UI в следующем кадре (не блокируем клик)
+    requestAnimationFrame(function() {
+        if (typeof updateUI === 'function') updateUI();
+        if (typeof navigate === 'function') navigate('catalog');
+    });
+
+    // 5. Серверную загрузку данных и трекинг делаем ОТЛОЖЕННО
+    setTimeout(function() {
+        if (typeof DB._loadUserDataFromServer === 'function') {
+            DB._loadUserDataFromServer(user.id);
+        }
+        if (typeof startOnlineTracking === 'function') {
+            startOnlineTracking();
+        }
+    }, 100);
 }
 
 // ===== БЛОКИРОВКА КНОПКИ =====
