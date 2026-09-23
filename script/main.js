@@ -358,9 +358,15 @@ function renderCoverflow(items) {
         const episodes = item.episodes || '?';
         const age = item.age_rating || '0+';
         const id = item.id;
+
+        // ✅ ФИКС: используем <img> с referrerpolicy вместо background-image
+        const posterHtml = img
+            ? `<img class="coverflow-slide-poster-img" src="${img}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'coverflow-slide-poster-fallback\\'>🎬</div>');">`
+            : '<div class="coverflow-slide-poster-fallback">🎬</div>';
+
         html += `
             <div class="coverflow-slide" data-index="${i}" onclick="openDetail('${id}')">
-                <div class="coverflow-slide-poster" style="background-image:url('${img}')"></div>
+                ${posterHtml}
                 <div class="coverflow-slide-age">${age}</div>
                 <div class="coverflow-slide-content">
                     <h3 class="coverflow-slide-title">${title}</h3>
@@ -705,10 +711,15 @@ function renderCatalog(list) {
         const id = a.mal_id || a.id;
         const age = a.age_rating || '0+';
 
+        // ✅ ФИКС: referrerpolicy="no-referrer" + fallback
+        const imgHtml = img
+            ? `<img src="${img}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<span style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:48px;\\'>🎬</span>');">`
+            : '🎬';
+
         htmlParts.push(`
             <div class="card" onclick="openDetail('${id}')" style="--card-index:${index};">
                 <div class="card-img" style="${!img ? 'background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:48px;' : ''}">
-                    ${img ? `<img src="${img}" loading="lazy" decoding="async" onerror="this.style.display='none'">` : '🎬'}
+                    ${imgHtml}
                     ${year && year !== '--' ? `<span class="card-year">${year}</span>` : ''}
                     <span class="card-age">${age}</span>
                 </div>
@@ -831,10 +842,15 @@ function renderRandomCard(anime) {
         statusHtml = `<div class="random-anime-status">${status}</div>`;
     }
 
+    // ✅ ФИКС: referrerpolicy + fallback
+    const imgHtml = img
+        ? `<img src="${img}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'random-anime-no-poster\\'>🎬</div>');">`
+        : '<div class="random-anime-no-poster">🎬</div>';
+
     return `
         <div class="random-anime-card" onclick="openDetail('${id}')">
             <div class="random-anime-poster">
-                ${img ? `<img src="${img}" alt="${title}" loading="lazy">` : '<div class="random-anime-no-poster">🎬</div>'}
+                ${imgHtml}
                 <div class="random-anime-age" style="background:${ageColor};">${age}</div>
                 ${scoreHtml}
             </div>
@@ -889,8 +905,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!suggestions.length) { autocompleteContainer.style.display = 'none'; return; }
                 let html = '';
                 suggestions.forEach(item => {
+                    const posterHtml = item.poster
+                        ? `<img src="${item.poster}" style="width:30px;height:40px;object-fit:cover;border-radius:4px;" referrerpolicy="no-referrer" onerror="this.style.display='none';">`
+                        : '<span style="font-size:20px;width:30px;text-align:center;">🎬</span>';
                     html += `<div class="autocomplete-item" onclick="selectSearchSuggestion('${item.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,0.03);">
-                        ${item.poster ? `<img src="${item.poster}" style="width:30px;height:40px;object-fit:cover;border-radius:4px;">` : '<span style="font-size:20px;width:30px;text-align:center;">🎬</span>'}
+                        ${posterHtml}
                         <div style="flex:1;"><div style="font-weight:600;color:var(--text-primary);">${item.title}</div>${item.year ? `<div style="font-size:11px;color:var(--text-muted);">${item.year}</div>` : ''}</div>
                     </div>`;
                 });
@@ -993,12 +1012,27 @@ function showDetail(anime) {
         if (descEl) descEl.textContent = anime.synopsis || anime.description || 'Описание отсутствует';
 
         const img = anime.images?.jpg?.image_url || '';
+        // ✅ ФИКС: referrerpolicy + fallback
         if (posterEl) {
-            if (img) { posterEl.src = img; posterEl.style.display = 'block'; }
-            else posterEl.style.display = 'none';
+            if (img) {
+                posterEl.src = img;
+                posterEl.setAttribute('referrerpolicy', 'no-referrer');
+                posterEl.onerror = function() {
+                    posterEl.onerror = null;
+                    posterEl.style.display = 'none';
+                };
+                posterEl.style.display = 'block';
+            } else {
+                posterEl.style.display = 'none';
+            }
         }
 
-        if (heroBg && img) { try { heroBg.style.backgroundImage = `url('${img}')`; } catch(e) {} }
+        if (heroBg && img) {
+            try {
+                // ✅ Используем <img> вместо background-image тоже для heroBg
+                heroBg.style.backgroundImage = `url('${img}')`;
+            } catch(e) {}
+        }
 
         const ambientGlow = document.getElementById('detailAmbientGlow');
         if (ambientGlow && img) {
@@ -1108,6 +1142,7 @@ function extractDominantColor(imgUrl, callback) {
 
     const img = new Image();
     img.crossOrigin = 'Anonymous';
+    img.referrerPolicy = 'no-referrer';
     let called = false;
     const safeCallback = (color) => { if (!called) { called = true; callback(color); } };
     const timeout = setTimeout(() => safeCallback('rgba(108, 92, 231, 0.3)'), 3000);
@@ -1527,7 +1562,12 @@ function renderFavCard(name, index) {
     const img = item?.images?.jpg?.image_url || '';
     const age = item?.age_rating || '0+';
     const score = item?.score || 0;
-    const posterContent = img ? `<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none';">` : '<div style="width:100%;height:100%;background:linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);display:flex;align-items:center;justify-content:center;font-size:48px;">🎬</div>';
+
+    // ✅ ФИКС: referrerpolicy + fallback
+    const posterContent = img
+        ? `<img src="${img}" alt="${name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div style=\\'width:100%;height:100%;background:linear-gradient(135deg,#1a1a3e,#2d1b69,#6c5ce7);display:flex;align-items:center;justify-content:center;font-size:48px;\\'>🎬</div>');">`
+        : '<div style="width:100%;height:100%;background:linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);display:flex;align-items:center;justify-content:center;font-size:48px;">🎬</div>';
+
     const scoreHtml = score > 0 ? `<div class="fav-card-score">⭐ ${score.toFixed(1)}</div>` : '';
 
     return `<div class="fav-card" data-name="${name.replace(/"/g, '&quot;')}" onclick="onFavCardClick(event, '${name.replace(/'/g, "\\'")}')" style="animation-delay: ${index * 0.04}s;"><div class="fav-card-img">${posterContent}</div><div class="fav-card-age">${age}</div>${scoreHtml}<div class="fav-card-checkbox"></div><button class="fav-card-remove" onclick="event.stopPropagation(); removeFromFav('${name.replace(/'/g, "\\'")}')" title="Удалить">✕</button><div class="fav-card-heart">❤️</div><div class="fav-card-info"><h3 class="fav-card-title">${name}</h3></div></div>`;
@@ -2075,7 +2115,7 @@ function renderContinueWatching(user) {
     entries.slice(0, 6).forEach(([anime, data], index) => {
         const progress = data.episode ? (data.episode / (data.total || 1)) * 100 : 0;
         const img = getPosterForAnime(anime);
-        html += `<div class="continue-card" onclick="searchAndOpen('${anime}')" style="animation-delay: ${index * 0.08}s;">${img ? `<img src="${img}" alt="${anime}">` : `<div style="width:65px;height:88px;background:#333;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎬</div>`}<div class="continue-info"><h4>${anime}</h4><div class="meta">Серия ${data.episode || 1}${data.total ? ' / ' + data.total : ''}</div><div class="continue-progress"><div class="fill" style="width:${Math.min(progress, 100)}%"></div></div><span class="continue-time">${data.timestamp ? formatTimeAgo(data.timestamp) : 'Недавно'}</span></div></div>`;
+        html += `<div class="continue-card" onclick="searchAndOpen('${anime}')" style="animation-delay: ${index * 0.08}s;">${img ? `<img src="${img}" alt="${anime}" referrerpolicy="no-referrer" onerror="this.style.display='none';">` : `<div style="width:65px;height:88px;background:#333;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎬</div>`}<div class="continue-info"><h4>${anime}</h4><div class="meta">Серия ${data.episode || 1}${data.total ? ' / ' + data.total : ''}</div><div class="continue-progress"><div class="fill" style="width:${Math.min(progress, 100)}%"></div></div><span class="continue-time">${data.timestamp ? formatTimeAgo(data.timestamp) : 'Недавно'}</span></div></div>`;
     });
     grid.innerHTML = html;
 }
@@ -2649,7 +2689,7 @@ function renderMcItem(comment, index, maxLength) {
     const isTopComment = text.length === maxLength && maxLength > 50;
     const isSelected = mcSelectedIds.has(comment.id);
 
-    const posterContent = poster ? `<img src="${poster}" alt="${anime}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mc-item-poster-no\\'>🎬</div>'">` : `<div class="mc-item-poster-no">🎬</div>`;
+    const posterContent = poster ? `<img src="${poster}" alt="${anime}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'mc-item-poster-no\\'>🎬</div>'">` : `<div class="mc-item-poster-no">🎬</div>`;
     const safeAnime = anime.replace(/'/g, "\\'");
 
     return `<div class="mc-item${isTopComment ? ' top-comment' : ''}${mcMassMode ? ' mass-mode' : ''}${isSelected ? ' selected' : ''}" data-id="${comment.id}" style="animation-delay: ${index * 0.03}s;"><div class="mc-item-checkbox" onclick="event.stopPropagation(); toggleMcSelection(${comment.id})"></div><div class="mc-item-poster" onclick="event.stopPropagation(); searchAndOpen('${safeAnime}')">${posterContent}</div><div class="mc-item-content" onclick="event.stopPropagation(); onMcItemClick(${comment.id})"><div class="mc-item-anime">📺 ${anime}</div><div class="mc-item-text">${text}</div><div class="mc-item-meta"><span class="mc-item-date">📅 ${date}</span><span class="mc-item-length">📏 ${text.length} симв.</span></div></div><div class="mc-item-actions"><button class="mc-action-icon-btn" onclick="event.stopPropagation(); searchAndOpen('${safeAnime}')" title="Перейти к аниме">🔗</button><button class="mc-action-icon-btn danger" onclick="event.stopPropagation(); deleteMcComment(${comment.id})" title="Удалить">🗑</button></div></div>`;
