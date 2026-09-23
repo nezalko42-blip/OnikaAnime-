@@ -50,6 +50,14 @@ const API = {
         }
     },
 
+    // ===== ХЕЛПЕР: делаем URL постера абсолютным =====
+    _fixPosterUrl(raw) {
+        if (!raw) return '';
+        if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+        if (raw.startsWith('//')) return 'https:' + raw;
+        return 'https://shikimori.one' + raw;
+    },
+
     // ============================================
     // 1. КАТАЛОГ
     // ============================================
@@ -178,7 +186,7 @@ const API = {
     },
 
     // ============================================
-    // 5. СЛУЧАЙНОЕ
+    // 5. СЛУЧАЙНОЕ (УЛУЧШЕННОЕ)
     // ============================================
     async getRandom(limit = 1) {
         const randomPage = Math.floor(Math.random() * 50) + 1;
@@ -230,7 +238,7 @@ const API = {
         return result;
     },
 
-    // ===== ВСПОМОГАТЕЛЬНЫЙ =====
+    // ===== ВСПОМОГАТЕЛЬНЫЙ: описание через REST =====
     async _getDescription(id) {
         try {
             const response = await fetch(this.SHIKIMORI_REST + '/' + id);
@@ -245,7 +253,7 @@ const API = {
     },
 
     // ============================================
-    // 6. ДЕТАЛИ
+    // 6. ДЕТАЛИ — через REST API (с описанием)
     // ============================================
     async getAnimeDetails(id) {
         const cleanId = id.toString().replace('shikimori_', '');
@@ -403,7 +411,6 @@ const API = {
         const shuffled = converted.sort(() => Math.random() - 0.5);
         let result = shuffled.slice(0, limit);
 
-        // Если получилось мало — добираем случайными
         if (result.length < limit) {
             const extra = await this.getRandomRecommendations(limit - result.length);
             const extraFiltered = extra.filter(a => !result.find(r => r.id === a.id));
@@ -436,7 +443,7 @@ const API = {
         return data.animes.map(a => ({
             id: 'shikimori_' + a.id,
             title: a.russian || a.name,
-            poster: a.poster?.originalUrl || a.poster?.mainUrl || '',
+            poster: this._fixPosterUrl(a.poster?.originalUrl || a.poster?.mainUrl || ''),
             year: a.year?.year || ''
         }));
     },
@@ -490,9 +497,12 @@ const API = {
     // ============================================
     _convertAnime(a) {
         let title = a.russian || a.name || 'Без названия';
+
+        // ✅ ФИКС: делаем URL абсолютным
         let poster = '';
         if (a.poster) {
-            poster = a.poster.originalUrl || a.poster.mainUrl || '';
+            const rawPoster = a.poster.originalUrl || a.poster.mainUrl || '';
+            poster = this._fixPosterUrl(rawPoster);
         }
 
         const genres = (a.genres || [])
@@ -564,17 +574,11 @@ const API = {
     _convertRestAnime(a) {
         let title = a.russian || a.name || 'Без названия';
 
+        // ✅ ФИКС: делаем URL абсолютным
         let poster = '';
         if (a.image) {
-            if (a.image.original) {
-                poster = a.image.original.startsWith('http')
-                    ? a.image.original
-                    : 'https://shikimori.one' + a.image.original;
-            } else if (a.image.preview) {
-                poster = a.image.preview.startsWith('http')
-                    ? a.image.preview
-                    : 'https://shikimori.one' + a.image.preview;
-            }
+            const rawPoster = a.image.original || a.image.preview || '';
+            poster = this._fixPosterUrl(rawPoster);
         }
 
         const genres = (a.genres || [])
