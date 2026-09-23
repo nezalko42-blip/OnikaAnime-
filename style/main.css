@@ -54,24 +54,41 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { box-shadow: 0 0 40px rgba(0, 245, 255, 0.4); }
 
-/* ===== ВИДЕО-ФОН ===== */
+/* ===== ВИДЕО-ФОН (ИСПРАВЛЕНО) ===== */
 .video-bg {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
     z-index: -1;
     overflow: hidden;
+    background: #0a0a12;
 }
+
 .video-bg video {
-    width: 100%; height: 100%;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: cover;
-    opacity: 0.2;
+    opacity: 0.35;
+    pointer-events: none;
 }
+
 .video-bg::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at center, rgba(10, 10, 18, 0.1) 0%, rgba(10, 10, 18, 0.9) 100%);
+    background: radial-gradient(ellipse at center, rgba(10, 10, 18, 0.3) 0%, rgba(10, 10, 18, 0.9) 100%);
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .video-bg video {
+        opacity: 0.25;
+    }
 }
 
 /* ===== ХЕДЕР ===== */
@@ -3897,7 +3914,6 @@ h3 {
     cursor: grabbing;
 }
 
-/* Скрываем дефолтный скроллбар */
 .coverflow-track {
     display: flex;
     align-items: center;
@@ -3954,6 +3970,21 @@ h3 {
     transform: scale(1.05);
 }
 
+/* Затемнение постера */
+.coverflow-slide-poster-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        transparent 35%,
+        rgba(10, 10, 20, 0.5) 65%,
+        rgba(10, 10, 20, 0.95) 100%
+    );
+    pointer-events: none;
+}
+
 /* ✅ НОВОЕ: Fallback если постера нет */
 .coverflow-slide-poster-fallback {
     position: absolute;
@@ -3964,6 +3995,20 @@ h3 {
     font-size: 80px;
     background: linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);
     z-index: 0;
+}
+
+.coverflow-slide-poster-fallback::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        transparent 35%,
+        rgba(10, 10, 20, 0.5) 65%,
+        rgba(10, 10, 20, 0.95) 100%
+    );
+    pointer-events: none;
 }
 
 /* ===== СТАРЫЙ ВАРИАНТ (background-image) — оставлен для совместимости ===== */
@@ -3986,22 +4031,6 @@ h3 {
         rgba(10, 10, 20, 0.5) 65%,
         rgba(10, 10, 20, 0.95) 100%
     );
-}
-
-/* Затемнение для IMG и FALLBACK */
-.coverflow-slide-poster-img::after,
-.coverflow-slide-poster-fallback::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        transparent 35%,
-        rgba(10, 10, 20, 0.5) 65%,
-        rgba(10, 10, 20, 0.95) 100%
-    );
-    pointer-events: none;
 }
 
 .coverflow-slide-content {
