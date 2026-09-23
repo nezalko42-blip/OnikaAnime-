@@ -84,9 +84,10 @@
         <div class="loading-text">Загрузка...</div>
     </div>
 
+    <!-- ✅ ИСПРАВЛЕНО: видео-фон для ВСЕХ устройств -->
     <div class="video-bg">
-        <video autoplay muted loop playsinline>
-            <source src="bg.mp4" type="video/mp4" media="(min-width: 768px)">
+        <video autoplay muted loop playsinline preload="auto" poster="">
+            <source src="bg.mp4" type="video/mp4">
         </video>
     </div>
 
@@ -264,7 +265,7 @@
                         
                         <div class="detail-hero-content">
                             <div class="detail-poster-wrapper">
-                                <img class="detail-poster" id="detailPoster" src="" alt="Постер">
+                                <img class="detail-poster" id="detailPoster" src="" alt="Постер" referrerpolicy="no-referrer">
                                 <div class="detail-age-restriction" id="detailAgeRestriction">
                                     <span class="age-badge age-0">0+</span>
                                 </div>
