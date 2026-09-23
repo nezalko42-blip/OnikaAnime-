@@ -186,7 +186,7 @@ const API = {
     },
 
     // ============================================
-    // 5. СЛУЧАЙНОЕ (УЛУЧШЕННОЕ)
+    // 5. СЛУЧАЙНОЕ
     // ============================================
     async getRandom(limit = 1) {
         const randomPage = Math.floor(Math.random() * 50) + 1;
@@ -493,12 +493,33 @@ const API = {
     async getShikimoriTitle() { return null; },
 
     // ============================================
-    // 12. КОНВЕРТАЦИЯ
+    // 12. VEOVEO PLAYER — тестовые URL
+    // ⚠️ Замени на реальный URL, найденный через DevTools (F12 → Network)
+    // ============================================
+    getVeoveoUrl(shikimoriId, episode = 1) {
+        // ============================================
+        // ОСНОВНОЙ URL (замени на рабочий)
+        // ============================================
+        const url = `https://veoveo.ru/embed/${shikimoriId}?episode=${episode}`;
+
+        // ============================================
+        // АЛЬТЕРНАТИВНЫЕ ВАРИАНТЫ (раскомментируй нужный)
+        // ============================================
+        // const url = `https://veoveo.com/embed/${shikimoriId}/${episode}`;
+        // const url = `https://player.veoveo.ru/?id=${shikimoriId}&ep=${episode}`;
+        // const url = `https://veoveo.ru/shikimori/${shikimoriId}/${episode}`;
+        // const url = `https://veoveo.ru/?shikimori=${shikimoriId}&episode=${episode}`;
+
+        console.log('🎥 Veoveo URL:', url);
+        return url;
+    },
+
+    // ============================================
+    // 13. КОНВЕРТАЦИЯ
     // ============================================
     _convertAnime(a) {
         let title = a.russian || a.name || 'Без названия';
 
-        // ✅ ФИКС: делаем URL абсолютным
         let poster = '';
         if (a.poster) {
             const rawPoster = a.poster.originalUrl || a.poster.mainUrl || '';
@@ -574,7 +595,6 @@ const API = {
     _convertRestAnime(a) {
         let title = a.russian || a.name || 'Без названия';
 
-        // ✅ ФИКС: делаем URL абсолютным
         let poster = '';
         if (a.image) {
             const rawPoster = a.image.original || a.image.preview || '';
