@@ -1,5 +1,5 @@
 // ============================================
-// ХРАНИЛИЩЕ ONIKAANIME (БЕЗ ПИТОМЦА)
+// ХРАНИЛИЩЕ ONIKAANIME (с debounce серверной синхронизации)
 // ============================================
 
 class Storage {
@@ -7,6 +7,8 @@ class Storage {
         this._data = null;
         this._initialized = false;
         this._saveInterval = null;
+        this._syncTimeout = null;   // Таймер debounce для сервера
+        this._pendingSync = false;  // Есть ли несохранённые данные
         this.init();
     }
 
@@ -45,7 +47,7 @@ class Storage {
         }
         
         if (this._saveInterval) clearInterval(this._saveInterval);
-        this._saveInterval = setInterval(() => this.save(), 5000);
+        this._saveInterval = setInterval(() => this._saveToLocal(), 10000);
         
         return this;
     }
@@ -69,37 +71,84 @@ class Storage {
         };
     }
 
+    // ============================================
+    // ✅ ОБНОВЛЕНО: debounce серверной синхронизации
+    // ============================================
     save(cb) {
         this._saveToLocal();
-        
+
         const user = this._data.currentUser;
         if (user && user.id) {
-            const userId = user.id;
-            const name = user.name;
-            
-            const favs = this._getUserData(name, 'favorites', []);
-            fetch('/api/favorites', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, favorites: favs })
-            }).catch(e => console.error('⚠️ Ошибка сохранения избранного:', e));
-            
-            const ach = this._getUserData(name, 'achievements', []);
-            fetch('/api/achievements', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, achievements: ach })
-            }).catch(e => console.error('⚠️ Ошибка сохранения достижений:', e));
-            
-            const title = this._getUserData(name, 'activeTitle', null);
-            fetch('/api/active-title', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, titleId: title })
-            }).catch(e => console.error('⚠️ Ошибка сохранения титула:', e));
+            this._pendingSync = true;
+
+            // Отменяем предыдущий таймер
+            if (this._syncTimeout) clearTimeout(this._syncTimeout);
+
+            // Запускаем новый — синхронизация через 1.5 секунды после последнего изменения
+            this._syncTimeout = setTimeout(() => {
+                this._syncToServer();
+            }, 1500);
         }
-        
+
         if (cb) cb();
+    }
+
+    // ============================================
+    // ✅ НОВОЕ: серверная синхронизация (параллельно)
+    // ============================================
+    async _syncToServer() {
+        if (!this._pendingSync) return;
+        this._pendingSync = false;
+
+        const user = this._data.currentUser;
+        if (!user || !user.id) return;
+
+        const userId = user.id;
+        const name = user.name;
+
+        try {
+            const favs = this._getUserData(name, 'favorites', []);
+            const ach = this._getUserData(name, 'achievements', []);
+            const title = this._getUserData(name, 'activeTitle', null);
+
+            // Отправляем параллельно (Promise.all — быстрее)
+            await Promise.all([
+                fetch('/api/favorites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, favorites: favs })
+                }).catch(e => console.warn('⚠️ Sync favorites:', e.message)),
+
+                fetch('/api/achievements', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, achievements: ach })
+                }).catch(e => console.warn('⚠️ Sync achievements:', e.message)),
+
+                fetch('/api/active-title', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, titleId: title })
+                }).catch(e => console.warn('⚠️ Sync title:', e.message))
+            ]);
+
+            console.log('✅ Данные синхронизированы с сервером');
+        } catch (e) {
+            console.warn('⚠️ Ошибка синхронизации:', e.message);
+        }
+    }
+
+    // ============================================
+    // ✅ НОВОЕ: принудительная синхронизация (beforeunload)
+    // ============================================
+    forceSync() {
+        if (this._syncTimeout) {
+            clearTimeout(this._syncTimeout);
+            this._syncTimeout = null;
+        }
+        if (this._pendingSync) {
+            this._syncToServer();
+        }
     }
 
     _saveToLocal() {
@@ -117,13 +166,15 @@ class Storage {
             const profiles = this._data.profiles || {};
             for (const name in profiles) {
                 if (profiles[name] && profiles[name].avatar) {
-                    localStorage.setItem('avatar_' + name, profiles[name].avatar);
+                    try {
+                        localStorage.setItem('avatar_' + name, profiles[name].avatar);
+                    } catch (e) {
+                        // localStorage переполнен — игнорируем
+                    }
                 }
             }
-            
-            console.log('💾 Данные сохранены в localStorage');
         } catch(e) {
-            console.error('❌ Ошибка сохранения:', e);
+            console.warn('⚠️ Ошибка сохранения в localStorage:', e.message);
         }
     }
 
@@ -178,7 +229,9 @@ class Storage {
         this._data[key][user] = val;
     }
 
-    // ===== ПУБЛИЧНЫЕ МЕТОДЫ =====
+    // ============================================
+    // ПУБЛИЧНЫЕ МЕТОДЫ
+    // ============================================
     get(key, def) {
         if (!this._data) return def;
         return this._data[key] !== undefined ? this._data[key] : def;
@@ -262,8 +315,6 @@ class Storage {
         this._saveToLocal();
     }
 
-    // ===== МЕТОДЫ ДЛЯ РАБОТЫ С ЖАНРАМИ =====
-    
     saveUserGenres(user, genres) {
         if (!user || !this._data) return false;
         this._setUserData(user, 'userGenres', genres);
@@ -277,17 +328,21 @@ class Storage {
     }
 }
 
-// ===== ИНИЦИАЛИЗАЦИЯ =====
+// ============================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================
 const DB = new Storage();
 DB.restoreData();
 
+// Принудительная синхронизация перед закрытием
 window.addEventListener('beforeunload', () => {
-    DB.save();
+    DB.forceSync();
 });
 
+// Синхронизация при уходе со вкладки
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        DB.save();
+        DB.forceSync();
     }
 });
 
@@ -317,6 +372,6 @@ window.forceRestore = function() {
 
 window.DB = DB;
 
-console.log('✅ Хранилище OnikaAnime инициализировано!');
+console.log('✅ Хранилище OnikaAnime инициализировано (debounce sync)');
 console.log('💡 Используйте checkData() для проверки данных');
 console.log('💡 Используйте forceRestore() для восстановления из бэкапа');
