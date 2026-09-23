@@ -19,7 +19,7 @@ let searchTimeout = null;
 // Coverflow
 let coverflowItems = [];
 let coverflowIndex = 0;
-let _recommendationsLoaded = false;
+let _isLoadingRecommendations = false;
 
 const CATALOG_LIMIT = 12;
 
@@ -245,13 +245,15 @@ window.addEventListener('scroll', function() {
 // 1. COVERFLOW КАРУСЕЛЬ РЕКОМЕНДАЦИЙ
 // ============================================
 async function loadRecommendationsForHero() {
-    if (_recommendationsLoaded && coverflowItems.length > 0) {
-        console.log('⚡ Рекомендации уже загружены');
+    if (_isLoadingRecommendations) {
+        console.log('⏳ Рекомендации уже загружаются...');
         return;
     }
 
+    _isLoadingRecommendations = true;
+
     const track = document.getElementById('coverflowTrack');
-    if (track && !track.children.length) {
+    if (track) {
         track.innerHTML = `
             <div style="width:100%;text-align:center;padding:60px 20px;color:var(--text-muted);">
                 <div class="spinner-small" style="margin:0 auto 12px;"></div>
@@ -261,17 +263,71 @@ async function loadRecommendationsForHero() {
     }
 
     try {
-        const recs = await API.getRecommended(7);
+        const user = DB.get('currentUser');
+        let recs = [];
+
+        if (user) {
+            const favs = DB.getUserData(user.name, 'favorites', []);
+            const favGenres = getGenresFromFavorites(favs);
+
+            if (favGenres.length > 0) {
+                console.log('✨ Персональные по жанрам:', favGenres);
+                recs = await API.getPersonalRecommendations(favGenres, favs, 7);
+            } else {
+                console.log('📌 У юзера нет избранного — случайные');
+                recs = await API.getRandomRecommendations(7);
+            }
+        } else {
+            console.log('👤 Гость — случайные рекомендации');
+            recs = await API.getRandomRecommendations(7);
+        }
+
         if (recs && recs.length > 0) {
             coverflowItems = recs;
             coverflowIndex = Math.floor(recs.length / 2);
             renderCoverflow(recs);
-            _recommendationsLoaded = true;
-            console.log('🎲 Загружено', recs.length, 'рекомендаций');
+            console.log(`✅ Загружено ${recs.length} рекомендаций`);
+        } else {
+            if (track) {
+                track.innerHTML = `
+                    <div style="width:100%;text-align:center;padding:60px 20px;color:var(--text-muted);">
+                        <div style="font-size:48px;margin-bottom:12px;">😅</div>
+                        <div>Не удалось загрузить рекомендации</div>
+                    </div>
+                `;
+            }
         }
     } catch (e) {
         console.error('Ошибка загрузки рекомендаций:', e);
+    } finally {
+        _isLoadingRecommendations = false;
     }
+}
+
+// ===== Собрать топ-3 жанра из избранного =====
+function getGenresFromFavorites(favTitles) {
+    if (!favTitles || favTitles.length === 0) return [];
+
+    const genreCount = {};
+
+    favTitles.forEach(title => {
+        const item = findAnimeByName(title);
+        if (item && item.genres && item.genres.length > 0) {
+            item.genres.forEach(g => {
+                if (typeof g === 'string') {
+                    genreCount[g] = (genreCount[g] || 0) + 1;
+                }
+            });
+        }
+    });
+
+    const sorted = Object.entries(genreCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([genre]) => genre);
+
+    console.log('🎭 Топ жанров из избранного:', sorted);
+    return sorted;
 }
 
 function renderCoverflow(items) {
@@ -2517,7 +2573,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUI();
     navigate('home');
 
-    // Загружаем рекомендации сразу, не дожидаясь каталога
     loadRecommendationsForHero();
 
     const user = DB.get('currentUser');
@@ -2635,5 +2690,11 @@ window.selectSearchSuggestion = selectSearchSuggestion;
 window.coverflowPrev = coverflowPrev;
 window.coverflowNext = coverflowNext;
 window.goToCoverflow = goToCoverflow;
+window.loadRecommendationsForHero = loadRecommendationsForHero;
+window.getGenresFromFavorites = getGenresFromFavorites;
+
+// ===== ЗАГЛУШКИ для совместимости =====
+window.showAchievementPopup = function() {};
+window.hidePopup = function() {};
 
 console.log('✅ OnikaAnime полностью загружен!');
