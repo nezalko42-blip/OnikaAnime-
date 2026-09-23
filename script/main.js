@@ -20,6 +20,10 @@ let searchTimeout = null;
 let coverflowItems = [];
 let coverflowIndex = 0;
 let _isLoadingRecommendations = false;
+let _coverflowAutoTimer = null;
+let _coverflowPauseUntil = 0;
+const COVERFLOW_LIMIT = 10;
+const COVERFLOW_AUTOPLAY_MS = 5000;
 
 const CATALOG_LIMIT = 12;
 
@@ -272,20 +276,21 @@ async function loadRecommendationsForHero() {
 
             if (favGenres.length > 0) {
                 console.log('✨ Персональные по жанрам:', favGenres);
-                recs = await API.getPersonalRecommendations(favGenres, favs, 7);
+                recs = await API.getPersonalRecommendations(favGenres, favs, COVERFLOW_LIMIT);
             } else {
                 console.log('📌 У юзера нет избранного — случайные');
-                recs = await API.getRandomRecommendations(7);
+                recs = await API.getRandomRecommendations(COVERFLOW_LIMIT);
             }
         } else {
             console.log('👤 Гость — случайные рекомендации');
-            recs = await API.getRandomRecommendations(7);
+            recs = await API.getRandomRecommendations(COVERFLOW_LIMIT);
         }
 
         if (recs && recs.length > 0) {
             coverflowItems = recs;
             coverflowIndex = Math.floor(recs.length / 2);
             renderCoverflow(recs);
+            startCoverflowAutoScroll();
             console.log(`✅ Загружено ${recs.length} рекомендаций`);
         } else {
             if (track) {
@@ -333,11 +338,9 @@ function getGenresFromFavorites(favTitles) {
 function renderCoverflow(items) {
     const track = document.getElementById('coverflowTrack');
     const dots = document.getElementById('coverflowDots');
-    const currentEl = document.getElementById('coverflowCurrent');
-    const totalEl = document.getElementById('coverflowTotal');
     if (!track) return;
 
-    const limited = items.slice(0, 7);
+    const limited = items.slice(0, COVERFLOW_LIMIT);
     coverflowItems = limited;
 
     let html = '';
@@ -369,8 +372,6 @@ function renderCoverflow(items) {
         dotsHtml += `<button class="coverflow-dot${i === coverflowIndex ? ' active' : ''}" onclick="goToCoverflow(${i})" aria-label="Слайд ${i + 1}"></button>`;
     });
     if (dots) dots.innerHTML = dotsHtml;
-    if (currentEl) currentEl.textContent = coverflowIndex + 1;
-    if (totalEl) totalEl.textContent = limited.length;
 
     updateCoverflow();
 }
@@ -392,17 +393,22 @@ function updateCoverflow() {
     });
 
     dots.forEach((dot, i) => dot.classList.toggle('active', i === coverflowIndex));
-
-    const currentEl = document.getElementById('coverflowCurrent');
-    if (currentEl) currentEl.textContent = coverflowIndex + 1;
 }
 
 function coverflowPrev() {
-    if (coverflowIndex > 0) { coverflowIndex--; updateCoverflow(); scrollCoverflowToActive(); }
+    if (coverflowItems.length === 0) return;
+    coverflowIndex = (coverflowIndex - 1 + coverflowItems.length) % coverflowItems.length;
+    updateCoverflow();
+    scrollCoverflowToActive();
+    pauseCoverflowAutoScroll();
 }
 
 function coverflowNext() {
-    if (coverflowIndex < coverflowItems.length - 1) { coverflowIndex++; updateCoverflow(); scrollCoverflowToActive(); }
+    if (coverflowItems.length === 0) return;
+    coverflowIndex = (coverflowIndex + 1) % coverflowItems.length;
+    updateCoverflow();
+    scrollCoverflowToActive();
+    pauseCoverflowAutoScroll();
 }
 
 function goToCoverflow(index) {
@@ -410,6 +416,7 @@ function goToCoverflow(index) {
         coverflowIndex = index;
         updateCoverflow();
         scrollCoverflowToActive();
+        pauseCoverflowAutoScroll();
     }
 }
 
@@ -421,10 +428,44 @@ function scrollCoverflowToActive() {
     }
 }
 
+// ============================================
+// АВТО-ПРОКРУТКА COVERFLOW (каждые 5 секунд)
+// ============================================
+function startCoverflowAutoScroll() {
+    stopCoverflowAutoScroll();
+    _coverflowPauseUntil = 0;
+    _coverflowAutoTimer = setInterval(function() {
+        if (Date.now() < _coverflowPauseUntil) return;
+        if (currentPage !== 'home') return;
+        if (document.hidden) return;
+        if (_isLoadingRecommendations) return;
+        coverflowNext();
+    }, COVERFLOW_AUTOPLAY_MS);
+    console.log('▶️ Авто-прокрутка запущена (каждые 5 сек)');
+}
+
+function stopCoverflowAutoScroll() {
+    if (_coverflowAutoTimer) {
+        clearInterval(_coverflowAutoTimer);
+        _coverflowAutoTimer = null;
+    }
+}
+
+function pauseCoverflowAutoScroll(ms = 10000) {
+    _coverflowPauseUntil = Date.now() + ms;
+}
+
 // ===== СВАЙП ДЛЯ COVERFLOW =====
 document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('coverflowContainer');
     const track = document.getElementById('coverflowTrack');
     if (!track) return;
+
+    if (container) {
+        container.addEventListener('mouseenter', () => pauseCoverflowAutoScroll(20000));
+        container.addEventListener('mouseleave', () => { _coverflowPauseUntil = 0; });
+    }
+
     let startX = 0, isDown = false;
     track.addEventListener('mousedown', e => { isDown = true; startX = e.pageX; });
     track.addEventListener('mouseup', e => {
@@ -439,6 +480,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const diff = e.changedTouches[0].pageX - startX;
         if (Math.abs(diff) > 50) diff > 0 ? coverflowPrev() : coverflowNext();
     }, { passive: true });
+});
+
+// ===== ОСТАНОВКА АВТО-ПРОКРУТКИ ПРИ УХОДЕ СО ВКЛАДКИ =====
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        stopCoverflowAutoScroll();
+    } else if (currentPage === 'home' && coverflowItems.length > 0) {
+        startCoverflowAutoScroll();
+    }
 });
 
 // ============================================
@@ -2665,8 +2715,6 @@ window.onMcItemClick = onMcItemClick;
 window.openAchModal = openAchModal;
 window.closeAchUnlock = closeAchUnlock;
 window.setActiveTitle = setActiveTitle;
-window.showAchievementPopup = showAchievementPopup;
-window.hidePopup = hidePopup;
 window.spawnConfetti = spawnConfetti;
 window.spawnTitleConfetti = spawnTitleConfetti;
 window.spawnBigConfetti = spawnBigConfetti;
@@ -2692,8 +2740,11 @@ window.coverflowNext = coverflowNext;
 window.goToCoverflow = goToCoverflow;
 window.loadRecommendationsForHero = loadRecommendationsForHero;
 window.getGenresFromFavorites = getGenresFromFavorites;
+window.startCoverflowAutoScroll = startCoverflowAutoScroll;
+window.stopCoverflowAutoScroll = stopCoverflowAutoScroll;
+window.pauseCoverflowAutoScroll = pauseCoverflowAutoScroll;
 
-// ===== ЗАГЛУШКИ для совместимости =====
+// ===== ЗАГЛУШКИ =====
 window.showAchievementPopup = function() {};
 window.hidePopup = function() {};
 
