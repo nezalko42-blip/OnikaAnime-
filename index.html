@@ -90,7 +90,7 @@
         </video>
     </div>
 
-    <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+    <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="uploadAvatar(this)">
 
     <header class="header">
         <div class="header-left">
@@ -130,7 +130,6 @@
                 <!-- ===== ГЛАВНАЯ ===== -->
                 <div id="page-home">
 
-                    <!-- ===== COVERFLOW КАРУСЕЛЬ РЕКОМЕНДАЦИЙ ===== -->
                     <section class="coverflow-section">
                         <div class="coverflow-header">
                             <h2>🎬 Рекомендации для тебя</h2>
