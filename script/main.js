@@ -2172,7 +2172,7 @@ function getCommentCount(user) {
 
 function renderContinueWatching(user) {
     const grid = document.getElementById('continueGrid');
-    const count = document.getElementById('continueCount');
+    const count = document.getElementById('continueCount2');
     if (!grid) return;
     const watching = DB.getUserData(user, 'continueWatching', {});
     const entries = Object.entries(watching);
@@ -2878,7 +2878,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 // ============================================
-// 25. ЭКСПОРТ
+// 25. ЭКСПОРТ (БАЗОВЫЙ)
 // ============================================
 window.openDetail = openDetail;
 window.navigate = navigate;
@@ -2995,3 +2995,264 @@ window.showAchievementPopup = function() {};
 window.hidePopup = function() {};
 
 console.log('✅ OnikaAnime полностью загружен!');
+
+// ============================================
+// REDESIGN v3 — ГЛАВНАЯ: HERO + RAILS
+// ============================================
+
+async function loadHeroAnime() {
+    const banner = document.getElementById('heroBanner');
+    if (!banner) return;
+
+    try {
+        const items = await API.getRandom(1);
+        if (!items || !items.length) return;
+        renderHero(items[0]);
+    } catch (e) {
+        console.warn('⚠️ Hero не загрузился:', e);
+    }
+}
+
+function renderHero(anime) {
+    if (!anime) return;
+
+    const title = anime.title || 'Без названия';
+    const subtitle = anime.title_english || '';
+    const poster = anime.images?.jpg?.image_url || '';
+    const year = anime.year || '';
+    const episodes = anime.episodes || '?';
+    const score = parseFloat(anime.score) || 0;
+    const status = anime.status || '';
+    const age = anime.age_rating || '0+';
+    const desc = (anime.synopsis || anime.description || '').slice(0, 260);
+    const id = anime.id || anime.rawId;
+
+    const titleEl = document.getElementById('heroTitle');
+    const subtitleEl = document.getElementById('heroSubtitle');
+    const metaEl = document.getElementById('heroMeta');
+    const descEl = document.getElementById('heroDesc');
+    const backdrop = document.getElementById('heroBackdrop');
+    const side = document.getElementById('heroSide');
+    const watchBtn = document.getElementById('heroWatchBtn');
+    const favBtn = document.getElementById('heroFavBtn');
+    const shuffleBtn = document.getElementById('heroShuffleBtn');
+
+    if (titleEl) titleEl.textContent = title;
+    if (subtitleEl) subtitleEl.textContent = subtitle;
+
+    if (metaEl) {
+        let html = '';
+        if (score > 0) html += `<span class="hero-meta-item score">⭐ ${score.toFixed(1)}</span>`;
+        if (year && year !== '--') html += `<span class="hero-meta-item">📅 ${year}</span>`;
+        if (episodes && episodes !== '?') html += `<span class="hero-meta-item">📺 ${episodes} эп.</span>`;
+        if (status) html += `<span class="hero-meta-item">${status}</span>`;
+        if (age) html += `<span class="hero-meta-item">${age}</span>`;
+        metaEl.innerHTML = html;
+    }
+
+    if (descEl) descEl.textContent = desc;
+
+    if (backdrop && poster) {
+        backdrop.style.backgroundImage = `url('${poster}')`;
+    }
+
+    if (side) {
+        if (poster) {
+            side.innerHTML = `<img class="hero-side-poster" src="${poster}" alt="${title}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`;
+        } else {
+            side.innerHTML = '';
+        }
+    }
+
+    if (watchBtn) {
+        watchBtn.onclick = function() { openDetail(id); };
+    }
+
+    if (favBtn) {
+        const user = DB.get('currentUser');
+        const favs = user ? DB.getUserData(user.name, 'favorites', []) : [];
+        const isFav = favs.indexOf(title) > -1;
+        updateHeroFavBtn(favBtn, isFav);
+
+        favBtn.onclick = function() {
+            if (!user) { showToast('Войдите в аккаунт!', 'error'); return; }
+            toggleFav(title);
+            const favsNow = DB.getUserData(user.name, 'favorites', []);
+            updateHeroFavBtn(favBtn, favsNow.indexOf(title) > -1);
+        };
+    }
+
+    if (shuffleBtn) {
+        shuffleBtn.onclick = function() {
+            shuffleBtn.style.transform = 'rotate(360deg)';
+            setTimeout(() => { shuffleBtn.style.transform = ''; }, 400);
+            loadHeroAnime();
+        };
+    }
+}
+
+function updateHeroFavBtn(btn, isFav) {
+    if (!btn) return;
+    const spanEl = btn.querySelector('span');
+    if (isFav) {
+        btn.classList.add('active');
+        if (spanEl) spanEl.textContent = 'В избранном';
+    } else {
+        btn.classList.remove('active');
+        if (spanEl) spanEl.textContent = 'В избранное';
+    }
+}
+
+function renderRailSkeleton(containerId, count = 6) {
+    const track = document.getElementById(containerId);
+    if (!track) return;
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += `<div class="rail-skeleton"><div class="rail-skeleton-poster"></div><div class="rail-skeleton-body"><div class="rail-skeleton-line"></div><div class="rail-skeleton-line short"></div></div></div>`;
+    }
+    track.innerHTML = html;
+}
+
+function renderRail(containerId, countId, items) {
+    const track = document.getElementById(containerId);
+    const countEl = document.getElementById(countId);
+    if (!track) return;
+
+    if (!items || !items.length) {
+        track.innerHTML = `<div style="padding:24px;color:rgba(255,255,255,0.4);font-size:14px;">Не удалось загрузить</div>`;
+        return;
+    }
+
+    if (countEl) countEl.textContent = items.length;
+
+    let html = '';
+    items.forEach((a, i) => {
+        const img = a.images?.jpg?.image_url || '';
+        const title = a.title || 'Без названия';
+        const year = a.year || '';
+        const eps = a.episodes || '?';
+        const age = a.age_rating || '0+';
+        const score = parseFloat(a.score) || 0;
+        const id = a.mal_id || a.id;
+
+        const posterHtml = img
+            ? `<img src="${img}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin','<div style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:48px;\\'>🎬</div>')">`
+            : '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:48px;">🎬</div>';
+
+        const scoreHtml = score > 0 ? `<div class="rail-card-score">⭐ ${score.toFixed(1)}</div>` : '';
+
+        html += `
+            <div class="rail-card" style="animation: cardFadeIn 0.5s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.05}s backwards;" onclick="openDetail('${id}')">
+                <div class="rail-card-poster">
+                    ${posterHtml}
+                    ${scoreHtml}
+                    <span class="rail-card-age">${age}</span>
+                </div>
+                <div class="rail-card-body">
+                    <h3 class="rail-card-title">${title}</h3>
+                    <div class="rail-card-meta">
+                        ${year && year !== '--' ? `<span>📅 ${year}</span>` : ''}
+                        ${eps && eps !== '?' ? `<span>📺 ${eps}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    track.innerHTML = html;
+}
+
+async function loadRails() {
+    renderRailSkeleton('trendingTrack', 6);
+    renderRailSkeleton('newTrack', 6);
+    renderRailSkeleton('topTrack', 6);
+
+    const [trending, fresh, top] = await Promise.allSettled([
+        API.getCatalog(1, 14, 'popularity'),
+        API.getLatest(1, 14),
+        API.getCatalog(1, 14, 'ranked')
+    ]);
+
+    if (trending.status === 'fulfilled' && trending.value?.items) {
+        renderRail('trendingTrack', 'trendingCount', trending.value.items);
+        trending.value.items.forEach(item => { allData[item.mal_id] = item; });
+    }
+    if (fresh.status === 'fulfilled' && fresh.value?.items) {
+        renderRail('newTrack', 'newCount', fresh.value.items);
+        fresh.value.items.forEach(item => { allData[item.mal_id] = item; });
+    }
+    if (top.status === 'fulfilled' && top.value?.items) {
+        renderRail('topTrack', 'topCount', top.value.items);
+        top.value.items.forEach(item => { allData[item.mal_id] = item; });
+    }
+}
+
+function renderContinueWatchingHome() {
+    const section = document.getElementById('continueSection');
+    const track = document.getElementById('continueTrack');
+    const countEl = document.getElementById('continueCount');
+    if (!section || !track) return;
+
+    const user = DB.get('currentUser');
+    if (!user) { section.style.display = 'none'; return; }
+
+    const watching = DB.getUserData(user.name, 'continueWatching', {});
+    const entries = Object.entries(watching).sort((a, b) => (b[1].timestamp || 0) - (a[1].timestamp || 0));
+
+    if (entries.length === 0) { section.style.display = 'none'; return; }
+
+    section.style.display = 'block';
+    if (countEl) countEl.textContent = entries.length;
+
+    let html = '';
+    entries.slice(0, 10).forEach(([animeName, data], i) => {
+        const poster = getPosterForAnime(animeName);
+        const ep = data.episode || 1;
+        const total = data.total || 0;
+        const percent = total > 0 ? Math.round((ep / total) * 100) : 0;
+
+        const posterHtml = poster
+            ? `<img class="continue-rail-poster" src="${poster}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">`
+            : `<div class="continue-rail-poster" style="display:flex;align-items:center;justify-content:center;font-size:22px;">🎬</div>`;
+
+        html += `
+            <div class="continue-rail-card" style="animation: cardFadeIn 0.5s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.05}s backwards;" onclick="searchAndOpen('${animeName.replace(/'/g, "\\'")}')">
+                ${posterHtml}
+                <div class="continue-rail-info">
+                    <div class="continue-rail-title">${animeName}</div>
+                    <div class="continue-rail-meta">Серия ${ep}${total ? ' / ' + total : ''}</div>
+                    <div class="continue-rail-bar"><div class="continue-rail-bar-fill" style="width:${percent}%"></div></div>
+                </div>
+            </div>
+        `;
+    });
+    track.innerHTML = html;
+}
+
+// Хук на navigate('home')
+(function patchNavigate() {
+    if (typeof window.navigate !== 'function') return;
+    const original = window.navigate;
+    window.navigate = function(pageName) {
+        original.call(this, pageName);
+        if (pageName === 'home') {
+            loadHeroAnime();
+            loadRails();
+            renderContinueWatchingHome();
+        }
+    };
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        if (document.getElementById('heroBanner')) {
+            loadHeroAnime();
+            loadRails();
+            renderContinueWatchingHome();
+        }
+    }, 200);
+});
+
+window.loadHeroAnime = loadHeroAnime;
+window.renderHero = renderHero;
+window.loadRails = loadRails;
+window.renderContinueWatchingHome = renderContinueWatchingHome;
