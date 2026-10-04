@@ -33,6 +33,10 @@
     <meta name="twitter:image" content="https://onikaanime.relaxdev.ru/og-image.jpg" />
     
     <title>OnikaAnime - Смотри аниме онлайн бесплатно</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style/main.css">
     
     <style>
@@ -130,39 +134,122 @@
                 <!-- ===== ГЛАВНАЯ ===== -->
                 <div id="page-home">
 
+                    <!-- HERO BANNER -->
+                    <section class="hero-banner" id="heroBanner">
+                        <div class="hero-backdrop" id="heroBackdrop"></div>
+                        <div class="hero-vignette"></div>
+                        <div class="hero-noise"></div>
+
+                        <div class="hero-content">
+                            <div class="hero-badge">
+                                <span class="hero-badge-dot"></span>
+                                <span id="heroBadgeText">Аниме дня</span>
+                            </div>
+
+                            <h1 class="hero-title" id="heroTitle">Загрузка...</h1>
+                            <div class="hero-subtitle" id="heroSubtitle"></div>
+                            <div class="hero-meta" id="heroMeta"></div>
+                            <p class="hero-desc" id="heroDesc"></p>
+
+                            <div class="hero-actions">
+                                <button class="hero-btn hero-btn-primary" id="heroWatchBtn">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                    <span>Смотреть</span>
+                                </button>
+                                <button class="hero-btn hero-btn-ghost" id="heroFavBtn">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    <span>В избранное</span>
+                                </button>
+                                <button class="hero-btn hero-btn-icon" id="heroShuffleBtn" title="Другое аниме">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="hero-side" id="heroSide"></div>
+                    </section>
+
+                    <!-- CONTINUE WATCHING -->
+                    <section class="rail-section" id="continueSection" style="display:none;">
+                        <div class="rail-header">
+                            <div class="rail-title-wrap">
+                                <h2 class="rail-title">▶ Продолжить просмотр</h2>
+                                <span class="rail-count" id="continueCount">0</span>
+                            </div>
+                            <button class="rail-link" onclick="navigate('profile')">Все →</button>
+                        </div>
+                        <div class="rail-track" id="continueTrack"></div>
+                    </section>
+
+                    <!-- COVERFLOW -->
                     <section class="coverflow-section">
                         <div class="coverflow-header">
-                            <h2>🎬 Рекомендации для тебя</h2>
-                            <p>Прокрути и выбери что-нибудь интересное</p>
+                            <h2>✨ Подобрано для тебя</h2>
+                            <p>Свайпни — выбери что-то интересное</p>
                         </div>
-                        
+
                         <div class="coverflow-container" id="coverflowContainer">
                             <button class="coverflow-nav coverflow-prev" onclick="coverflowPrev()" aria-label="Назад">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                     <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
-                            
                             <div class="coverflow-track" id="coverflowTrack"></div>
-                            
                             <button class="coverflow-nav coverflow-next" onclick="coverflowNext()" aria-label="Вперёд">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                     <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
                         </div>
-                        
+
                         <div class="coverflow-dots" id="coverflowDots"></div>
                     </section>
 
+                    <!-- TRENDING -->
+                    <section class="rail-section">
+                        <div class="rail-header">
+                            <div class="rail-title-wrap">
+                                <h2 class="rail-title">🔥 Сейчас в тренде</h2>
+                                <span class="rail-count" id="trendingCount">0</span>
+                            </div>
+                            <button class="rail-link" onclick="document.getElementById('catalogTitle').scrollIntoView({behavior:'smooth'})">Все →</button>
+                        </div>
+                        <div class="rail-track" id="trendingTrack"></div>
+                    </section>
+
+                    <!-- NEW RELEASES -->
+                    <section class="rail-section">
+                        <div class="rail-header">
+                            <div class="rail-title-wrap">
+                                <h2 class="rail-title">🌙 Новинки</h2>
+                                <span class="rail-count" id="newCount">0</span>
+                            </div>
+                            <button class="rail-link" onclick="setGenre('latest', null)">Все →</button>
+                        </div>
+                        <div class="rail-track" id="newTrack"></div>
+                    </section>
+
+                    <!-- TOP RATED -->
+                    <section class="rail-section">
+                        <div class="rail-header">
+                            <div class="rail-title-wrap">
+                                <h2 class="rail-title">⭐ Топ по рейтингу</h2>
+                                <span class="rail-count" id="topCount">0</span>
+                            </div>
+                            <button class="rail-link" onclick="document.getElementById('catalogTitle').scrollIntoView({behavior:'smooth'})">Все →</button>
+                        </div>
+                        <div class="rail-track" id="topTrack"></div>
+                    </section>
+
+                    <!-- RANDOM -->
                     <section class="random-section">
                         <div class="random-container">
                             <div class="random-header">
                                 <div class="random-header-icon">🎲</div>
                                 <h2 class="random-header-title">Не знаю что посмотреть?</h2>
-                                <p class="random-header-subtitle">Нажми на кнопку — мы подберём для тебя идеальное аниме</p>
+                                <p class="random-header-subtitle">Нажми на кнопку — мы подберём идеальное аниме</p>
                             </div>
-                            
+
                             <button class="random-trigger-btn" onclick="randomAnime()">
                                 <span class="random-trigger-icon">🎬</span>
                                 <span class="random-trigger-text">Подобрать аниме</span>
@@ -172,6 +259,7 @@
                         </div>
                     </section>
 
+                    <!-- CATALOG -->
                     <section class="catalog-section">
                         <div class="catalog-header">
                             <h2 id="catalogTitle">📚 ВСЕ АНИМЕ</h2>
@@ -197,16 +285,13 @@
                         </div>
                         
                         <div class="pagination" id="pagination" style="display:none;">
-                            <button class="pagination-btn" id="prevPageBtn" onclick="goToPrevPage()">
-                                ‹ <span>Назад</span>
-                            </button>
+                            <button class="pagination-btn" id="prevPageBtn" onclick="goToPrevPage()">‹ <span>Назад</span></button>
                             <div class="pagination-pages" id="paginationPages"></div>
-                            <button class="pagination-btn" id="nextPageBtn" onclick="goToNextPage()">
-                                <span>Вперёд</span> ›
-                            </button>
+                            <button class="pagination-btn" id="nextPageBtn" onclick="goToNextPage()"><span>Вперёд</span> ›</button>
                         </div>
                     </section>
 
+                    <!-- SOCIAL -->
                     <section class="social-section">
                         <div class="social-container">
                             <div class="social-header">
@@ -216,27 +301,21 @@
 
                             <div class="social-grid-3">
                                 <div class="social-card telegram-card">
-                                    <div class="social-card-icon">
-                                        <svg width="48" height="48" fill="#0088cc"><use href="icons/icons.svg#icon-telegram"/></svg>
-                                    </div>
+                                    <div class="social-card-icon"><svg width="48" height="48" fill="#0088cc"><use href="icons/icons.svg#icon-telegram"/></svg></div>
                                     <h3>Telegram</h3>
                                     <p>Новости, розыгрыши</p>
                                     <a href="https://t.me/onikaanime" target="_blank" class="social-btn telegram-btn">Подписаться</a>
                                     <div class="social-stats"><span id="tgStats">👥 0 подписчиков</span></div>
                                 </div>
                                 <div class="social-card vk-card">
-                                    <div class="social-card-icon">
-                                        <svg width="48" height="48" fill="#4e80b4"><use href="icons/icons.svg#icon-vk"/></svg>
-                                    </div>
+                                    <div class="social-card-icon"><svg width="48" height="48" fill="#4e80b4"><use href="icons/icons.svg#icon-vk"/></svg></div>
                                     <h3>VKontakte</h3>
                                     <p>Обсуждения, опросы</p>
                                     <a href="https://vk.com/onikaanime" target="_blank" class="social-btn vk-btn">Подписаться</a>
                                     <div class="social-stats"><span id="vkStats">👥 0 подписчиков</span></div>
                                 </div>
                                 <div class="social-card tiktok-card">
-                                    <div class="social-card-icon">
-                                        <svg width="48" height="48" fill="#25f4ee"><use href="icons/icons.svg#icon-tiktok"/></svg>
-                                    </div>
+                                    <div class="social-card-icon"><svg width="48" height="48" fill="#25f4ee"><use href="icons/icons.svg#icon-tiktok"/></svg></div>
                                     <h3>TikTok</h3>
                                     <p>Клипы, тренды</p>
                                     <a href="https://tiktok.com/@onikaanime" target="_blank" class="social-btn tiktok-btn">Подписаться</a>
@@ -249,7 +328,6 @@
 
                 <!-- ===== ДЕТАЛЬНАЯ ===== -->
                 <div id="page-detail" style="display:none;">
-                    
                     <div class="detail-ambient-glow" id="detailAmbientGlow"></div>
                     
                     <span class="back-btn" onclick="goBack()">
@@ -273,9 +351,7 @@
                             <div class="detail-info">
                                 <h1 id="detailTitle"></h1>
                                 <div class="eng" id="detailEng"></div>
-                                
                                 <div class="detail-meta-row" id="detailMeta"></div>
-                                
                                 <div class="detail-tags" id="detailTags"></div>
                                 
                                 <div class="detail-desc-wrapper">
@@ -309,55 +385,37 @@
                                 <div class="watch-content">
                                     <h4>VK Video — DEEP</h4>
                                     <p>Озвучка от студии DEEP</p>
-                                    <div class="watch-tags">
-                                        <span>🎙️ Дубляж</span>
-                                        <span>🔥 287K</span>
-                                    </div>
+                                    <div class="watch-tags"><span>🎙️ Дубляж</span><span>🔥 287K</span></div>
                                 </div>
                                 <div class="watch-arrow">→</div>
                             </button>
 
                             <button onclick="watchOnDeep()" class="watch-card watch-deep">
-                                <div class="watch-icon">
-                                    <span style="font-size:36px;">🎬</span>
-                                </div>
+                                <div class="watch-icon"><span style="font-size:36px;">🎬</span></div>
                                 <div class="watch-content">
                                     <h4>DEEP Entertainment</h4>
                                     <p>Официальный сайт</p>
-                                    <div class="watch-tags">
-                                        <span>✅ Без рекламы</span>
-                                        <span>📺 HD</span>
-                                    </div>
+                                    <div class="watch-tags"><span>✅ Без рекламы</span><span>📺 HD</span></div>
                                 </div>
                                 <div class="watch-arrow">→</div>
                             </button>
 
                             <button onclick="watchOnVeoveo()" class="watch-card watch-veoveo">
-                                <div class="watch-icon">
-                                    <span style="font-size:36px;">🎥</span>
-                                </div>
+                                <div class="watch-icon"><span style="font-size:36px;">🎥</span></div>
                                 <div class="watch-content">
                                     <h4>Veoveo</h4>
                                     <p>Альтернативный источник</p>
-                                    <div class="watch-tags">
-                                        <span>⚡ Быстрый</span>
-                                        <span>🔄 Резерв</span>
-                                    </div>
+                                    <div class="watch-tags"><span>⚡ Быстрый</span><span>🔄 Резерв</span></div>
                                 </div>
                                 <div class="watch-arrow">→</div>
                             </button>
 
                             <button onclick="openKodiModal()" class="watch-card watch-kodi">
-                                <div class="watch-icon">
-                                    <span style="font-size:36px;">🎞️</span>
-                                </div>
+                                <div class="watch-icon"><span style="font-size:36px;">🎞️</span></div>
                                 <div class="watch-content">
                                     <h4>Kodi плеер</h4>
                                     <p>Через приложение</p>
-                                    <div class="watch-tags">
-                                        <span>💻 Десктоп</span>
-                                        <span>📱 Мобильный</span>
-                                    </div>
+                                    <div class="watch-tags"><span>💻 Десктоп</span><span>📱 Мобильный</span></div>
                                 </div>
                                 <div class="watch-arrow">→</div>
                             </button>
@@ -400,7 +458,6 @@
 
                 <!-- ===== ИЗБРАННОЕ ===== -->
                 <div id="page-favorites" style="display:none;">
-                    
                     <div class="fav-header">
                         <div class="fav-header-left">
                             <div class="fav-header-icon">❤️</div>
@@ -410,39 +467,17 @@
                             </div>
                         </div>
                         <div class="fav-header-actions">
-                            <button class="fav-action-btn" onclick="toggleFavView()" id="favViewBtn" title="Переключить вид">
-                                📋 Список
-                            </button>
-                            <button class="fav-action-btn" onclick="randomFromFav()" title="Случайное из избранного">
-                                🎲 Случайное
-                            </button>
-                            <button class="fav-action-btn danger" onclick="toggleMassMode()" id="favMassBtn" title="Массовое выделение">
-                                ☑️ Выбрать
-                            </button>
+                            <button class="fav-action-btn" onclick="toggleFavView()" id="favViewBtn" title="Переключить вид">📋 Список</button>
+                            <button class="fav-action-btn" onclick="randomFromFav()" title="Случайное из избранного">🎲 Случайное</button>
+                            <button class="fav-action-btn danger" onclick="toggleMassMode()" id="favMassBtn" title="Массовое выделение">☑️ Выбрать</button>
                         </div>
                     </div>
 
                     <div class="fav-stats">
-                        <div class="fav-stat-card">
-                            <div class="fav-stat-icon">❤️</div>
-                            <div class="fav-stat-value" id="favStatTotal">0</div>
-                            <div class="fav-stat-label">Всего аниме</div>
-                        </div>
-                        <div class="fav-stat-card">
-                            <div class="fav-stat-icon">🎭</div>
-                            <div class="fav-stat-value" id="favStatGenres">0</div>
-                            <div class="fav-stat-label">Жанров</div>
-                        </div>
-                        <div class="fav-stat-card">
-                            <div class="fav-stat-icon">📺</div>
-                            <div class="fav-stat-value" id="favStatEpisodes">0</div>
-                            <div class="fav-stat-label">Серий</div>
-                        </div>
-                        <div class="fav-stat-card">
-                            <div class="fav-stat-icon">⭐</div>
-                            <div class="fav-stat-value" id="favStatScore">—</div>
-                            <div class="fav-stat-label">Средний балл</div>
-                        </div>
+                        <div class="fav-stat-card"><div class="fav-stat-icon">❤️</div><div class="fav-stat-value" id="favStatTotal">0</div><div class="fav-stat-label">Всего аниме</div></div>
+                        <div class="fav-stat-card"><div class="fav-stat-icon">🎭</div><div class="fav-stat-value" id="favStatGenres">0</div><div class="fav-stat-label">Жанров</div></div>
+                        <div class="fav-stat-card"><div class="fav-stat-icon">📺</div><div class="fav-stat-value" id="favStatEpisodes">0</div><div class="fav-stat-label">Серий</div></div>
+                        <div class="fav-stat-card"><div class="fav-stat-icon">⭐</div><div class="fav-stat-value" id="favStatScore">—</div><div class="fav-stat-label">Средний балл</div></div>
                     </div>
 
                     <div class="fav-controls">
@@ -451,7 +486,6 @@
                             <input type="text" id="favSearchInput" placeholder="Поиск по избранному..." class="fav-search-input" oninput="filterFavorites()">
                             <button class="fav-search-clear" id="favSearchClear" onclick="clearFavSearch()" style="display:none;">✕</button>
                         </div>
-                        
                         <div class="fav-sort-wrapper">
                             <select id="favSortSelect" class="fav-sort-select" onchange="filterFavorites()">
                                 <option value="added_desc">📅 Недавно добавленные</option>
@@ -467,9 +501,7 @@
                     </div>
 
                     <div class="fav-mass-panel" id="favMassPanel" style="display:none;">
-                        <div class="fav-mass-info">
-                            Выбрано: <strong id="favMassCount">0</strong>
-                        </div>
+                        <div class="fav-mass-info">Выбрано: <strong id="favMassCount">0</strong></div>
                         <div class="fav-mass-actions">
                             <button class="fav-mass-btn" onclick="selectAllFav()">Выбрать все</button>
                             <button class="fav-mass-btn" onclick="deselectAllFav()">Снять всё</button>
@@ -479,12 +511,10 @@
                     </div>
 
                     <div id="favGrouped"></div>
-
                 </div>
 
                 <!-- ===== ДОСТИЖЕНИЯ ===== -->
                 <div id="page-achievements" style="display:none;">
-                    
                     <svg width="0" height="0" style="position:absolute;">
                         <defs>
                             <linearGradient id="achGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -502,15 +532,10 @@
 
                     <div class="ach-hero">
                         <div class="ach-hero-content">
-                            
                             <div class="ach-progress-ring">
                                 <svg viewBox="0 0 120 120">
                                     <circle class="ach-progress-ring-bg" cx="60" cy="60" r="52"/>
-                                    <circle class="ach-progress-ring-fill" 
-                                            id="achRingFill"
-                                            cx="60" cy="60" r="52"
-                                            stroke-dasharray="326.7"
-                                            stroke-dashoffset="326.7"/>
+                                    <circle class="ach-progress-ring-fill" id="achRingFill" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
                                 </svg>
                                 <div class="ach-progress-ring-text">
                                     <div class="ach-progress-ring-percent" id="achRingPercent">0%</div>
@@ -521,31 +546,11 @@
                             <div class="ach-hero-info">
                                 <h1 class="ach-hero-title">🏆 Достижения</h1>
                                 <p class="ach-hero-subtitle">Твоя коллекция побед и титулов</p>
-                                
                                 <div id="achActiveTitleContainer"></div>
-                                
                                 <div class="ach-mini-stats">
-                                    <div class="ach-mini-stat">
-                                        <span class="ach-mini-stat-icon">✅</span>
-                                        <div>
-                                            <div class="ach-mini-stat-value" id="achEarnedCount">0</div>
-                                            <div class="ach-mini-stat-label">Получено</div>
-                                        </div>
-                                    </div>
-                                    <div class="ach-mini-stat">
-                                        <span class="ach-mini-stat-icon">🎯</span>
-                                        <div>
-                                            <div class="ach-mini-stat-value" id="achTotalCount">0</div>
-                                            <div class="ach-mini-stat-label">Всего</div>
-                                        </div>
-                                    </div>
-                                    <div class="ach-mini-stat">
-                                        <span class="ach-mini-stat-icon">⏳</span>
-                                        <div>
-                                            <div class="ach-mini-stat-value" id="achRemainingCount">0</div>
-                                            <div class="ach-mini-stat-label">Осталось</div>
-                                        </div>
-                                    </div>
+                                    <div class="ach-mini-stat"><span class="ach-mini-stat-icon">✅</span><div><div class="ach-mini-stat-value" id="achEarnedCount">0</div><div class="ach-mini-stat-label">Получено</div></div></div>
+                                    <div class="ach-mini-stat"><span class="ach-mini-stat-icon">🎯</span><div><div class="ach-mini-stat-value" id="achTotalCount">0</div><div class="ach-mini-stat-label">Всего</div></div></div>
+                                    <div class="ach-mini-stat"><span class="ach-mini-stat-icon">⏳</span><div><div class="ach-mini-stat-value" id="achRemainingCount">0</div><div class="ach-mini-stat-label">Осталось</div></div></div>
                                 </div>
                             </div>
                         </div>
@@ -582,7 +587,6 @@
 
                 <!-- ===== МОИ КОММЕНТАРИИ ===== -->
                 <div id="page-mycomments" style="display:none;">
-                    
                     <div class="mc-header">
                         <div class="mc-header-left">
                             <div class="mc-header-icon">💬</div>
@@ -592,36 +596,16 @@
                             </div>
                         </div>
                         <div class="mc-header-actions">
-                            <button class="mc-action-btn" onclick="toggleMcGroup()" id="mcGroupBtn" title="Группировка">
-                                📅 По дате
-                            </button>
-                            <button class="mc-action-btn" onclick="toggleMcMassMode()" id="mcMassBtn" title="Массовое выделение">
-                                ☑️ Выбрать
-                            </button>
+                            <button class="mc-action-btn" onclick="toggleMcGroup()" id="mcGroupBtn" title="Группировка">📅 По дате</button>
+                            <button class="mc-action-btn" onclick="toggleMcMassMode()" id="mcMassBtn" title="Массовое выделение">☑️ Выбрать</button>
                         </div>
                     </div>
 
                     <div class="mc-stats">
-                        <div class="mc-stat-card">
-                            <div class="mc-stat-icon">💬</div>
-                            <div class="mc-stat-value" id="mcStatTotal">0</div>
-                            <div class="mc-stat-label">Всего</div>
-                        </div>
-                        <div class="mc-stat-card">
-                            <div class="mc-stat-icon">🎬</div>
-                            <div class="mc-stat-value" id="mcStatAnime">0</div>
-                            <div class="mc-stat-label">Аниме</div>
-                        </div>
-                        <div class="mc-stat-card">
-                            <div class="mc-stat-icon">📅</div>
-                            <div class="mc-stat-value" id="mcStatWeek">0</div>
-                            <div class="mc-stat-label">За неделю</div>
-                        </div>
-                        <div class="mc-stat-card">
-                            <div class="mc-stat-icon">📏</div>
-                            <div class="mc-stat-value" id="mcStatAvg">0</div>
-                            <div class="mc-stat-label">Ср. длина</div>
-                        </div>
+                        <div class="mc-stat-card"><div class="mc-stat-icon">💬</div><div class="mc-stat-value" id="mcStatTotal">0</div><div class="mc-stat-label">Всего</div></div>
+                        <div class="mc-stat-card"><div class="mc-stat-icon">🎬</div><div class="mc-stat-value" id="mcStatAnime">0</div><div class="mc-stat-label">Аниме</div></div>
+                        <div class="mc-stat-card"><div class="mc-stat-icon">📅</div><div class="mc-stat-value" id="mcStatWeek">0</div><div class="mc-stat-label">За неделю</div></div>
+                        <div class="mc-stat-card"><div class="mc-stat-icon">📏</div><div class="mc-stat-value" id="mcStatAvg">0</div><div class="mc-stat-label">Ср. длина</div></div>
                     </div>
 
                     <div class="mc-controls">
@@ -630,7 +614,6 @@
                             <input type="text" id="mcSearchInput" placeholder="Поиск по комментариям..." class="mc-search-input" oninput="filterMyComments()">
                             <button class="mc-search-clear" id="mcSearchClear" onclick="clearMcSearch()" style="display:none;">✕</button>
                         </div>
-                        
                         <div class="mc-sort-wrapper">
                             <select id="mcSortSelect" class="mc-sort-select" onchange="filterMyComments()">
                                 <option value="date_desc">📅 Новые сначала</option>
@@ -643,9 +626,7 @@
                     </div>
 
                     <div class="mc-mass-panel" id="mcMassPanel" style="display:none;">
-                        <div class="mc-mass-info">
-                            Выбрано: <strong id="mcMassCount">0</strong>
-                        </div>
+                        <div class="mc-mass-info">Выбрано: <strong id="mcMassCount">0</strong></div>
                         <div class="mc-mass-actions">
                             <button class="mc-mass-btn" onclick="selectAllMc()">Выбрать все</button>
                             <button class="mc-mass-btn" onclick="deselectAllMc()">Снять всё</button>
@@ -655,13 +636,11 @@
                     </div>
 
                     <div id="mcGrouped"></div>
-
                 </div>
 
                 <!-- ===== ПРОФИЛЬ ===== -->
                 <div id="page-profile" style="display:none;">
                     <div class="profile-container">
-                        
                         <div class="profile-banner" id="profileBanner" style="background: linear-gradient(135deg, #1a1a3e, #2d1b69, #6c5ce7);">
                             <div class="banner-overlay"></div>
                             <button class="profile-banner-edit" onclick="changeBanner()">
@@ -707,32 +686,16 @@
                         </div>
                         
                         <div class="stats-cards">
-                            <div class="stat-card" onclick="navigate('favorites')">
-                                <div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-favorites"/></svg></div>
-                                <div class="num" id="statFav">0</div>
-                                <div class="lbl">В избранном</div>
-                            </div>
-                            <div class="stat-card" onclick="navigate('mycomments')">
-                                <div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-comment"/></svg></div>
-                                <div class="num" id="statComments">0</div>
-                                <div class="lbl">Комментариев</div>
-                            </div>
-                            <div class="stat-card" onclick="navigate('achievements')">
-                                <div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-achievements"/></svg></div>
-                                <div class="num" id="statAchievements">0</div>
-                                <div class="lbl">Достижений</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-icon">⏱️</div>
-                                <div class="num" id="statTime">0ч</div>
-                                <div class="lbl">Время на сайте</div>
-                            </div>
+                            <div class="stat-card" onclick="navigate('favorites')"><div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-favorites"/></svg></div><div class="num" id="statFav">0</div><div class="lbl">В избранном</div></div>
+                            <div class="stat-card" onclick="navigate('mycomments')"><div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-comment"/></svg></div><div class="num" id="statComments">0</div><div class="lbl">Комментариев</div></div>
+                            <div class="stat-card" onclick="navigate('achievements')"><div class="stat-icon"><svg width="24" height="24"><use href="icons/icons.svg#icon-achievements"/></svg></div><div class="num" id="statAchievements">0</div><div class="lbl">Достижений</div></div>
+                            <div class="stat-card"><div class="stat-icon">⏱️</div><div class="num" id="statTime">0ч</div><div class="lbl">Время на сайте</div></div>
                         </div>
 
                         <div class="continue-watching-section" id="continueWatchingSection">
                             <div class="section-header">
                                 <h3>▶️ Продолжить просмотр</h3>
-                                <span class="section-count" id="continueCount">0</span>
+                                <span class="section-count" id="continueCount2">0</span>
                             </div>
                             <div class="continue-grid" id="continueGrid">
                                 <div style="color:var(--text-muted);text-align:center;padding:12px;width:100%;">Нет сохранённых серий</div>
@@ -864,9 +827,7 @@
             </div>
             <div class="footer-column">
                 <h4>📧 Контакты</h4>
-                <ul>
-                    <li>📧 <a href="mailto:support@onikaanime.com">support@onikaanime.com</a></li>
-                </ul>
+                <ul><li>📧 <a href="mailto:support@onikaanime.com">support@onikaanime.com</a></li></ul>
             </div>
             <div class="footer-column">
                 <h4>📋 Информация</h4>
@@ -955,9 +916,7 @@
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
             if (!sidebar || !overlay) return;
-            
             const isOpen = sidebar.classList.contains('open');
-            
             if (isOpen) {
                 sidebar.classList.remove('open');
                 overlay.classList.remove('open');
